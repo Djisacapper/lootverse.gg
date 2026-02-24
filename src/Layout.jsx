@@ -261,15 +261,23 @@ export default function Layout({ children, currentPageName }) {
         </div>
       )}
 
-      {/* Main Content */}
-      <main
-        className={`flex-1 pt-14 min-h-screen transition-all duration-300
+      {/* Main Content + Chat Panel */}
+      <div
+        className={`flex flex-1 min-h-screen pt-14 transition-all duration-300
           ${sidebarCollapsed ? 'lg:ml-[60px]' : 'lg:ml-[220px]'}`}
       >
-        <div className="max-w-7xl mx-auto p-4 md:p-5 lg:p-6">
-          {children}
-        </div>
-      </main>
+        {/* Page content */}
+        <main className="flex-1 min-w-0 overflow-y-auto">
+          <div className="max-w-5xl mx-auto p-4 md:p-5 lg:p-6">
+            {children}
+          </div>
+        </main>
+
+        {/* Right Chat Panel - desktop only */}
+        <aside className="hidden lg:flex flex-col w-[260px] flex-shrink-0 h-[calc(100vh-56px)] sticky top-14">
+          <LiveChat />
+        </aside>
+      </div>
     </div>
   );
 }
