@@ -34,9 +34,12 @@ export default function Inventory() {
   }, [user]);
 
   const handleSell = async (item) => {
-    await base44.entities.UserInventory.update(item.id, { status: 'sold' });
-    await updateBalance(item.value, 'item_sell', `Sold ${item.item_name}`);
+    // Optimistically remove from UI first
     setItems(prev => prev.filter(i => i.id !== item.id));
+    await base44.entities.UserInventory.update(item.id, { status: 'sold' });
+    const newBal = await updateBalance(item.value, 'item_sell', `Sold ${item.item_name}`);
+    // Force re-read balance into local state
+    reload();
   };
 
   const sortedItems = [...items].sort((a, b) => {
