@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
-import { useWallet, rollItem, getRarityColor, getRarityGlow } from '../components/game/useWallet';
+import { rollItem, getRarityColor, getRarityGlow } from '../components/game/useWallet';
 import CaseSpinner from '../components/game/CaseSpinner';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Box, Coins, ArrowLeft, RefreshCw, Sparkles, Percent } from 'lucide-react';
+import { Box, ArrowLeft, RefreshCw, Sparkles, Percent, Coins } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
@@ -17,7 +17,24 @@ export default function CaseOpen() {
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState(null);
   const [showResult, setShowResult] = useState(false);
-  const { user, balance, updateBalance, addXp } = useWallet();
+  const [balance, setBalance] = useState(0);
+  const [xp, setXp] = useState(0);
+  const [level, setLevel] = useState(1);
+  const [xpProgress, setXpProgress] = useState(0);
+  const [user, setUser] = useState(null);
+  const [userLoading, setUserLoading] = useState(true);
+
+  // Load user fresh on mount
+  useEffect(() => {
+    base44.auth.me().then((me) => {
+      setUser(me);
+      setBalance(me.balance || 0);
+      setXp(me.xp || 0);
+      setLevel(me.level || 1);
+      setXpProgress(((me.xp || 0) % 500) / 5);
+      setUserLoading(false);
+    });
+  }, []);
 
   useEffect(() => {
     if (caseId) {
@@ -29,15 +46,18 @@ export default function CaseOpen() {
   }, [caseId]);
 
   const handleOpen = async () => {
-    if (!caseData || spinning) return;
+    if (!caseData || spinning || !user) return;
     if (balance < caseData.price) return;
 
-    // Deduct cost
-    await updateBalance(-caseData.price, 'case_purchase', `Opened ${caseData.name}`);
-
-    // Roll item
+    // Roll item FIRST (outcome-driven)
     const wonItem = rollItem(caseData.items || []);
     setResult(wonItem);
+
+    // Deduct cost immediately (real-time)
+    const costDeducted = balance - caseData.price;
+    setBalance(costDeducted);
+    await base44.auth.updateMe({ balance: costDeducted });
+
     setSpinning(true);
     setShowResult(false);
   };
@@ -46,28 +66,45 @@ export default function CaseOpen() {
     setSpinning(false);
     setShowResult(true);
 
-    if (result) {
-      // Credit winnings
-      await updateBalance(result.value, 'case_win', `Won ${result.name} from ${caseData.name}`);
+    if (result && user) {
+      // Credit winnings in real-time
+      const newBalance = balance + result.value;
+      setBalance(newBalance);
+      await base44.auth.updateMe({ balance: newBalance });
 
-      // Add to inventory
-      await base44.entities.UserInventory.create({
+      // Log transaction
+      base44.entities.Transaction.create({
+        user_email: user.email,
+        type: 'case_win',
+        amount: result.value - caseData.price,
+        balance_after: newBalance,
+        description: `Won ${result.name} from ${caseData.name}`,
+      });
+
+      // Add XP in real-time
+      const xpGain = Math.floor(caseData.price / 10);
+      const newXp = xp + xpGain;
+      const newLevel = Math.floor(newXp / 500) + 1;
+      const newProgress = (newXp % 500) / 7;
+      setXp(newXp);
+      setLevel(newLevel);
+      setXpProgress(newProgress);
+      base44.auth.updateMe({ xp: newXp, level: newLevel });
+
+      // Update case counter (fire and forget)
+      base44.entities.CaseTemplate.update(caseData.id, {
+        total_opened: (caseData.total_opened || 0) + 1
+      });
+
+      // Log win to inventory for live feed (no status required)
+      base44.entities.UserInventory.create({
         user_email: user.email,
         item_name: result.name,
-        item_image_url: result.image_url,
         rarity: result.rarity,
         value: result.value,
         source: 'case_opening',
         source_case: caseData.name,
         status: 'owned',
-      });
-
-      // Add XP
-      await addXp(Math.floor(caseData.price / 10));
-
-      // Update case counter
-      await base44.entities.CaseTemplate.update(caseData.id, {
-        total_opened: (caseData.total_opened || 0) + 1
       });
     }
   };
@@ -77,7 +114,7 @@ export default function CaseOpen() {
     setShowResult(false);
   };
 
-  if (loading) {
+  if (loading || userLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <div className="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full animate-spin" />
@@ -101,16 +138,36 @@ export default function CaseOpen() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Header */}
+      {/* Header with live balance + XP */}
       <div className="flex items-center gap-4">
         <Link to={createPageUrl('Cases')}>
           <Button variant="ghost" size="icon" className="text-white/40 hover:text-white hover:bg-white/5 rounded-xl">
             <ArrowLeft className="w-5 h-5" />
           </Button>
         </Link>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold text-white">{caseData.name}</h1>
           <p className="text-sm text-white/40">{caseData.description}</p>
+        </div>
+
+        {/* Live Balance + Level display */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2">
+            <Coins className="w-4 h-4 text-amber-400" />
+            <span className="text-sm font-bold text-white">{balance.toLocaleString()}</span>
+          </div>
+          <div className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2">
+            <div className="w-5 h-5 rounded-md bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-[9px] font-bold text-white">
+              {level}
+            </div>
+            <div className="w-20 h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full"
+                animate={{ width: `${xpProgress}%` }}
+                transition={{ duration: 0.5 }}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -129,7 +186,7 @@ export default function CaseOpen() {
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.9 }}
-            className={`glass rounded-2xl p-8 text-center border ${showResult ? 'border-white/10' : ''}`}
+            className="glass rounded-2xl p-8 text-center border border-white/10"
           >
             <div className={`w-24 h-24 rounded-2xl bg-gradient-to-br ${getRarityColor(result.rarity)} flex items-center justify-center mx-auto mb-4 ${getRarityGlow(result.rarity)} shadow-2xl`}>
               {result.image_url ? (
@@ -142,7 +199,7 @@ export default function CaseOpen() {
               {result.rarity}
             </Badge>
             <h2 className="text-xl font-bold text-white mb-1">{result.name}</h2>
-            <p className="text-2xl font-bold text-amber-400">{result.value?.toLocaleString()} coins</p>
+            <p className="text-2xl font-bold text-amber-400">+{result.value?.toLocaleString()} coins added to balance</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -150,19 +207,12 @@ export default function CaseOpen() {
       {/* Action buttons */}
       <div className="flex justify-center gap-3">
         {showResult ? (
-          <>
-            <Button
-              onClick={handleTryAgain}
-              className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-xl h-12 px-8"
-            >
-              <RefreshCw className="w-5 h-5 mr-2" /> Open Again ({caseData.price?.toLocaleString()} coins)
-            </Button>
-            <Link to={createPageUrl('Inventory')}>
-              <Button variant="outline" className="border-white/10 text-white hover:bg-white/5 rounded-xl h-12">
-                View Inventory
-              </Button>
-            </Link>
-          </>
+          <Button
+            onClick={handleTryAgain}
+            className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-xl h-12 px-8"
+          >
+            <RefreshCw className="w-5 h-5 mr-2" /> Open Again ({caseData.price?.toLocaleString()} coins)
+          </Button>
         ) : (
           <Button
             onClick={handleOpen}
@@ -193,7 +243,7 @@ export default function CaseOpen() {
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {(caseData.items || []).map((item, i) => (
-            <div key={i} className={`glass rounded-xl p-4 text-center border ${item.rarity === result?.rarity && item.name === result?.name && showResult ? 'border-amber-400/40' : 'border-white/5'}`}>
+            <div key={i} className={`glass rounded-xl p-4 text-center border ${item.name === result?.name && showResult ? 'border-amber-400/40' : 'border-white/5'}`}>
               <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${getRarityColor(item.rarity)} flex items-center justify-center mx-auto mb-2`}>
                 {item.image_url ? (
                   <img src={item.image_url} alt="" className="w-10 h-10 object-contain" />
