@@ -47,13 +47,38 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
+import Home from './pages/Home';
+import Cases from './pages/Cases';
+import CaseOpen from './pages/CaseOpen';
+import Inventory from './pages/Inventory';
+import Coinflip from './pages/Coinflip';
+import Crash from './pages/Crash';
+import Upgrade from './pages/Upgrade';
+import Battles from './pages/Battles';
+import Rewards from './pages/Rewards';
+import Leaderboard from './pages/Leaderboard';
+import Referrals from './pages/Referrals';
+import Deposit from './pages/Deposit';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "Home": Home,
+    "Cases": Cases,
+    "CaseOpen": CaseOpen,
+    "Inventory": Inventory,
+    "Coinflip": Coinflip,
+    "Crash": Crash,
+    "Upgrade": Upgrade,
+    "Battles": Battles,
+    "Rewards": Rewards,
+    "Leaderboard": Leaderboard,
+    "Referrals": Referrals,
+    "Deposit": Deposit,
 }
 
 export const pagesConfig = {
+    mainPage: "Home",
     Pages: PAGES,
     Layout: __Layout,
 };
