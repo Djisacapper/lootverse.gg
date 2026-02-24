@@ -15,19 +15,23 @@ export function useWallet() {
     setXp(me.xp || 0);
     setLevel(me.level || 1);
     setLoading(false);
+    return me;
   }, []);
 
   useEffect(() => {
     loadUser();
   }, [loadUser]);
 
+  // Always fetch fresh balance from server to avoid stale closure issues
   const updateBalance = useCallback(async (amount, type, description) => {
-    const newBalance = balance + amount;
+    const me = await base44.auth.me();
+    const currentBalance = me.balance || 0;
+    const newBalance = currentBalance + amount;
     await base44.auth.updateMe({ balance: newBalance });
     setBalance(newBalance);
 
     await base44.entities.Transaction.create({
-      user_email: user.email,
+      user_email: me.email,
       type,
       amount,
       balance_after: newBalance,
@@ -35,15 +39,17 @@ export function useWallet() {
     });
 
     return newBalance;
-  }, [balance, user]);
+  }, []);
 
   const addXp = useCallback(async (amount) => {
-    const newXp = (xp || 0) + amount;
+    const me = await base44.auth.me();
+    const currentXp = me.xp || 0;
+    const newXp = currentXp + amount;
     const newLevel = Math.floor(newXp / 500) + 1;
     await base44.auth.updateMe({ xp: newXp, level: newLevel });
     setXp(newXp);
     setLevel(newLevel);
-  }, [xp]);
+  }, []);
 
   const xpProgress = ((xp % 500) / 500) * 100;
 

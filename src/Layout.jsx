@@ -2,28 +2,43 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
-import WalletBar from './components/game/WalletBar';
 import {
   Box, Swords, Coins, TrendingUp, Gift, Award, Users,
-  Menu, X, Home, Backpack, BarChart3, LogOut, Zap
+  Menu, X, Home, Backpack, LogOut, Zap, ChevronLeft,
+  ChevronRight, Wallet, Plus
 } from 'lucide-react';
 
-const NAV_ITEMS = [
-  { name: 'Home', icon: Home, page: 'Home' },
-  { name: 'Cases', icon: Box, page: 'Cases' },
-  { name: 'Battles', icon: Swords, page: 'Battles' },
-  { name: 'Coinflip', icon: Coins, page: 'Coinflip' },
-  { name: 'Crash', icon: TrendingUp, page: 'Crash' },
-  { name: 'Upgrade', icon: Zap, page: 'Upgrade' },
-  { name: 'Inventory', icon: Backpack, page: 'Inventory' },
-  { name: 'Rewards', icon: Gift, page: 'Rewards' },
-  { name: 'Leaderboard', icon: Award, page: 'Leaderboard' },
-  { name: 'Referrals', icon: Users, page: 'Referrals' },
+const NAV_SECTIONS = [
+  {
+    label: 'GAMES',
+    items: [
+      { name: 'Battles', icon: Swords, page: 'Battles' },
+      { name: 'Cases', icon: Box, page: 'Cases' },
+      { name: 'Coinflip', icon: Coins, page: 'Coinflip' },
+      { name: 'Crash', icon: TrendingUp, page: 'Crash' },
+      { name: 'Upgrade', icon: Zap, page: 'Upgrade' },
+    ]
+  },
+  {
+    label: 'REWARDS',
+    items: [
+      { name: 'Referrals', icon: Users, page: 'Referrals' },
+      { name: 'Daily Rewards', icon: Gift, page: 'Rewards' },
+      { name: 'Leaderboard', icon: Award, page: 'Leaderboard' },
+    ]
+  },
+  {
+    label: 'OTHER',
+    items: [
+      { name: 'Inventory', icon: Backpack, page: 'Inventory' },
+    ]
+  }
 ];
 
 export default function Layout({ children, currentPageName }) {
   const [user, setUser] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
@@ -33,114 +48,224 @@ export default function Layout({ children, currentPageName }) {
     setMobileOpen(false);
   }, [currentPageName]);
 
-  return (
-    <div className="min-h-screen bg-[#0a0a0f] flex">
-      {/* Sidebar - Desktop */}
-      <aside className="hidden lg:flex flex-col w-64 bg-[#0c0c14] border-r border-white/5 fixed h-full z-40">
-        <div className="p-6 border-b border-white/5">
-          <Link to={createPageUrl('Home')} className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center glow-purple">
-              <Box className="w-5 h-5 text-white" />
-            </div>
+  const xpProgress = user ? ((user.xp || 0) % 500) / 5 : 0;
+  const level = user?.level || 1;
+
+  const SidebarContent = ({ collapsed }) => (
+    <>
+      {/* Logo */}
+      <div className={`flex items-center border-b border-white/5 ${collapsed ? 'px-3 py-4 justify-center' : 'px-5 py-4'}`}>
+        <Link to={createPageUrl('Home')} className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-violet-500/30">
+            <Box className="w-5 h-5 text-white" />
+          </div>
+          {!collapsed && (
             <div>
-              <h1 className="text-lg font-bold text-white tracking-tight">LOOTVERSE</h1>
-              <p className="text-[10px] text-white/30 uppercase tracking-widest">Next-Gen Cases</p>
+              <span className="text-base font-bold text-white tracking-wide">LOOTVERSE</span>
             </div>
-          </Link>
-        </div>
+          )}
+        </Link>
+      </div>
 
-        <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-hide">
-          {NAV_ITEMS.map((item) => {
-            const active = currentPageName === item.page;
-            return (
-              <Link
-                key={item.page}
-                to={createPageUrl(item.page)}
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                  ${active
-                    ? 'bg-violet-500/15 text-violet-300 border border-violet-500/20'
-                    : 'text-white/50 hover:text-white/80 hover:bg-white/5 border border-transparent'
-                  }`}
-              >
-                <item.icon className={`w-4.5 h-4.5 ${active ? 'text-violet-400' : ''}`} />
-                {item.name}
-              </Link>
-            );
-          })}
-        </nav>
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto scrollbar-hide py-3">
+        {NAV_SECTIONS.map((section) => (
+          <div key={section.label} className="mb-4">
+            {!collapsed && (
+              <p className="text-[10px] font-semibold text-white/25 tracking-[0.15em] uppercase px-4 mb-1.5">{section.label}</p>
+            )}
+            {section.items.map((item) => {
+              const active = currentPageName === item.page;
+              return (
+                <Link
+                  key={item.page}
+                  to={createPageUrl(item.page)}
+                  title={collapsed ? item.name : undefined}
+                  className={`flex items-center gap-3 mx-2 mb-0.5 rounded-lg transition-all duration-150
+                    ${collapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5'}
+                    ${active
+                      ? 'bg-violet-500/20 text-white'
+                      : 'text-white/45 hover:text-white hover:bg-white/5'
+                    }`}
+                >
+                  <item.icon className={`w-[18px] h-[18px] flex-shrink-0 ${active ? 'text-violet-400' : ''}`} />
+                  {!collapsed && <span className="text-[13px] font-medium">{item.name}</span>}
+                  {active && !collapsed && (
+                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-violet-400" />
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
+      </nav>
 
-        {user && (
-          <div className="p-4 border-t border-white/5">
-            <div className="flex items-center gap-3 mb-3">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-sm font-bold text-white">
-                {user.full_name?.[0]?.toUpperCase() || '?'}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-white truncate">{user.full_name || 'Player'}</p>
-                <p className="text-[11px] text-white/30 truncate">{user.email}</p>
-              </div>
+      {/* User */}
+      {user && !collapsed && (
+        <div className="p-4 border-t border-white/5">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
+              {user.full_name?.[0]?.toUpperCase() || '?'}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[13px] font-medium text-white truncate">{user.full_name || 'Player'}</p>
+              <p className="text-[10px] text-white/25 truncate">{user.email}</p>
             </div>
             <button
               onClick={() => base44.auth.logout()}
-              className="flex items-center gap-2 text-xs text-white/30 hover:text-red-400 transition-colors w-full px-2 py-1.5"
+              className="text-white/25 hover:text-red-400 transition-colors"
             >
-              <LogOut className="w-3.5 h-3.5" /> Sign Out
+              <LogOut className="w-4 h-4" />
             </button>
           </div>
-        )}
+        </div>
+      )}
+    </>
+  );
+
+  return (
+    <div className="min-h-screen bg-[#0e0e18] flex text-white">
+      {/* Sidebar - Desktop */}
+      <aside
+        className={`hidden lg:flex flex-col bg-[#0b0b15] border-r border-white/[0.06] fixed h-full z-40 transition-all duration-300
+          ${sidebarCollapsed ? 'w-[60px]' : 'w-[220px]'}`}
+      >
+        <SidebarContent collapsed={sidebarCollapsed} />
+
+        {/* Collapse toggle */}
+        <button
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+          className="absolute -right-3 top-[72px] w-6 h-6 rounded-full bg-[#1a1a2e] border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-colors z-50"
+        >
+          {sidebarCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
+        </button>
       </aside>
 
-      {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 glass border-b border-white/5">
-        <div className="flex items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-3">
-            <button onClick={() => setMobileOpen(!mobileOpen)} className="text-white/60 hover:text-white">
-              {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-            <Link to={createPageUrl('Home')} className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
-                <Box className="w-4 h-4 text-white" />
+      {/* Top Header Bar */}
+      <div
+        className={`fixed top-0 right-0 z-30 h-14 bg-[#0b0b15] border-b border-white/[0.06] flex items-center px-4 gap-3 transition-all duration-300
+          ${sidebarCollapsed ? 'left-[60px]' : 'left-[220px]'} hidden lg:flex`}
+      >
+        <div className="flex-1" />
+
+        {/* Level + XP bar */}
+        {user && (
+          <div className="flex items-center gap-2.5 bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-1.5">
+            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
+              {level}
+            </div>
+            <div className="flex flex-col gap-0.5 w-24">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] text-white/40">Level {level}</span>
+                <span className="text-[10px] text-white/25">{Math.round(xpProgress)}%</span>
               </div>
-              <span className="font-bold text-white text-sm">LOOTVERSE</span>
+              <div className="h-1 bg-white/10 rounded-full overflow-hidden w-full">
+                <div
+                  className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full transition-all duration-700"
+                  style={{ width: `${xpProgress}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Balance */}
+        {user && (
+          <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.07] rounded-lg pl-2 pr-1 py-1">
+            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
+              <span className="text-[9px] font-bold text-white">$</span>
+            </div>
+            <span className="text-sm font-bold text-white">{(user.balance || 0).toLocaleString()}</span>
+            <Link to={createPageUrl('Deposit')}>
+              <div className="ml-1 bg-green-500 hover:bg-green-400 transition-colors rounded-md px-2 py-1 flex items-center gap-1">
+                <Wallet className="w-3 h-3 text-white" />
+                <span className="text-[11px] font-semibold text-white">Wallet</span>
+              </div>
             </Link>
           </div>
-          {user && (
-            <WalletBar balance={user.balance} level={user.level} xpProgress={((user.xp || 0) % 500) / 5} compact />
-          )}
-        </div>
+        )}
+
+        {/* Avatar */}
+        {user && (
+          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-xs font-bold text-white">
+            {user.full_name?.[0]?.toUpperCase() || '?'}
+          </div>
+        )}
+      </div>
+
+      {/* Mobile Header */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-[#0b0b15] border-b border-white/[0.06] flex items-center px-4 gap-3">
+        <button onClick={() => setMobileOpen(!mobileOpen)} className="text-white/50 hover:text-white">
+          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </button>
+        <Link to={createPageUrl('Home')} className="flex items-center gap-2">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center">
+            <Box className="w-3.5 h-3.5 text-white" />
+          </div>
+          <span className="font-bold text-white text-sm">LOOTVERSE</span>
+        </Link>
+        <div className="flex-1" />
+        {user && (
+          <div className="flex items-center gap-2">
+            {/* Mobile level badge */}
+            <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-1">
+              <div className="w-5 h-5 rounded-md bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-[9px] font-bold text-white">
+                {level}
+              </div>
+              <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full"
+                  style={{ width: `${xpProgress}%` }}
+                />
+              </div>
+            </div>
+            {/* Mobile balance */}
+            <div className="flex items-center gap-1 bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-1.5">
+              <div className="w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center">
+                <span className="text-[8px] font-bold text-white">$</span>
+              </div>
+              <span className="text-xs font-bold text-white">{(user.balance || 0).toLocaleString()}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Mobile Drawer */}
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-40">
-          <div className="absolute inset-0 bg-black/60" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-[#0c0c14] border-r border-white/5 pt-16 overflow-y-auto">
-            <nav className="p-3 space-y-1">
-              {NAV_ITEMS.map((item) => {
-                const active = currentPageName === item.page;
-                return (
-                  <Link
-                    key={item.page}
-                    to={createPageUrl(item.page)}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all
-                      ${active
-                        ? 'bg-violet-500/15 text-violet-300'
-                        : 'text-white/50 hover:text-white/80 hover:bg-white/5'
-                      }`}
-                  >
-                    <item.icon className="w-5 h-5" />
-                    {item.name}
-                  </Link>
-                );
-              })}
+          <div className="absolute inset-0 bg-black/70" onClick={() => setMobileOpen(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-[#0b0b15] border-r border-white/[0.06] pt-14 flex flex-col overflow-y-auto">
+            <nav className="flex-1 py-3">
+              {NAV_SECTIONS.map((section) => (
+                <div key={section.label} className="mb-4">
+                  <p className="text-[10px] font-semibold text-white/25 tracking-[0.15em] uppercase px-4 mb-1.5">{section.label}</p>
+                  {section.items.map((item) => {
+                    const active = currentPageName === item.page;
+                    return (
+                      <Link
+                        key={item.page}
+                        to={createPageUrl(item.page)}
+                        className={`flex items-center gap-3 mx-2 mb-0.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all
+                          ${active ? 'bg-violet-500/20 text-white' : 'text-white/45 hover:text-white hover:bg-white/5'}`}
+                      >
+                        <item.icon className={`w-[18px] h-[18px] ${active ? 'text-violet-400' : ''}`} />
+                        {item.name}
+                      </Link>
+                    );
+                  })}
+                </div>
+              ))}
             </nav>
           </aside>
         </div>
       )}
 
       {/* Main Content */}
-      <main className="flex-1 lg:ml-64 pt-16 lg:pt-0 min-h-screen">
-        <div className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8">
+      <main
+        className={`flex-1 pt-14 min-h-screen transition-all duration-300
+          ${sidebarCollapsed ? 'lg:ml-[60px]' : 'lg:ml-[220px]'}`}
+      >
+        <div className="max-w-7xl mx-auto p-4 md:p-5 lg:p-6">
           {children}
         </div>
       </main>
