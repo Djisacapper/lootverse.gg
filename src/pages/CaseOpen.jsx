@@ -25,13 +25,18 @@ export default function CaseOpen() {
     base44.auth.me().then((me) => {
       setUser(me);
       setUserLoading(false);
+    }).catch(() => {
+      setUserLoading(false);
     });
   }, []);
 
   useEffect(() => {
     if (caseId) {
+      setLoading(true);
       base44.entities.CaseTemplate.filter({ id: caseId }).then(([data]) => {
         setCaseData(data);
+        setLoading(false);
+      }).catch(() => {
         setLoading(false);
       });
     }
