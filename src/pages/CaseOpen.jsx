@@ -17,10 +17,6 @@ export default function CaseOpen() {
   const [spinning, setSpinning] = useState(false);
   const [result, setResult] = useState(null);
   const [showResult, setShowResult] = useState(false);
-  const [balance, setBalance] = useState(0);
-  const [xp, setXp] = useState(0);
-  const [level, setLevel] = useState(1);
-  const [xpProgress, setXpProgress] = useState(0);
   const [user, setUser] = useState(null);
   const [userLoading, setUserLoading] = useState(true);
 
@@ -28,10 +24,6 @@ export default function CaseOpen() {
   useEffect(() => {
     base44.auth.me().then((me) => {
       setUser(me);
-      setBalance(me.balance || 0);
-      setXp(me.xp || 0);
-      setLevel(me.level || 1);
-      setXpProgress(((me.xp || 0) % 500) / 5);
       setUserLoading(false);
     });
   }, []);
@@ -47,16 +39,16 @@ export default function CaseOpen() {
 
   const handleOpen = async () => {
     if (!caseData || spinning || !user) return;
-    if (balance < caseData.price) return;
+    if ((user.balance || 0) < caseData.price) return;
 
     // Roll item FIRST (outcome-driven)
     const wonItem = rollItem(caseData.items || []);
     setResult(wonItem);
 
     // Deduct cost immediately (real-time)
-    const costDeducted = balance - caseData.price;
-    setBalance(costDeducted);
+    const costDeducted = (user.balance || 0) - caseData.price;
     await base44.auth.updateMe({ balance: costDeducted });
+    setUser({ ...user, balance: costDeducted });
 
     setSpinning(true);
     setShowResult(false);
@@ -68,9 +60,15 @@ export default function CaseOpen() {
 
     if (result && user) {
       // Credit winnings in real-time
-      const newBalance = balance + result.value;
-      setBalance(newBalance);
-      await base44.auth.updateMe({ balance: newBalance });
+      const newBalance = (user.balance || 0) + result.value;
+      
+      // Add XP in real-time
+      const xpGain = Math.floor(caseData.price / 10);
+      const newXp = (user.xp || 0) + xpGain;
+      const newLevel = Math.floor(newXp / 500) + 1;
+
+      await base44.auth.updateMe({ balance: newBalance, xp: newXp, level: newLevel });
+      setUser({ ...user, balance: newBalance, xp: newXp, level: newLevel });
 
       // Log transaction
       base44.entities.Transaction.create({
@@ -80,16 +78,6 @@ export default function CaseOpen() {
         balance_after: newBalance,
         description: `Won ${result.name} from ${caseData.name}`,
       });
-
-      // Add XP in real-time
-      const xpGain = Math.floor(caseData.price / 10);
-      const newXp = xp + xpGain;
-      const newLevel = Math.floor(newXp / 500) + 1;
-      const newProgress = (newXp % 500) / 7;
-      setXp(newXp);
-      setLevel(newLevel);
-      setXpProgress(newProgress);
-      base44.auth.updateMe({ xp: newXp, level: newLevel });
 
       // Update case counter (fire and forget)
       base44.entities.CaseTemplate.update(caseData.id, {
@@ -138,7 +126,7 @@ export default function CaseOpen() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      {/* Header with live balance + XP */}
+      {/* Header */}
       <div className="flex items-center gap-4">
         <Link to={createPageUrl('Cases')}>
           <Button variant="ghost" size="icon" className="text-white/40 hover:text-white hover:bg-white/5 rounded-xl">
@@ -148,26 +136,6 @@ export default function CaseOpen() {
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-white">{caseData.name}</h1>
           <p className="text-sm text-white/40">{caseData.description}</p>
-        </div>
-
-        {/* Live Balance + Level display */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2">
-            <Coins className="w-4 h-4 text-amber-400" />
-            <span className="text-sm font-bold text-white">{balance.toLocaleString()}</span>
-          </div>
-          <div className="flex items-center gap-2 bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-2">
-            <div className="w-5 h-5 rounded-md bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-[9px] font-bold text-white">
-              {level}
-            </div>
-            <div className="w-20 h-1.5 bg-white/10 rounded-full overflow-hidden">
-              <motion.div
-                className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full"
-                animate={{ width: `${xpProgress}%` }}
-                transition={{ duration: 0.5 }}
-              />
-            </div>
-          </div>
         </div>
       </div>
 
@@ -216,7 +184,7 @@ export default function CaseOpen() {
         ) : (
           <Button
             onClick={handleOpen}
-            disabled={spinning || balance < caseData.price}
+            disabled={spinning || (user.balance || 0) < caseData.price}
             className="bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 rounded-xl h-14 px-10 text-lg disabled:opacity-50"
           >
             {spinning ? (
@@ -229,7 +197,7 @@ export default function CaseOpen() {
         )}
       </div>
 
-      {balance < caseData.price && !spinning && !showResult && (
+      {(user.balance || 0) < caseData.price && !spinning && !showResult && (
         <p className="text-center text-red-400/80 text-sm">
           Not enough coins. <Link to={createPageUrl('Deposit')} className="text-violet-400 underline">Deposit more</Link>
         </p>
