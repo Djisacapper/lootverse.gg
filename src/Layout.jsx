@@ -41,9 +41,13 @@ export default function Layout({ children, currentPageName }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  useEffect(() => {
+  const reloadUser = () => {
     base44.auth.me().then(setUser).catch(() => {});
-  }, []);
+  };
+
+  useEffect(() => {
+    reloadUser();
+  }, [currentPageName]);
 
   useEffect(() => {
     setMobileOpen(false);

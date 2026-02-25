@@ -47,34 +47,34 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
-import Home from './pages/Home';
-import Cases from './pages/Cases';
+import Battles from './pages/Battles';
 import CaseOpen from './pages/CaseOpen';
-import Inventory from './pages/Inventory';
+import Cases from './pages/Cases';
 import Coinflip from './pages/Coinflip';
 import Crash from './pages/Crash';
-import Upgrade from './pages/Upgrade';
-import Battles from './pages/Battles';
-import Rewards from './pages/Rewards';
+import Deposit from './pages/Deposit';
+import Home from './pages/Home';
+import Inventory from './pages/Inventory';
 import Leaderboard from './pages/Leaderboard';
 import Referrals from './pages/Referrals';
-import Deposit from './pages/Deposit';
+import Rewards from './pages/Rewards';
+import Upgrade from './pages/Upgrade';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
-    "Home": Home,
-    "Cases": Cases,
+    "Battles": Battles,
     "CaseOpen": CaseOpen,
-    "Inventory": Inventory,
+    "Cases": Cases,
     "Coinflip": Coinflip,
     "Crash": Crash,
-    "Upgrade": Upgrade,
-    "Battles": Battles,
-    "Rewards": Rewards,
+    "Deposit": Deposit,
+    "Home": Home,
+    "Inventory": Inventory,
     "Leaderboard": Leaderboard,
     "Referrals": Referrals,
-    "Deposit": Deposit,
+    "Rewards": Rewards,
+    "Upgrade": Upgrade,
 }
 
 export const pagesConfig = {
