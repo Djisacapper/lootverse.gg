@@ -97,9 +97,19 @@ export default function CaseOpen() {
     }
   };
 
-  const handleTryAgain = () => {
+  const handleTryAgain = async () => {
     setResult(null);
     setShowResult(false);
+    // Re-fetch fresh user balance before opening again
+    const me = await base44.auth.me();
+    setUser(me);
+    if (!caseData || !me || (me.balance || 0) < caseData.price) return;
+    const wonItem = rollItem(caseData.items || []);
+    setResult(wonItem);
+    const costDeducted = (me.balance || 0) - caseData.price;
+    await base44.auth.updateMe({ balance: costDeducted });
+    setUser({ ...me, balance: costDeducted });
+    setSpinning(true);
   };
 
   if (loading || userLoading) {
