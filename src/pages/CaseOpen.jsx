@@ -33,8 +33,9 @@ export default function CaseOpen() {
   useEffect(() => {
     if (caseId) {
       setLoading(true);
-      base44.entities.CaseTemplate.filter({ id: caseId }).then(([data]) => {
-        setCaseData(data);
+      base44.entities.CaseTemplate.list().then((all) => {
+        const found = all.find(c => c.id === caseId);
+        setCaseData(found || null);
         setLoading(false);
       }).catch(() => {
         setLoading(false);
