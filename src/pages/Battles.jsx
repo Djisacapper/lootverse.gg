@@ -44,9 +44,6 @@ export default function Battles() {
     const firstName = selectedCases[0].name;
     const caseName = selectedCases.length === 1 ? firstName : `${firstName} +${selectedCases.length - 1} more`;
 
-    // Always start as waiting — let players join, don't auto-fill with bots
-    const status = 'waiting';
-
     await updateBalance(-totalCost, 'battle_entry', `Created battle: ${caseName}`);
 
     const battle = await base44.entities.CaseBattle.create({
@@ -56,20 +53,15 @@ export default function Battles() {
       rounds: selectedCases.length,
       max_players: players.length,
       entry_cost: totalCost,
-      status,
+      status: 'waiting',
       battle_modes: battleModes,
       mode_label: modeLabel,
       teams_config: JSON.stringify(teams),
       players: players.map(p => ({ email: p.email, name: p.name, isBot: p.isBot, total_value: 0, items_won: [] })),
     });
 
-    if (status === 'in_progress') {
-      setArenaData({ battle, selectedCases, players, teams, modeLabel, battleModes });
-      setView('arena');
-    } else {
-      // Save as waiting — show in open battles list
-      setView('list');
-    }
+    // Save as waiting — show in open battles list
+    setView('list');
     loadBattles();
   };
 
