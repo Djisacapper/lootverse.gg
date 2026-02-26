@@ -19,8 +19,8 @@ export default function Battles() {
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [selectedCaseId, setSelectedCaseId] = useState('');
-  const [rounds, setRounds] = useState(3);
+  const [showCasePicker, setShowCasePicker] = useState(false);
+  const [selectedCases, setSelectedCases] = useState([]);
   const [activeBattle, setActiveBattle] = useState(null);
 
   useEffect(() => {
