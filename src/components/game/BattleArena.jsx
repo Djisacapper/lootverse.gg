@@ -541,9 +541,9 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
         </div>
       )}
       {isMagicSpin && !done && (
-        <div className="flex items-center gap-2 bg-violet-500/10 border border-violet-400/20 rounded-xl px-3 py-2">
-          <EyeOff className="w-3.5 h-3.5 text-violet-400 flex-shrink-0" />
-          <p className="text-xs text-violet-400/80">Magic Spin — epic & legendary items are hidden until the end.</p>
+        <div className="flex items-center gap-2 bg-cyan-500/10 border border-cyan-400/20 rounded-xl px-3 py-2">
+          <Gem className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
+          <p className="text-xs text-cyan-400/80">Magic Spin active — lucky players trigger a special bonus spin with <strong>top items only</strong>!</p>
         </div>
       )}
       {isCrazy && !done && (
