@@ -187,19 +187,51 @@ function ItemChip({ item, hidden }) {
 }
 
 /* ─── Player Column ──────────────────────────────────────────────────────────── */
-function PlayerColumn({ player, playerColor, isWinner, wonItems, isSpinning, caseItems, spinnerKey, spinnerItem, onSpinDone, fast, magicSpin, pct, grandTotal, showPct }) {
+function PlayerColumn({ player, playerColor, isWinner, wonItems, isSpinning, caseItems, spinnerKey, spinnerItem, onSpinDone, fast, magicSpinActive, pct, grandTotal, showPct }) {
+  const [showMagicOverlay, setShowMagicOverlay] = useState(false);
+  const [magicSpinnerVisible, setMagicSpinnerVisible] = useState(false);
+  const [magicItem, setMagicItem] = useState(null);
+  const prevSpinning = useRef(false);
+
   const total = wonItems.reduce((s, it) => s + (it?.value || 0), 0);
-  const HIDDEN_RARITIES = ['epic', 'legendary'];
+
+  // When spin finishes and this player hit magic spin, show overlay then bonus spinner
+  useEffect(() => {
+    if (!magicSpinActive) return;
+    if (prevSpinning.current && !isSpinning) {
+      // Spin just ended for this player → trigger magic overlay
+      setShowMagicOverlay(true);
+    }
+    prevSpinning.current = isSpinning;
+  }, [isSpinning, magicSpinActive]);
+
+  const handleMagicOverlayDone = () => {
+    setShowMagicOverlay(false);
+    // The item is already the top-rolled one; just show an extra spinner animation
+    setMagicItem(wonItems[wonItems.length - 1] || spinnerItem);
+    setMagicSpinnerVisible(true);
+  };
+
+  const handleMagicSpinnerDone = () => {
+    setMagicSpinnerVisible(false);
+  };
 
   return (
     <div
-      className={`flex-1 min-w-0 flex flex-col rounded-2xl border transition-all duration-500
-        ${isWinner ? 'border-amber-400/60 shadow-lg shadow-amber-400/10' : ''}`}
+      className={`relative flex-1 min-w-0 flex flex-col rounded-2xl border transition-all duration-500
+        ${isWinner ? 'border-amber-400/60 shadow-lg shadow-amber-400/10' : ''}
+        ${magicSpinActive ? 'shadow-lg shadow-cyan-400/20' : ''}`}
       style={{
-        borderColor: isWinner ? undefined : playerColor + '55',
+        borderColor: isWinner ? undefined : magicSpinActive ? 'rgba(56,189,248,0.5)' : playerColor + '55',
         background: isWinner ? 'rgba(245,158,11,0.05)' : (playerColor + '0d'),
       }}
     >
+      {/* Magic spin overlay */}
+      <AnimatePresence>
+        {showMagicOverlay && (
+          <MagicSpinOverlay playerName={player.name} onDone={handleMagicOverlayDone} />
+        )}
+      </AnimatePresence>
       <div className="flex items-center gap-2 px-3 pt-3 pb-1">
         <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold"
           style={{ background: playerColor + '33', color: playerColor, border: `2px solid ${playerColor}66` }}>
