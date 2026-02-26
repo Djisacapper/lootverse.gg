@@ -44,6 +44,60 @@ function ConfettiEffect({ active }) {
   return <canvas ref={ref} className="fixed inset-0 pointer-events-none z-50" />;
 }
 
+/* ─── Magic Spin Overlay ────────────────────────────────────────────────────── */
+function MagicSpinOverlay({ playerName, onDone }) {
+  useEffect(() => {
+    const t = setTimeout(onDone, 2400);
+    return () => clearTimeout(t);
+  }, []);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="absolute inset-0 z-30 flex flex-col items-center justify-center rounded-2xl overflow-hidden"
+      style={{ background: 'rgba(8,8,20,0.92)' }}
+    >
+      {/* Glow rings */}
+      <motion.div
+        animate={{ scale: [1, 1.6, 1], opacity: [0.6, 0, 0.6] }}
+        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+        className="absolute w-24 h-24 rounded-full"
+        style={{ background: 'radial-gradient(circle, rgba(56,189,248,0.4) 0%, transparent 70%)' }}
+      />
+      <motion.div
+        animate={{ scale: [1, 2.4, 1], opacity: [0.3, 0, 0.3] }}
+        transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }}
+        className="absolute w-24 h-24 rounded-full"
+        style={{ background: 'radial-gradient(circle, rgba(56,189,248,0.2) 0%, transparent 70%)' }}
+      />
+      {/* Diamond */}
+      <motion.div
+        animate={{ scale: [0.7, 1.15, 1], rotate: [0, -10, 10, 0] }}
+        transition={{ duration: 0.6, ease: 'easeOut' }}
+        className="relative z-10"
+      >
+        <img
+          src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/699dd76dcea052380b9a5db5/96798da0f_8347162b71a885416a3050079be4f18b9694ddae.png"
+          alt="Magic Spin"
+          className="w-16 h-16 drop-shadow-2xl"
+          style={{ filter: 'drop-shadow(0 0 18px rgba(56,189,248,0.9))' }}
+        />
+      </motion.div>
+      <motion.p
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.3 }}
+        className="text-xs font-black text-cyan-300 mt-2 tracking-widest uppercase"
+      >
+        ✦ Magic Spin ✦
+      </motion.p>
+      <p className="text-[10px] text-cyan-400/60 mt-0.5">Top items only!</p>
+    </motion.div>
+  );
+}
+
 /* ─── Vertical Spinner ──────────────────────────────────────────────────────── */
 function VerticalSpinner({ items, winnerItem, onDone, fast }) {
   const ITEM_H = 80;
