@@ -42,6 +42,14 @@ export default function Battles() {
     const firstName = selectedCases[0].name;
     const caseName = selectedCases.length === 1 ? firstName : `${firstName} +${selectedCases.length - 1} more`;
 
+    // Check if any slots are open (non-bot, non-user = truly empty → will be filled by bots at start)
+    // We treat all non-user slots that are bots as "filled". Empty slots remain open for real players.
+    const hasOpenSlots = players.some(p => !p.isBot && p.email !== user.email);
+    const allBotsOrUser = players.every(p => p.isBot || p.email === user.email);
+
+    // If all slots are bots/user, start immediately. Otherwise save as waiting.
+    const status = allBotsOrUser ? 'in_progress' : 'waiting';
+
     await updateBalance(-totalCost, 'battle_entry', `Created battle: ${caseName}`);
 
     const battle = await base44.entities.CaseBattle.create({
@@ -51,12 +59,20 @@ export default function Battles() {
       rounds: selectedCases.length,
       max_players: players.length,
       entry_cost: totalCost,
-      status: 'in_progress',
-      players: players.map(p => ({ email: p.email, name: p.name, total_value: 0, items_won: [] })),
+      status,
+      battle_modes: battleModes,
+      mode_label: modeLabel,
+      teams_config: JSON.stringify(teams),
+      players: players.map(p => ({ email: p.email, name: p.name, isBot: p.isBot, total_value: 0, items_won: [] })),
     });
 
-    setArenaData({ battle, selectedCases, players, teams, modeLabel, battleModes });
-    setView('arena');
+    if (status === 'in_progress') {
+      setArenaData({ battle, selectedCases, players, teams, modeLabel, battleModes });
+      setView('arena');
+    } else {
+      // Save as waiting — show in open battles list
+      setView('list');
+    }
     loadBattles();
   };
 
@@ -69,24 +85,54 @@ export default function Battles() {
     await updateBalance(-battle.entry_cost, 'battle_entry', `Joined battle: ${battle.case_name}`);
 
     const rounds = battle.rounds || 1;
-    const selectedCases = Array.from({ length: rounds }, () => caseTemplate);
-    const creator = battle.players?.[0] || { email: battle.creator_email, name: 'Player 1' };
-    const players = [
-      { ...creator, isBot: false },
-      { name: user.full_name || 'You', email: user.email, isBot: false },
-    ];
+    const selectedCasesArr = Array.from({ length: rounds }, () => caseTemplate);
 
-    await base44.entities.CaseBattle.update(battle.id, { status: 'in_progress' });
+    // Replace first empty (non-bot, non-user) slot with joining player
+    const updatedPlayers = [...(battle.players || [])];
+    const emptySlotIdx = updatedPlayers.findIndex(p => !p.email || p.email === '');
+    const joinerSlot = { email: user.email, name: user.full_name || 'Player', isBot: false, total_value: 0, items_won: [] };
+    if (emptySlotIdx >= 0) {
+      updatedPlayers[emptySlotIdx] = joinerSlot;
+    } else {
+      updatedPlayers.push(joinerSlot);
+    }
 
-    setArenaData({ battle, selectedCases, players, mode: { total: 2, label: '1v1' } });
+    const stillHasEmpty = updatedPlayers.some(p => !p.email || p.email === '');
+    const newStatus = stillHasEmpty ? 'waiting' : 'in_progress';
+
+    await base44.entities.CaseBattle.update(battle.id, { status: newStatus, players: updatedPlayers });
+
+    if (newStatus === 'in_progress') {
+      const teams = battle.teams_config ? JSON.parse(battle.teams_config) : [updatedPlayers.map((_, i) => i)];
+      const battleModes = battle.battle_modes || {};
+      const modeLabel = battle.mode_label || '1v1';
+      setArenaData({ battle: { ...battle, status: 'in_progress', players: updatedPlayers }, selectedCases: selectedCasesArr, players: updatedPlayers, teams, modeLabel, battleModes });
+      setView('arena');
+    }
+    loadBattles();
+  };
+
+  // Watch / spectate an in-progress battle
+  const handleWatch = (battle) => {
+    const caseTemplate = cases.find(c => c.id === battle.case_template_id);
+    if (!caseTemplate) return;
+    const rounds = battle.rounds || 1;
+    const selectedCasesArr = Array.from({ length: rounds }, () => caseTemplate);
+    const players = battle.players || [];
+    const teams = battle.teams_config ? JSON.parse(battle.teams_config) : [players.map((_, i) => i)];
+    const battleModes = battle.battle_modes || {};
+    const modeLabel = battle.mode_label || '1v1';
+    setArenaData({ battle, selectedCases: selectedCasesArr, players, teams, modeLabel, battleModes, spectate: true });
     setView('arena');
   };
 
   // Called from BattleArena when battle finishes
   const handleArenaReward = async (totalPot) => {
     if (!user) return;
-    await updateBalance(totalPot, 'battle_win', `Won battle — ${totalPot} coins`);
-    await addXp(150);
+    if (!arenaData?.spectate) {
+      await updateBalance(totalPot, 'battle_win', `Won battle — ${totalPot} coins`);
+      await addXp(150);
+    }
     if (arenaData?.battle?.id) {
       await base44.entities.CaseBattle.update(arenaData.battle.id, { status: 'completed' });
     }
