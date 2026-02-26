@@ -442,12 +442,7 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
           <p className="text-xs text-amber-400/80">Terminal mode — only the <strong>last round</strong> determines the winner.</p>
         </div>
       )}
-      {isMagicSpin && !done && (
-        <div className="flex items-center gap-2 bg-cyan-500/10 border border-cyan-400/20 rounded-xl px-3 py-2">
-          <Gem className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-          <p className="text-xs text-cyan-400/80">Magic Spin active — 20% chance for a bonus spin with <strong>top items only</strong>!</p>
-        </div>
-      )}
+
       {isCrazy && !done && (
         <div className="flex items-center gap-2 bg-pink-500/10 border border-pink-400/20 rounded-xl px-3 py-2">
           <span className="text-sm">🎭</span>
