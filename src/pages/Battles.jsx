@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import CreateBattle from '../components/game/CreateBattle';
 import BattleArena from '../components/game/BattleArena';
-import BattleLobby from '../components/game/BattleLobby';
 
 const BOT_NAMES = ['Alpha', 'Blitz', 'Cipher', 'Delta', 'Echo', 'Forge', 'Ghost', 'Havoc', 'Inferno', 'Jester'];
 
