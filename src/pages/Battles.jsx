@@ -121,7 +121,7 @@ export default function Battles() {
   }
 
   // List view
-  const waitingBattles = battles.filter(b => b.status === 'waiting');
+  const waitingBattles = battles.filter(b => b.status === 'waiting' || b.status === 'in_progress');
   const completedBattles = battles.filter(b => b.status === 'completed').slice(0, 5);
 
   return (
