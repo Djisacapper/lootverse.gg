@@ -44,10 +44,11 @@ function ConfettiEffect({ active }) {
   return <canvas ref={ref} className="fixed inset-0 pointer-events-none z-50" />;
 }
 
-/* ─── Magic Spin Overlay ────────────────────────────────────────────────────── */
-function MagicSpinOverlay({ wonItem, onDone }) {
+/* ─── Magic Spin Announcement ─────────────────────────────────────────────── */
+// This is a brief fullscreen announcement that plays BEFORE the bonus spin
+function MagicSpinOverlay({ onDone }) {
   useEffect(() => {
-    const t = setTimeout(onDone, 2200);
+    const t = setTimeout(onDone, 1800);
     return () => clearTimeout(t);
   }, []);
 
@@ -56,40 +57,39 @@ function MagicSpinOverlay({ wonItem, onDone }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="absolute inset-0 z-30 flex flex-col items-center justify-center rounded-2xl overflow-hidden"
-      style={{ background: 'rgba(8,8,20,0.93)' }}
+      className="fixed inset-0 z-50 flex flex-col items-center justify-center pointer-events-none"
+      style={{ background: 'rgba(4,4,16,0.88)' }}
     >
-      {/* Glow rings */}
       <motion.div
         animate={{ scale: [1, 1.8, 1], opacity: [0.5, 0, 0.5] }}
         transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute w-32 h-32 rounded-full"
-        style={{ background: 'radial-gradient(circle, rgba(56,189,248,0.35) 0%, transparent 70%)' }}
+        className="absolute w-48 h-48 rounded-full"
+        style={{ background: 'radial-gradient(circle, rgba(56,189,248,0.4) 0%, transparent 70%)' }}
       />
-      {/* Item image */}
       <motion.div
-        animate={{ scale: [0.6, 1.1, 1], rotate: [0, -8, 8, 0] }}
-        transition={{ duration: 0.7, ease: 'easeOut' }}
-        className="relative z-10"
+        initial={{ scale: 0.4, rotate: -15 }}
+        animate={{ scale: 1, rotate: 0 }}
+        transition={{ duration: 0.5, ease: 'backOut' }}
+        className="text-6xl relative z-10"
       >
-        <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${getRarityColor(wonItem?.rarity || 'epic')} flex items-center justify-center overflow-hidden`}
-          style={{ boxShadow: '0 0 30px rgba(56,189,248,0.6)' }}>
-          {wonItem?.image_url
-            ? <img src={wonItem.image_url} alt={wonItem.name} className="w-18 h-18 object-contain" style={{ width: '72px', height: '72px' }} />
-            : <span className="text-4xl">💎</span>}
-        </div>
+        💎
       </motion.div>
       <motion.p
-        initial={{ opacity: 0, y: 6 }}
+        initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="text-xs font-black text-cyan-300 mt-3 tracking-widest uppercase"
+        className="text-2xl font-black text-cyan-300 mt-4 tracking-widest uppercase"
       >
-        ✦ Magic Spin ✦
+        ✦ Magic Spin! ✦
       </motion.p>
-      {wonItem?.name && (
-        <p className="text-[11px] text-white/70 mt-0.5 font-medium">{wonItem.name}</p>
-      )}
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.6 }}
+        className="text-sm text-cyan-400/70 mt-1"
+      >
+        Bonus spin — top items only!
+      </motion.p>
     </motion.div>
   );
 }
