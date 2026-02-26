@@ -271,18 +271,21 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
     let winIdx;
 
     if (forcedWinnerTi !== null) {
-      // Jackpot forced winner
       winIdx = forcedWinnerTi;
     } else {
-      // Compute from items
-      const finalItems = players.map((_, pi) =>
-        allRolled.current.map(r => r[pi])
+      // Always compute directly from allRolled to avoid stale state
+      const teamVals = teamList.map(mi =>
+        mi.reduce((sum, pi) => {
+          if (isTerminal) {
+            const lastRound = allRolled.current[totalRounds - 1];
+            return sum + (lastRound[pi]?.value || 0);
+          }
+          return sum + allRolled.current.reduce((s, r) => s + (r[pi]?.value || 0), 0);
+        }, 0)
       );
-      const teamVals = computeTeamValues(finalItems.map(items => items));
 
       if (isGroup) {
-        // Everyone wins a share
-        winIdx = -1; // special: all win
+        winIdx = -1;
       } else if (isCrazy) {
         winIdx = teamVals.indexOf(Math.min(...teamVals));
       } else {
