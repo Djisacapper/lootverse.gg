@@ -190,13 +190,6 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
         background: isWinner ? 'rgba(245,158,11,0.05)' : (playerColor + '0d'),
       }}
     >
-      {/* Magic overlay — fullscreen announcement before bonus spin */}
-      <AnimatePresence>
-        {spinPhase === 'magic_overlay' && (
-          <MagicSpinOverlay onDone={onMagicSpinDone} />
-        )}
-      </AnimatePresence>
-
       {/* Header */}
       <div className="flex items-center gap-2 px-3 pt-3 pb-1">
         <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold"
