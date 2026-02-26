@@ -98,6 +98,7 @@ export default function CreateBattle({ cases, balance, user, onBack, onCreate })
   };
 
   const allFilled = slots.every(s => s !== null);
+  const canCreate = selectedCases.length > 0 && totalCost <= balance && slots[0] !== null;
 
   // Get team index for a slot index
   const getTeamIdx = (slotIdx) => {
