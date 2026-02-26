@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, User, ArrowLeft, Crown, Eye, EyeOff, Zap } from 'lucide-react';
+import { Bot, User, ArrowLeft, Crown, EyeOff, Zap, Gem } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getRarityColor, getRarityBorder, rollItem } from './useWallet';
 import { motion, AnimatePresence } from 'framer-motion';
