@@ -552,6 +552,7 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
                     magicSpin={isMagicSpin && !done}
                     pct={grandPlayerTotal > 0 ? (playerTotals[pi] || 0) / grandPlayerTotal : 0}
                     grandTotal={grandPlayerTotal}
+                    showPct={isJackpot}
                   />
                 ))}
               </div>
