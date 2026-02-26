@@ -339,6 +339,13 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
   const teamTotals   = teamList.map(mi => mi.reduce((s, pi) => s + (playerTotals[pi] || 0), 0));
   const totalPot     = players.length * selectedCases.reduce((s, c) => s + (c.price || 0), 0);
 
+  // Assign unique color per player across all teams (flat index)
+  const allPlayerIndices = teamList.flat();
+  const playerColorMap = {};
+  allPlayerIndices.forEach((pi, idx) => { playerColorMap[pi] = PLAYER_COLORS[idx % PLAYER_COLORS.length]; });
+
+  const grandPlayerTotal = playerTotals.reduce((s, v) => s + v, 0);
+
   let payoutLabel = '';
   if (done) {
     if (isGroup) {
