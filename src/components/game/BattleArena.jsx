@@ -285,7 +285,7 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
   const [winnerTeamIdx, setWinnerTeamIdx] = useState(null);
   const [showConfetti, setShowConfetti]   = useState(false);
 
-  // Per-player spin phase: 'idle' | 'spinning' | 'magic_overlay' | 'magic_spin' | 'done'
+  // Per-player spin phase: 'idle' | 'spinning' | 'magic_spin'
   const [playerPhases, setPlayerPhases] = useState(players.map(() => 'idle'));
 
   const allRolled   = useRef(null);
