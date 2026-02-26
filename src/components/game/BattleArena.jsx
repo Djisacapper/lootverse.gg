@@ -397,7 +397,7 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
   ].filter(Boolean);
 
   return (
-    <div className="space-y-4 relative">
+    <div className="space-y-4 relative max-w-full overflow-hidden">
       <ConfettiEffect active={showConfetti} />
 
       {/* ── Header ── */}
