@@ -489,13 +489,33 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
       <AnimatePresence>
         {phase === 'countdown' && (
           <motion.div key="cd" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 flex items-center justify-center bg-black/75">
+            className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-black/85 gap-8">
+            {/* Player color badges */}
+            <div className="flex gap-4 flex-wrap justify-center">
+              {allPlayerIndices.map((pi, idx) => {
+                const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
+                return (
+                  <motion.div key={pi}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: idx * 0.1 }}
+                    className="flex flex-col items-center gap-2">
+                    <div className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-black"
+                      style={{ background: color + '33', border: `3px solid ${color}`, color }}>
+                      {players[pi]?.isBot ? '🤖' : players[pi]?.name?.[0]?.toUpperCase() || '?'}
+                    </div>
+                    <span className="text-xs font-bold text-white/80">{players[pi]?.name}</span>
+                    <div className="w-10 h-2 rounded-full" style={{ background: color }} />
+                  </motion.div>
+                );
+              })}
+            </div>
             <motion.div key={countdown}
               initial={{ scale: 0.2, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 1.8, opacity: 0 }}
               transition={{ duration: 0.35 }}
-              className="text-[10rem] font-black text-white drop-shadow-2xl select-none">
+              className="text-[9rem] font-black text-white drop-shadow-2xl select-none leading-none">
               {countdown === 0 ? '🎲' : countdown}
             </motion.div>
           </motion.div>
