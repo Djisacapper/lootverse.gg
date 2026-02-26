@@ -286,20 +286,21 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
   const rewardGiven = useRef(false);
   const currentRoundRef = useRef(0);
 
-  // Roll items; in magic spin mode, if the rolled item is epic/legendary, re-roll from ONLY top items
+  // Roll items; in magic spin mode each player has 20% chance to trigger magic spin → re-roll from top items only
+  // Returns { item, isMagic }
   const rollWithMagicSpin = (caseItems) => {
     const item = rollItem(caseItems) || { name: 'Nothing', value: 0, rarity: 'common', image_url: null };
-    if (!isMagicSpin) return item;
+    if (!isMagicSpin) return { item, isMagic: false };
     const TOP_RARITIES = ['epic', 'legendary'];
     const topItems = caseItems.filter(it => TOP_RARITIES.includes(it.rarity));
-    // ~20% chance to trigger the magic spin (re-roll from top items only)
     if (topItems.length > 0 && Math.random() < 0.20) {
-      return rollItem(topItems) || item;
+      return { item: rollItem(topItems) || item, isMagic: true };
     }
-    return item;
+    return { item, isMagic: false };
   };
 
   useEffect(() => {
+    // allRolled stores { item, isMagic } per [round][playerIdx]
     allRolled.current = selectedCases.map(c =>
       players.map(() => rollWithMagicSpin(c.items || []))
     );
