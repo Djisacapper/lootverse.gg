@@ -1,108 +1,160 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 
-const TEAM_COLORS = ['#8b5cf6', '#3b82f6', '#ef4444', '#10b981'];
+// Each player gets a unique color
+const PLAYER_COLORS = [
+  '#8b5cf6', '#3b82f6', '#ef4444', '#10b981',
+  '#f59e0b', '#ec4899', '#06b6d4', '#84cc16',
+];
 
-// Jackpot wheel — horizontal strip where each team gets a segment sized by their % of pot
-export default function JackpotWheel({ teamList, teamTotals, players, onWinner }) {
-  const total = teamTotals.reduce((a, b) => a + b, 0) || 1;
-  const segments = teamList.map((mi, ti) => ({
-    ti,
-    pct: teamTotals[ti] / total,
-    color: TEAM_COLORS[ti],
-    label: mi.length === 1 ? players[mi[0]]?.name : `Team ${ti + 1}`,
-    names: mi.map(pi => players[pi]?.name).join(' & '),
-  }));
+export default function JackpotWheel({ teamList, players, onWinner }) {
+  // Build per-player totals from the teamTotals passed via teamList player indices
+  // We receive teamList: [[pi, pi], [pi, pi]] and players: [{name, email}, ...]
+  // We need per-player values — passed via the playerValues prop
+  // Actually we receive teamTotals per team. We need to split per player.
+  // The parent passes teamTotals as team averages now. We need raw per-player values.
+  // Re-derive: accept playerTotals prop instead.
+  // This component now expects: playerTotals (array indexed by player index)
+  const { playerTotals = [] } = JackpotWheel._props || {};
+  return null;
+}
 
-  // Build a long repeated strip so we can spin into it
-  const STRIP_COUNT = 8; // repeat segments 8 times
-  const STRIP_W = 800;   // total width of one loop
+// ── Actual export ────────────────────────────────────────────────────────────
+export function JackpotWheelInner({ teamList, players, playerTotals, onWinner }) {
+  const grandTotal = playerTotals.reduce((s, v) => s + (v || 0), 0) || 1;
+
+  // Build one segment per PLAYER (not team) so each player has their own color & %
+  // We need to map player index → team index so we know which team wins
+  const playerTeamMap = {};
+  teamList.forEach((mi, ti) => mi.forEach(pi => { playerTeamMap[pi] = ti; }));
+
+  // Flatten all players in order
+  const allPlayerIndices = teamList.flat();
+
+  const segments = allPlayerIndices.map((pi, idx) => {
+    const val = playerTotals[pi] || 0;
+    const pct = val / grandTotal;
+    return {
+      pi,
+      ti: playerTeamMap[pi],
+      pct,
+      color: PLAYER_COLORS[idx % PLAYER_COLORS.length],
+      name: players[pi]?.name || `P${pi + 1}`,
+      value: val,
+    };
+  });
+
+  const VIEWPORT_W = 600;
+  const STRIP_REPS = 10; // repeat strip 10 times so spin has room
+  const STRIP_W = VIEWPORT_W * 2; // one full loop = 2x viewport width
+
+  // Build the repeating strip
   const strip = [];
-  let x = 0;
-  for (let rep = 0; rep < STRIP_COUNT; rep++) {
+  let curX = 0;
+  for (let rep = 0; rep < STRIP_REPS; rep++) {
     for (const seg of segments) {
-      const w = seg.pct * STRIP_W;
-      strip.push({ ...seg, x, w });
-      x += w;
+      const w = Math.max(seg.pct * STRIP_W, 4); // min 4px so tiny segments are visible
+      strip.push({ ...seg, x: curX, w, rep });
+      curX += w;
     }
   }
-  const totalStripW = x;
+  const totalStripW = curX;
 
-  // Pick winner based on pct (weighted random, pre-determined)
+  // Determine winner weighted by value
   const winnerRef = useRef(() => {
     const r = Math.random();
     let acc = 0;
     for (const seg of segments) {
       acc += seg.pct;
-      if (r <= acc) return seg.ti;
+      if (r < acc) return seg;
     }
-    return segments[segments.length - 1].ti;
+    return segments[segments.length - 1];
   });
-  const winnerTi = useRef(winnerRef.current()).current;
+  const winnerSeg = useRef(winnerRef.current()).current;
 
-  // Find a good landing x inside the last loop for the winning segment
+  // Find landing position: center of the winner's segment in the LAST repetition
   const landingX = useRef(() => {
-    const loopStart = (STRIP_COUNT - 1) * STRIP_W;
-    let cx = 0;
-    for (const seg of segments) {
-      if (seg.ti === winnerTi) {
-        // center of this segment in last loop
-        return loopStart + cx + seg.pct * STRIP_W / 2;
-      }
-      cx += seg.pct * STRIP_W;
-    }
-    return loopStart + STRIP_W / 2;
+    // Find last occurrence of the winner player in the strip
+    const matches = strip.filter(s => s.pi === winnerSeg.pi);
+    // Pick second-to-last occurrence so it's not cut off
+    const target = matches[matches.length - 2] || matches[matches.length - 1];
+    if (!target) return totalStripW / 2;
+    // Center of that segment
+    return target.x + target.w / 2;
   }).current;
 
-  // The pointer is at center of viewport (400px). We need to scroll so that landingX is at 400.
-  const targetTranslate = -(landingX - 400);
+  // The pointer sits at VIEWPORT_W/2. We need to translate so landingX lands at pointer.
+  const targetX = -(landingX - VIEWPORT_W / 2);
 
-  const [fired, setFired] = useState(false);
+  const [spun, setSpun] = useState(false);
+  const firedRef = useRef(false);
+
   useEffect(() => {
+    setSpun(true);
     const t = setTimeout(() => {
-      if (!fired) { setFired(true); onWinner(winnerTi); }
-    }, 5500);
+      if (!firedRef.current) {
+        firedRef.current = true;
+        onWinner(winnerSeg.ti);
+      }
+    }, 5800);
     return () => clearTimeout(t);
   }, []);
 
   return (
-    <div className="space-y-3">
-      <p className="text-center text-white/60 text-sm font-semibold">🎰 Jackpot Spin — determining winner...</p>
-      <div className="relative overflow-hidden rounded-2xl border border-amber-400/30 bg-[#08080f]" style={{ height: 80 }}>
-        {/* Pointer */}
-        <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-0.5 bg-amber-400 z-20" />
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-0 h-0 z-20"
-          style={{ borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderTop: '12px solid #f59e0b' }} />
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-0 h-0 z-20"
-          style={{ borderLeft: '8px solid transparent', borderRight: '8px solid transparent', borderBottom: '12px solid #f59e0b' }} />
+    <div className="space-y-4">
+      <p className="text-center text-white font-bold text-base">🎰 Jackpot Spin</p>
+
+      {/* Spin wheel */}
+      <div className="relative overflow-hidden rounded-2xl border border-amber-400/40 bg-[#05050d]"
+        style={{ height: 90, width: '100%', maxWidth: VIEWPORT_W, margin: '0 auto' }}>
+
+        {/* Top pointer arrow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 z-30 w-0 h-0"
+          style={{ borderLeft: '9px solid transparent', borderRight: '9px solid transparent', borderTop: '14px solid #f59e0b' }} />
+        {/* Bottom pointer arrow */}
+        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 z-30 w-0 h-0"
+          style={{ borderLeft: '9px solid transparent', borderRight: '9px solid transparent', borderBottom: '14px solid #f59e0b' }} />
+        {/* Center line */}
+        <div className="absolute inset-y-0 left-1/2 -translate-x-px w-0.5 bg-amber-400/80 z-20" />
+
+        {/* Fade edges */}
+        <div className="absolute inset-y-0 left-0 w-20 z-10 pointer-events-none"
+          style={{ background: 'linear-gradient(to right, #05050d 0%, transparent 100%)' }} />
+        <div className="absolute inset-y-0 right-0 w-20 z-10 pointer-events-none"
+          style={{ background: 'linear-gradient(to left, #05050d 0%, transparent 100%)' }} />
 
         <motion.div
           className="absolute top-0 left-0 flex h-full"
           style={{ width: totalStripW }}
           initial={{ x: 0 }}
-          animate={{ x: targetTranslate }}
-          transition={{ duration: 5.0, ease: [0.05, 0.85, 0.2, 1] }}
+          animate={spun ? { x: targetX } : { x: 0 }}
+          transition={{ duration: 5.2, ease: [0.03, 0.9, 0.18, 1] }}
         >
           {strip.map((seg, i) => (
-            <div key={i} className="h-full flex items-center justify-center flex-shrink-0 border-r border-black/30"
-              style={{ width: seg.w, background: seg.color + 'cc' }}>
-              {seg.w > 40 && (
-                <div className="text-center px-1">
-                  <p className="text-[10px] font-bold text-white truncate">{seg.label}</p>
-                  <p className="text-[9px] text-white/70">{Math.round(seg.pct * 100)}%</p>
-                </div>
+            <div
+              key={i}
+              className="h-full flex-shrink-0 flex items-center justify-center border-r border-black/40"
+              style={{ width: seg.w, background: seg.color + 'cc' }}
+            >
+              {seg.w > 35 && (
+                <span className="text-[9px] font-bold text-white drop-shadow px-0.5 text-center leading-tight truncate" style={{ maxWidth: seg.w - 4 }}>
+                  {seg.name}
+                </span>
               )}
             </div>
           ))}
         </motion.div>
       </div>
-      {/* Percent display */}
+
+      {/* Per-player percentage breakdown */}
       <div className="flex gap-2 flex-wrap justify-center">
-        {segments.map(seg => (
-          <div key={seg.ti} className="flex items-center gap-1.5 bg-white/5 rounded-lg px-2 py-1">
-            <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ background: seg.color }} />
-            <p className="text-[11px] text-white/70">{seg.names}</p>
-            <p className="text-[11px] font-bold text-white">{Math.round(seg.pct * 100)}%</p>
+        {segments.map((seg, idx) => (
+          <div key={seg.pi} className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 border border-white/10"
+            style={{ background: seg.color + '18' }}>
+            <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: seg.color }} />
+            <span className="text-xs font-semibold text-white/90">{seg.name}</span>
+            <span className="text-xs font-black" style={{ color: seg.color }}>{Math.round(seg.pct * 100)}%</span>
+            <span className="text-[10px] text-white/40">({seg.value.toLocaleString()})</span>
           </div>
         ))}
       </div>
