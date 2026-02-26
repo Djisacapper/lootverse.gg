@@ -48,18 +48,28 @@ function ConfettiEffect({ active }) {
 
 /* ─── Vertical Spinner ──────────────────────────────────────────────────────── */
 function VerticalSpinner({ items, winnerItem, onDone, fast }) {
-  const ITEM_H = 56;
-  const duration = fast ? 1.2 : 2.5;
-  const strip = [...items.slice(0, 8), winnerItem, ...items.slice(0, 8)];
-  const targetY = -(8 * ITEM_H);
+  const ITEM_H = 80;
+  const WIN_POS = 28;
+  const TOTAL = 36;
+  const VISIBLE_H = 240;
+  const duration = fast ? 1.4 : 3.0;
+
+  const strip = useRef(
+    Array.from({ length: TOTAL }, (_, i) =>
+      i === WIN_POS ? winnerItem : items[Math.floor(Math.random() * items.length)]
+    )
+  ).current;
+
+  const targetY = -(WIN_POS * ITEM_H - VISIBLE_H / 2 + ITEM_H / 2);
 
   useEffect(() => {
-    const t = setTimeout(onDone, duration * 1000);
+    const spinMs = fast ? 1500 : 3100;
+    const t = setTimeout(onDone, spinMs);
     return () => clearTimeout(t);
-  }, [duration, onDone]);
+  }, []);
 
   return (
-    <div className="relative overflow-hidden rounded-xl border border-white/10 bg-[#08080f]" style={{ height: ITEM_H }}>
+    <div className="relative overflow-hidden rounded-xl border border-white/10 bg-[#08080f]" style={{ height: VISIBLE_H }}>
       <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 pointer-events-none z-10"
         style={{ height: ITEM_H, background: 'rgba(255,255,255,0.03)', borderTop: '1px solid rgba(245,158,11,0.5)', borderBottom: '1px solid rgba(245,158,11,0.5)' }} />
       <div className="absolute inset-x-0 top-0 h-16 pointer-events-none z-20"
@@ -68,13 +78,13 @@ function VerticalSpinner({ items, winnerItem, onDone, fast }) {
         style={{ background: 'linear-gradient(to top, #08080f 0%, transparent 100%)' }} />
 
       <motion.div
-        className="absolute left-0 right-0 top-0 flex flex-col w-full"
+        className="absolute left-0 right-0 top-0 flex flex-col"
         initial={{ y: 0 }}
         animate={{ y: targetY }}
         transition={{ duration, ease: [0.04, 0.82, 0.165, 1] }}
       >
         {strip.map((item, i) => (
-          <div key={i} className="flex items-center gap-2 px-3 flex-shrink-0 w-full" style={{ height: ITEM_H, minWidth: 0 }}>
+          <div key={i} className="flex items-center gap-2 px-3 flex-shrink-0" style={{ height: ITEM_H }}>
             <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getRarityColor(item?.rarity || 'common')} flex-shrink-0 flex items-center justify-center overflow-hidden`}>
               {item?.image_url
                 ? <img src={item.image_url} alt={item?.name} className="w-11 h-11 object-contain" />
