@@ -206,13 +206,14 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
   const totalRounds = selectedCases.length;
   const teamList = teams || [players.map((_, i) => i)];
 
-  // --- Battle Mode flags ---
-  const isCrazy     = !!battleModes.crazy;       // lowest value wins
-  const isTerminal  = !!battleModes.terminal;    // only last round counts
-  const isGroup     = !!battleModes.group;       // split pot among all
-  const isMagicSpin = !!battleModes.magic_spin;  // epic/legendary items hidden
-  const isFastMode  = !!battleModes.fast_mode;   // faster spinners
-  const isJackpot   = !!battleModes.jackpot;     // jackpot wheel at end
+  // --- Battle Mode flags --- (only true if explicitly set to boolean true)
+  const modes       = battleModes && typeof battleModes === 'object' ? battleModes : {};
+  const isCrazy     = modes.crazy     === true;
+  const isTerminal  = modes.terminal  === true;
+  const isGroup     = modes.group     === true;
+  const isMagicSpin = modes.magic_spin === true;
+  const isFastMode  = modes.fast_mode  === true;
+  const isJackpot   = modes.jackpot   === true;
 
   const [phase, setPhase]             = useState('countdown');
   const [countdown, setCountdown]     = useState(3);
