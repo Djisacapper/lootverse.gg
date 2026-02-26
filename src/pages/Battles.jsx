@@ -20,7 +20,6 @@ export default function Battles() {
   const [view, setView] = useState('list');
   const [arenaData, setArenaData] = useState(null);
 
-  // List view — tab state (MUST be here, not after early returns)
   const [tab, setTab] = useState('open');
 
   useEffect(() => {
