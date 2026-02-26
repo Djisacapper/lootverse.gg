@@ -300,7 +300,21 @@ export default function Battles() {
                           <Swords className="w-3.5 h-3.5 mr-1.5" /> Join
                         </Button>
                       ) : (
-                        <Badge className="bg-white/5 text-white/30 border-white/10">Waiting...</Badge>
+                        <Button
+                          onClick={() => {
+                            const rounds = b.rounds || 1;
+                            const caseTemplate = cases.find(c => c.id === b.case_template_id);
+                            const selectedCasesArr = caseTemplate ? Array.from({ length: rounds }, () => caseTemplate) : [];
+                            const teams = b.teams_config ? JSON.parse(b.teams_config) : [b.players?.map((_, i) => i) || []];
+                            setArenaData({ selectedCases: selectedCasesArr, teams });
+                            setCurrentBattle(b);
+                            setView('lobby');
+                          }}
+                          size="sm"
+                          className="bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-xl"
+                        >
+                          Manage
+                        </Button>
                       )}
                     </div>
                   </div>
