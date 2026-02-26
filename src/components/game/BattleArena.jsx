@@ -188,7 +188,6 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
       style={{
         borderColor: isWinner ? undefined : (isMagic && spinPhase !== 'idle') ? 'rgba(56,189,248,0.5)' : playerColor + '55',
         background: isWinner ? 'rgba(245,158,11,0.05)' : (playerColor + '0d'),
-        overflow: 'visible',
       }}
     >
       {/* Magic overlay — shown AFTER normal spin lands, before bonus spin */}
