@@ -78,11 +78,11 @@ export default function JackpotWheel({ teamList, players, playerTotals, onWinner
   const firedRef = useRef(false);
 
   useEffect(() => {
-    const startT = setTimeout(() => setStarted(true), 300);
+    const startT = setTimeout(() => setStarted(true), 200);
     const endT = setTimeout(() => {
       if (!firedRef.current) {
         firedRef.current = true;
-        onWinner(winnerSeg.ti);
+        onWinner(winner.ti);
       }
     }, 6200);
     return () => { clearTimeout(startT); clearTimeout(endT); };
