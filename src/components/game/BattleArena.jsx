@@ -194,7 +194,7 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
       {/* Magic overlay — shown AFTER normal spin lands, before bonus spin */}
       <AnimatePresence>
         {spinPhase === 'magic_overlay' && (
-          <MagicSpinOverlay onDone={onMagicSpinDone} />
+          <MagicSpinOverlay wonItem={magicItem} onDone={onMagicSpinDone} />
         )}
       </AnimatePresence>
 
