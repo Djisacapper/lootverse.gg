@@ -219,9 +219,10 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
 }
 
 /* ─── Battle Arena ──────────────────────────────────────────────────────────── */
-export default function BattleArena({ battle, selectedCases, players, teams, modeLabel, battleModes = {}, userEmail, onClose, onReward }) {
+export default function BattleArena({ battle, selectedCases, players, teams, modeLabel, battleModes = {}, userEmail, onClose, onReward, onJoin, onAddBot, onStart, balance = 0 }) {
   const totalRounds = selectedCases.length;
   const teamList = teams || [players.map((_, i) => i)];
+  const isWaiting = battle?.status === 'waiting';
 
   const modes       = battleModes && typeof battleModes === 'object' ? battleModes : {};
   const isCrazy     = modes.crazy     === true;
@@ -412,6 +413,96 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
     isFastMode  && { icon: '⚡', label: 'Fast', color: '#06b6d4' },
     isJackpot   && { icon: '👑', label: 'Jackpot', color: '#f59e0b' },
   ].filter(Boolean);
+
+  // If waiting, don't render battle logic yet
+  if (isWaiting) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors">
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+          <div>
+            <p className="text-xs text-white/40">{modeLabel || '1v1'}</p>
+            <p className="text-sm font-bold text-white/60">
+              Waiting for players...
+            </p>
+          </div>
+        </div>
+
+        {/* Waiting overlay content */}
+        <div className="glass rounded-2xl border border-white/5 p-6 space-y-4">
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <p className="text-[11px] text-white/40 uppercase">Players</p>
+              <p className="text-2xl font-bold text-white">{players.length}/{battle.max_players || 2}</p>
+            </div>
+            <div>
+              <p className="text-[11px] text-white/40 uppercase">Entry</p>
+              <p className="text-sm font-bold text-amber-400">{battle.entry_cost?.toLocaleString()}</p>
+            </div>
+            <div>
+              <p className="text-[11px] text-white/40 uppercase">Status</p>
+              <p className="text-sm font-bold text-amber-400">Waiting</p>
+            </div>
+          </div>
+
+          {/* Player slots grid */}
+          <div className="grid grid-cols-2 gap-3">
+            {players.map((p, idx) => (
+              <div key={idx} className="p-3 rounded-lg bg-white/5 border border-white/10">
+                <p className="text-xs font-semibold text-white">{p.name}</p>
+                {p.isBot && <p className="text-[9px] text-white/40 mt-0.5">BOT</p>}
+              </div>
+            ))}
+            {Array.from({ length: (battle.max_players || 2) - players.length }).map((_, idx) => (
+              <div key={`empty-${idx}`} className="p-3 rounded-lg bg-white/5 border border-dashed border-white/10 flex flex-col items-center justify-center min-h-[60px]">
+                {battle.creator_email === userEmail ? (
+                  <Button
+                    onClick={() => onAddBot()}
+                    size="sm"
+                    className="text-[10px] h-7 px-2"
+                  >
+                    <Plus className="w-2.5 h-2.5 mr-1" /> Add Bot
+                  </Button>
+                ) : (
+                  <p className="text-xs text-white/30">Empty</p>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Join button */}
+          {!players.some(p => p.email === userEmail) && battle.creator_email !== userEmail && (
+            <Button
+              onClick={() => onJoin()}
+              disabled={battle.entry_cost > balance}
+              className="w-full bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500"
+            >
+              {battle.entry_cost > balance ? 'Insufficient Balance' : 'Join Battle'}
+            </Button>
+          )}
+
+          {/* Start button (creator only) */}
+          {battle.creator_email === userEmail && players.length === (battle.max_players || 2) && (
+            <Button
+              onClick={() => onStart()}
+              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500"
+            >
+              Start Battle
+            </Button>
+          )}
+
+          {/* Waiting message */}
+          {!battle.creator_email === userEmail && players.some(p => p.email === userEmail) && (
+            <div className="text-center p-3 rounded-lg bg-blue-500/10 border border-blue-400/20">
+              <p className="text-xs text-blue-400">Waiting for creator to start...</p>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4 relative max-w-full overflow-hidden">
