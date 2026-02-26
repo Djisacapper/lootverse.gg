@@ -80,10 +80,7 @@ export default function Battles() {
 
     await updateBalance(-battle.entry_cost, 'battle_entry', `Joined battle: ${battle.case_name}`);
 
-    const rounds = battle.rounds || 1;
-    const selectedCasesArr = Array.from({ length: rounds }, () => caseTemplate);
-
-    // Replace first empty (non-bot, non-user) slot with joining player
+    // Add player to first empty slot
     const updatedPlayers = [...(battle.players || [])];
     const emptySlotIdx = updatedPlayers.findIndex(p => !p.email || p.email === '');
     const joinerSlot = { email: user.email, name: user.full_name || 'Player', isBot: false, total_value: 0, items_won: [] };
@@ -93,18 +90,16 @@ export default function Battles() {
       updatedPlayers.push(joinerSlot);
     }
 
-    const stillHasEmpty = updatedPlayers.some(p => !p.email || p.email === '');
-    const newStatus = stillHasEmpty ? 'waiting' : 'in_progress';
+    const rounds = battle.rounds || 1;
+    const selectedCasesArr = Array.from({ length: rounds }, () => caseTemplate);
 
-    await base44.entities.CaseBattle.update(battle.id, { status: newStatus, players: updatedPlayers });
+    await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers });
 
-    if (newStatus === 'in_progress') {
-      const teams = battle.teams_config ? JSON.parse(battle.teams_config) : [updatedPlayers.map((_, i) => i)];
-      const battleModes = battle.battle_modes || {};
-      const modeLabel = battle.mode_label || '1v1';
-      setArenaData({ battle: { ...battle, status: 'in_progress', players: updatedPlayers }, selectedCases: selectedCasesArr, players: updatedPlayers, teams, modeLabel, battleModes });
-      setView('arena');
-    }
+    // Show lobby to player
+    const teams = battle.teams_config ? JSON.parse(battle.teams_config) : [updatedPlayers.map((_, i) => i)];
+    setArenaData({ selectedCases: selectedCasesArr, teams });
+    setCurrentBattle({ ...battle, players: updatedPlayers });
+    setView('lobby');
     loadBattles();
   };
 
