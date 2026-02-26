@@ -133,10 +133,9 @@ function ItemChip({ item, hidden }) {
 }
 
 /* ─── Player Column ──────────────────────────────────────────────────────────── */
-function PlayerColumn({ player, playerColor, isWinner, wonItems, isSpinning, caseItems, spinnerKey, spinnerItem, onSpinDone, fast, magicSpin, pct, grandTotal }) {
+function PlayerColumn({ player, playerColor, isWinner, wonItems, isSpinning, caseItems, spinnerKey, spinnerItem, onSpinDone, fast, magicSpin, pct, grandTotal, showPct }) {
   const total = wonItems.reduce((s, it) => s + (it?.value || 0), 0);
   const HIDDEN_RARITIES = ['epic', 'legendary'];
-  const showPct = grandTotal > 0;
 
   return (
     <div
