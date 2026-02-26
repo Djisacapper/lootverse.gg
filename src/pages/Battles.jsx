@@ -173,6 +173,20 @@ export default function Battles() {
     );
   }
 
+  if (view === 'lobby' && currentBattle) {
+    return (
+      <BattleLobby
+        battle={currentBattle}
+        cases={cases}
+        teams={arenaData?.teams}
+        user={user}
+        onBack={() => { setView('list'); setCurrentBattle(null); }}
+        onStart={() => handleStartBattle(currentBattle)}
+        onAddBot={(slotIdx) => handleAddBot(currentBattle, slotIdx)}
+      />
+    );
+  }
+
   if (view === 'arena' && arenaData) {
     return (
       <BattleArena
