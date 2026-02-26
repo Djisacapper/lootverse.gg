@@ -56,8 +56,8 @@ function MagicSpinOverlay({ wonItem, onDone }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="absolute inset-0 z-30 flex flex-col items-center justify-center"
-      style={{ background: 'rgba(8,8,20,0.93)', borderRadius: '1rem' }}
+      className="absolute inset-0 z-30 flex flex-col items-center justify-center rounded-2xl overflow-hidden"
+      style={{ background: 'rgba(8,8,20,0.93)' }}
     >
       {/* Glow rings */}
       <motion.div
