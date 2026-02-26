@@ -133,32 +133,51 @@ function ItemChip({ item, hidden }) {
 }
 
 /* ─── Player Column ──────────────────────────────────────────────────────────── */
-function PlayerColumn({ player, teamColor, isWinner, wonItems, isSpinning, caseItems, spinnerKey, spinnerItem, onSpinDone, fast, magicSpin }) {
+function PlayerColumn({ player, playerColor, isWinner, wonItems, isSpinning, caseItems, spinnerKey, spinnerItem, onSpinDone, fast, magicSpin, pct, grandTotal }) {
   const total = wonItems.reduce((s, it) => s + (it?.value || 0), 0);
   const HIDDEN_RARITIES = ['epic', 'legendary'];
+  const showPct = grandTotal > 0;
 
   return (
     <div
       className={`flex-1 min-w-0 flex flex-col rounded-2xl border transition-all duration-500
         ${isWinner ? 'border-amber-400/60 shadow-lg shadow-amber-400/10' : ''}`}
       style={{
-        borderColor: isWinner ? undefined : teamColor + '44',
-        background: isWinner ? 'rgba(245,158,11,0.05)' : 'rgba(255,255,255,0.02)',
+        borderColor: isWinner ? undefined : playerColor + '55',
+        background: isWinner ? 'rgba(245,158,11,0.05)' : (playerColor + '0d'),
       }}
     >
       <div className="flex items-center gap-2 px-3 pt-3 pb-1">
         <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold"
-          style={{ background: teamColor + '30', color: teamColor }}>
+          style={{ background: playerColor + '33', color: playerColor, border: `2px solid ${playerColor}66` }}>
           {player.isBot ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-white truncate">{player.name}</p>
-          {player.isBot && <p className="text-[9px] font-semibold" style={{ color: teamColor }}>BOT</p>}
+          {player.isBot && <p className="text-[9px] font-semibold" style={{ color: playerColor }}>BOT</p>}
         </div>
         {isWinner && <Crown className="w-4 h-4 text-amber-400 flex-shrink-0" />}
       </div>
 
       <p className="text-xl font-black text-amber-400 text-center py-1">{total.toLocaleString()}</p>
+
+      {/* Live percentage bar */}
+      {showPct && (
+        <div className="px-3 pb-1">
+          <div className="flex justify-between items-center mb-0.5">
+            <span className="text-[10px] font-bold" style={{ color: playerColor }}>{Math.round(pct * 100)}%</span>
+          </div>
+          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full rounded-full"
+              style={{ background: playerColor }}
+              initial={{ width: '0%' }}
+              animate={{ width: `${pct * 100}%` }}
+              transition={{ duration: 0.6, ease: 'easeOut' }}
+            />
+          </div>
+        </div>
+      )}
 
       {isSpinning && caseItems.length > 0 && (
         <div className="px-2 pb-2">
