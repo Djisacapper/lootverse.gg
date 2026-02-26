@@ -20,6 +20,9 @@ export default function Battles() {
   const [view, setView] = useState('list');
   const [arenaData, setArenaData] = useState(null);
 
+  // List view — tab state (MUST be here, not after early returns)
+  const [tab, setTab] = useState('open');
+
   useEffect(() => {
     loadBattles();
     base44.entities.CaseTemplate.list().then(all => setCases(all.filter(c => c.is_active !== false)));
