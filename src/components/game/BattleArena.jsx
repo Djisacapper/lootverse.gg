@@ -544,7 +544,7 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
       </AnimatePresence>
 
       {/* ── Player Grid ── */}
-      <div className="flex gap-2 items-start">
+      <div className="flex gap-2 items-start overflow-x-auto max-w-full">
         {teamList.map((mi, ti) => (
           <React.Fragment key={ti}>
             <div className="flex-1 min-w-0 space-y-2">
