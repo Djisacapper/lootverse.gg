@@ -635,14 +635,7 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
                       spinnerItem={rolled?.item}
                       magicItem={rolled?.isMagic ? rolled.item : null}
                       onSpinDone={() => handleNormalSpinDone(pi)}
-                      onMagicSpinDone={() => {
-                        // If currently in magic_overlay → go to magic_spin; if in magic_spin → done
-                        if (playerPhases[pi] === 'magic_overlay') {
-                          handleMagicOverlayDone(pi);
-                        } else {
-                          handleMagicSpinDone(pi);
-                        }
-                      }}
+                      onMagicSpinDone={() => handleMagicSpinDone(pi)}
                       fast={isFastMode}
                       pct={grandPlayerTotal > 0 ? (playerTotals[pi] || 0) / grandPlayerTotal : 0}
                       grandTotal={grandPlayerTotal}
