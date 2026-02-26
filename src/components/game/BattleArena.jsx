@@ -278,6 +278,8 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
   const [jackpotPhase, setJackpotPhase] = useState(false);
   const [winnerTeamIdx, setWinnerTeamIdx] = useState(null);
   const [showConfetti, setShowConfetti]   = useState(false);
+  // Track which players triggered magic spin this round: array of booleans
+  const [magicSpinPlayers, setMagicSpinPlayers] = useState(players.map(() => false));
 
   const allRolled   = useRef(null);
   const spinsDone   = useRef(0);
