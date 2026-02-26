@@ -55,7 +55,7 @@ export default function Battles() {
       players: players.map(p => ({ email: p.email, name: p.name, total_value: 0, items_won: [] })),
     });
 
-    setArenaData({ battle, selectedCases, players, teams, modeLabel });
+    setArenaData({ battle, selectedCases, players, teams, modeLabel, battleModes });
     setView('arena');
     loadBattles();
   };
