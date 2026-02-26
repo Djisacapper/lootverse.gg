@@ -64,8 +64,11 @@ export default function Battles() {
       players: players.map(p => ({ email: p.email, name: p.name, isBot: p.isBot, total_value: 0, items_won: [] })),
     });
 
-    // Save as waiting — show in open battles list
-    setView('list');
+    // Show lobby for creator to manage players
+    const selectedCasesArr = Array.from({ length: selectedCases.length }, (_, i) => selectedCases[i]);
+    setArenaData({ selectedCases: selectedCasesArr, teams });
+    setCurrentBattle(battle);
+    setView('lobby');
     loadBattles();
   };
 
