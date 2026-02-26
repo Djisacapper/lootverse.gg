@@ -562,7 +562,7 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
                     spinnerItem={spinners[pi]}
                     onSpinDone={handleSpinDone}
                     fast={isFastMode}
-                    magicSpin={isMagicSpin && !done}
+                    magicSpin={false}
                     pct={grandPlayerTotal > 0 ? (playerTotals[pi] || 0) / grandPlayerTotal : 0}
                     grandTotal={grandPlayerTotal}
                     showPct={isJackpot}
