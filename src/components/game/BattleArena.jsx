@@ -317,7 +317,10 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
     spinsDone.current = 0;
     currentRoundRef.current = round;
     setCurrentRound(round);
-    setSpinners(allRolled.current[round]);
+    const roundData = allRolled.current[round];
+    setSpinners(roundData.map(d => d.item));
+    // Set which players hit magic spin this round
+    setMagicSpinPlayers(roundData.map(d => d.isMagic));
     setSpinning(true);
   };
 
@@ -327,7 +330,7 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
 
     const round = currentRoundRef.current;
     const rolled = allRolled.current[round];
-    setPlayerItems(prev => prev.map((items, pi) => [...items, rolled[pi]]));
+    setPlayerItems(prev => prev.map((items, pi) => [...items, rolled[pi].item]));
     setSpinning(false);
 
     if (round + 1 >= totalRounds) {
