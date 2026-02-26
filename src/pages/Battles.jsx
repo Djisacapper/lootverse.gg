@@ -36,21 +36,32 @@ export default function Battles() {
     setLoading(false);
   };
 
-  const handleCreate = async () => {
-    const selectedCase = cases.find(c => c.id === selectedCaseId);
-    if (!selectedCase) return;
-    const cost = selectedCase.price * rounds;
-    if (cost > balance) return;
+  const handleAddCase = (c) => {
+    setSelectedCases(prev => [...prev, c]);
+  };
 
-    await updateBalance(-cost, 'battle_entry', `Created battle with ${selectedCase.name}`);
+  const handleRemoveCase = (index) => {
+    setSelectedCases(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const totalCost = selectedCases.reduce((sum, c) => sum + c.price, 0);
+
+  const handleCreate = async () => {
+    if (selectedCases.length === 0) return;
+    if (totalCost > balance) return;
+
+    const firstName = selectedCases[0].name;
+    const caseName = selectedCases.length === 1 ? firstName : `${firstName} +${selectedCases.length - 1} more`;
+
+    await updateBalance(-totalCost, 'battle_entry', `Created battle with ${caseName}`);
 
     await base44.entities.CaseBattle.create({
       creator_email: user.email,
-      case_template_id: selectedCaseId,
-      case_name: selectedCase.name,
-      rounds,
+      case_template_id: selectedCases[0].id,
+      case_name: caseName,
+      rounds: selectedCases.length,
       max_players: 2,
-      entry_cost: cost,
+      entry_cost: totalCost,
       status: 'waiting',
       players: [{
         email: user.email,
@@ -61,6 +72,7 @@ export default function Battles() {
     });
 
     setShowCreate(false);
+    setSelectedCases([]);
     loadBattles();
   };
 
