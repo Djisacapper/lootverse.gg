@@ -47,8 +47,8 @@ export default function Layout({ children, currentPageName }) {
 
   useEffect(() => {
     reloadUser();
-    // Poll every 500ms for balance/xp updates
-    const interval = setInterval(reloadUser, 500);
+    // Poll every 5 seconds for balance/xp updates
+    const interval = setInterval(reloadUser, 5000);
     return () => clearInterval(interval);
   }, []);
 
