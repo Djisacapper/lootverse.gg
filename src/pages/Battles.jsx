@@ -179,13 +179,29 @@ export default function Battles() {
       <BattleArena
         battle={arenaData.battle}
         selectedCases={arenaData.selectedCases}
-        players={arenaData.players}
+        players={arenaData.battle?.players || []}
         teams={arenaData.teams}
         modeLabel={arenaData.modeLabel}
         battleModes={arenaData.battleModes || {}}
         userEmail={user?.email}
+        balance={balance}
         onClose={() => setView('list')}
         onReward={handleArenaReward}
+        onJoin={() => {
+          if (arenaData.battle) {
+            handleJoin(arenaData.battle);
+          }
+        }}
+        onAddBot={() => {
+          if (arenaData.battle) {
+            handleAddBot(arenaData.battle);
+          }
+        }}
+        onStart={() => {
+          if (arenaData.battle) {
+            handleStartBattle(arenaData.battle);
+          }
+        }}
       />
     );
   }
