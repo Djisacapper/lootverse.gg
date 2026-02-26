@@ -170,7 +170,6 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
         const TOP_RARITIES = ['epic', 'legendary'];
         const topItems = caseItems.filter(it => TOP_RARITIES.includes(it.rarity));
         
-        // Build spin pool based on phase
         let spinPool = caseItems;
         let winItem = spinnerItem;
         
@@ -180,7 +179,7 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
         }
 
         return (
-          <div className="px-2 pb-2 flex-shrink-0 h-32">
+          <div className="px-2 pb-2 flex-shrink-0">
             {spinPhase === 'magic_spin' && (
               <div className="text-center mb-1">
                 <span className="text-[10px] font-bold text-cyan-300 tracking-widest uppercase">✦ Magic Spin ✦</span>
