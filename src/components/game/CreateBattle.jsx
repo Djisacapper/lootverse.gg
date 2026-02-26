@@ -93,8 +93,9 @@ export default function CreateBattle({ cases, balance, user, onBack, onCreate })
 
   const handleCreate = () => {
     if (selectedCases.length === 0 || totalCost > balance) return;
-    // Send slots as-is, don't auto-fill with bots
-    onCreate({ selectedCases, modeLabel, teams: buildTeams(), players: slots, battleModes });
+    // Filter out null slots, send only filled players
+    const players = slots.filter(s => s !== null);
+    onCreate({ selectedCases, modeLabel, teams: buildTeams(), players, battleModes });
   };
 
   const allFilled = slots.every(s => s !== null);
