@@ -19,10 +19,9 @@ export default function Battles() {
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // View state: 'list' | 'create' | 'lobby' | 'arena'
+  // View state: 'list' | 'create' | 'arena'
   const [view, setView] = useState('list');
   const [arenaData, setArenaData] = useState(null);
-  const [currentBattle, setCurrentBattle] = useState(null);
 
   const [tab, setTab] = useState('open');
 
@@ -64,11 +63,10 @@ export default function Battles() {
       players: players.map(p => ({ email: p.email, name: p.name, isBot: p.isBot, total_value: 0, items_won: [] })),
     });
 
-    // Show lobby for creator to manage players
+    // Show arena immediately
     const selectedCasesArr = Array.from({ length: selectedCases.length }, (_, i) => selectedCases[i]);
-    setArenaData({ selectedCases: selectedCasesArr, teams });
-    setCurrentBattle(battle);
-    setView('lobby');
+    setArenaData({ battle, selectedCases: selectedCasesArr, teams, modeLabel, battleModes });
+    setView('arena');
     loadBattles();
   };
 
@@ -95,42 +93,43 @@ export default function Battles() {
 
     await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers });
 
-    // Show lobby to player
+    // Show arena to joined player
     const teams = battle.teams_config ? JSON.parse(battle.teams_config) : [updatedPlayers.map((_, i) => i)];
-    setArenaData({ selectedCases: selectedCasesArr, teams });
-    setCurrentBattle({ ...battle, players: updatedPlayers });
-    setView('lobby');
+    setArenaData({ 
+      battle: { ...battle, players: updatedPlayers },
+      selectedCases: selectedCasesArr, 
+      teams,
+      modeLabel: battle.mode_label || '1v1',
+      battleModes: battle.battle_modes || {}
+    });
+    setView('arena');
     loadBattles();
   };
 
-  // Start battle from lobby
-  const handleStartBattle = async (battle) => {
-    const caseTemplate = cases.find(c => c.id === battle.case_template_id);
-    if (!caseTemplate) return;
-    const rounds = battle.rounds || 1;
-    const selectedCasesArr = Array.from({ length: rounds }, () => caseTemplate);
-    const players = battle.players || [];
-    const teams = battle.teams_config ? JSON.parse(battle.teams_config) : [players.map((_, i) => i)];
-    const battleModes = battle.battle_modes || {};
-    const modeLabel = battle.mode_label || '1v1';
-    
-    await base44.entities.CaseBattle.update(battle.id, { status: 'in_progress' });
-    setArenaData({ battle: { ...battle, status: 'in_progress' }, selectedCases: selectedCasesArr, players, teams, modeLabel, battleModes });
-    setView('arena');
-  };
-
-  // Add bot to battle
-  const handleAddBot = async (battle, slotIdx) => {
+  // Add bot to waiting battle
+  const handleAddBot = async (battle) => {
     const updatedPlayers = [...(battle.players || [])];
-    updatedPlayers[slotIdx] = {
+    const emptyIdx = updatedPlayers.findIndex(p => !p || !p.email);
+    if (emptyIdx === -1) return;
+    
+    updatedPlayers[emptyIdx] = {
       name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)],
-      email: `bot_${Date.now()}_${slotIdx}@system`,
+      email: `bot_${Date.now()}_${emptyIdx}@system`,
       isBot: true,
       total_value: 0,
       items_won: []
     };
     await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers });
-    setCurrentBattle({ ...battle, players: updatedPlayers });
+    setArenaData(prev => prev ? { ...prev, battle: { ...battle, players: updatedPlayers } } : null);
+    loadBattles();
+  };
+
+  // Start waiting battle when all slots filled
+  const handleStartBattle = async (battle) => {
+    await base44.entities.CaseBattle.update(battle.id, { status: 'in_progress' });
+    if (arenaData) {
+      setArenaData(prev => ({ ...prev, battle: { ...battle, status: 'in_progress' } }));
+    }
     loadBattles();
   };
 
@@ -173,19 +172,7 @@ export default function Battles() {
     );
   }
 
-  if (view === 'lobby' && currentBattle) {
-    return (
-      <BattleLobby
-        battle={currentBattle}
-        cases={cases}
-        teams={arenaData?.teams}
-        user={user}
-        onBack={() => { setView('list'); setCurrentBattle(null); }}
-        onStart={() => handleStartBattle(currentBattle)}
-        onAddBot={(slotIdx) => handleAddBot(currentBattle, slotIdx)}
-      />
-    );
-  }
+
 
   if (view === 'arena' && arenaData) {
     return (
@@ -306,14 +293,13 @@ export default function Battles() {
                             const caseTemplate = cases.find(c => c.id === b.case_template_id);
                             const selectedCasesArr = caseTemplate ? Array.from({ length: rounds }, () => caseTemplate) : [];
                             const teams = b.teams_config ? JSON.parse(b.teams_config) : [b.players?.map((_, i) => i) || []];
-                            setArenaData({ selectedCases: selectedCasesArr, teams });
-                            setCurrentBattle(b);
-                            setView('lobby');
+                            setArenaData({ battle: b, selectedCases: selectedCasesArr, teams, modeLabel: b.mode_label || '1v1', battleModes: b.battle_modes || {} });
+                            setView('arena');
                           }}
                           size="sm"
                           className="bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-xl"
                         >
-                          Manage
+                          View
                         </Button>
                       )}
                     </div>
