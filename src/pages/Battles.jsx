@@ -103,6 +103,37 @@ export default function Battles() {
     loadBattles();
   };
 
+  // Start battle from lobby
+  const handleStartBattle = async (battle) => {
+    const caseTemplate = cases.find(c => c.id === battle.case_template_id);
+    if (!caseTemplate) return;
+    const rounds = battle.rounds || 1;
+    const selectedCasesArr = Array.from({ length: rounds }, () => caseTemplate);
+    const players = battle.players || [];
+    const teams = battle.teams_config ? JSON.parse(battle.teams_config) : [players.map((_, i) => i)];
+    const battleModes = battle.battle_modes || {};
+    const modeLabel = battle.mode_label || '1v1';
+    
+    await base44.entities.CaseBattle.update(battle.id, { status: 'in_progress' });
+    setArenaData({ battle: { ...battle, status: 'in_progress' }, selectedCases: selectedCasesArr, players, teams, modeLabel, battleModes });
+    setView('arena');
+  };
+
+  // Add bot to battle
+  const handleAddBot = async (battle, slotIdx) => {
+    const updatedPlayers = [...(battle.players || [])];
+    updatedPlayers[slotIdx] = {
+      name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)],
+      email: `bot_${Date.now()}_${slotIdx}@system`,
+      isBot: true,
+      total_value: 0,
+      items_won: []
+    };
+    await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers });
+    setCurrentBattle({ ...battle, players: updatedPlayers });
+    loadBattles();
+  };
+
   // Watch / spectate an in-progress battle
   const handleWatch = (battle) => {
     const caseTemplate = cases.find(c => c.id === battle.case_template_id);
