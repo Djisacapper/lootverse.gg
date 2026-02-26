@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, User, ArrowLeft, Crown, EyeOff, Zap, Gem } from 'lucide-react';
+import { Bot, User, ArrowLeft, Crown, Zap, Gem } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getRarityColor, getRarityBorder, rollItem } from './useWallet';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -45,9 +45,9 @@ function ConfettiEffect({ active }) {
 }
 
 /* ─── Magic Spin Overlay ────────────────────────────────────────────────────── */
-function MagicSpinOverlay({ playerName, onDone }) {
+function MagicSpinOverlay({ onDone }) {
   useEffect(() => {
-    const t = setTimeout(onDone, 2400);
+    const t = setTimeout(onDone, 2000);
     return () => clearTimeout(t);
   }, []);
 
@@ -57,33 +57,20 @@ function MagicSpinOverlay({ playerName, onDone }) {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="absolute inset-0 z-30 flex flex-col items-center justify-center rounded-2xl overflow-hidden"
-      style={{ background: 'rgba(8,8,20,0.92)' }}
+      style={{ background: 'rgba(8,8,20,0.93)' }}
     >
-      {/* Glow rings */}
       <motion.div
         animate={{ scale: [1, 1.6, 1], opacity: [0.6, 0, 0.6] }}
         transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute w-24 h-24 rounded-full"
+        className="absolute w-28 h-28 rounded-full"
         style={{ background: 'radial-gradient(circle, rgba(56,189,248,0.4) 0%, transparent 70%)' }}
       />
       <motion.div
-        animate={{ scale: [1, 2.4, 1], opacity: [0.3, 0, 0.3] }}
-        transition={{ duration: 1.6, repeat: Infinity, ease: 'easeInOut', delay: 0.2 }}
-        className="absolute w-24 h-24 rounded-full"
-        style={{ background: 'radial-gradient(circle, rgba(56,189,248,0.2) 0%, transparent 70%)' }}
-      />
-      {/* Diamond */}
-      <motion.div
         animate={{ scale: [0.7, 1.15, 1], rotate: [0, -10, 10, 0] }}
         transition={{ duration: 0.6, ease: 'easeOut' }}
-        className="relative z-10"
+        className="relative z-10 text-5xl"
       >
-        <img
-          src="https://qtrypzzcjebvfcihiynt.supabase.co/storage/v1/object/public/base44-prod/public/699dd76dcea052380b9a5db5/96798da0f_8347162b71a885416a3050079be4f18b9694ddae.png"
-          alt="Magic Spin"
-          className="w-16 h-16 drop-shadow-2xl"
-          style={{ filter: 'drop-shadow(0 0 18px rgba(56,189,248,0.9))' }}
-        />
+        💎
       </motion.div>
       <motion.p
         initial={{ opacity: 0, y: 6 }}
@@ -99,13 +86,15 @@ function MagicSpinOverlay({ playerName, onDone }) {
 }
 
 /* ─── Vertical Spinner ──────────────────────────────────────────────────────── */
-function VerticalSpinner({ items, winnerItem, onDone, fast }) {
+function VerticalSpinner({ items, winnerItem, onDone, fast, isMagic }) {
   const ITEM_H = 80;
   const WIN_POS = 28;
   const TOTAL = 36;
   const VISIBLE_H = 240;
   const duration = fast ? 1.4 : 3.0;
 
+  // Build strip once — winner at WIN_POS, rest random from items
+  // For magic spin: all items in strip are top-rarity, blurred until done
   const strip = useRef(
     Array.from({ length: TOTAL }, (_, i) =>
       i === WIN_POS ? winnerItem : items[Math.floor(Math.random() * items.length)]
@@ -113,125 +102,109 @@ function VerticalSpinner({ items, winnerItem, onDone, fast }) {
   ).current;
 
   const targetY = -(WIN_POS * ITEM_H - VISIBLE_H / 2 + ITEM_H / 2);
+  const [landed, setLanded] = useState(false);
 
   useEffect(() => {
-    const t = setTimeout(onDone, fast ? 1600 : 3300);
+    const spinMs = fast ? 1500 : 3100;
+    const t = setTimeout(() => {
+      setLanded(true);
+      onDone();
+    }, spinMs);
     return () => clearTimeout(t);
   }, []);
 
   return (
     <div className="relative overflow-hidden rounded-xl border border-white/10 bg-[#08080f]" style={{ height: VISIBLE_H }}>
+      {/* Center highlight line */}
       <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 pointer-events-none z-10"
         style={{ height: ITEM_H, background: 'rgba(255,255,255,0.03)', borderTop: '1px solid rgba(245,158,11,0.5)', borderBottom: '1px solid rgba(245,158,11,0.5)' }} />
+      {/* Top fade */}
       <div className="absolute inset-x-0 top-0 h-16 pointer-events-none z-20"
         style={{ background: 'linear-gradient(to bottom, #08080f 0%, transparent 100%)' }} />
+      {/* Bottom fade */}
       <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none z-20"
         style={{ background: 'linear-gradient(to top, #08080f 0%, transparent 100%)' }} />
+
       <motion.div
         className="absolute left-0 right-0 top-0 flex flex-col"
         initial={{ y: 0 }}
         animate={{ y: targetY }}
         transition={{ duration, ease: [0.04, 0.82, 0.165, 1] }}
       >
-        {strip.map((item, i) => (
-          <div key={i} className="flex items-center gap-2 px-3 flex-shrink-0" style={{ height: ITEM_H }}>
-            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getRarityColor(item?.rarity || 'common')} flex-shrink-0 flex items-center justify-center overflow-hidden`}>
-              {item?.image_url
-                ? <img src={item.image_url} alt={item?.name} className="w-11 h-11 object-contain" />
-                : <span className="text-2xl">📦</span>}
+        {strip.map((item, i) => {
+          const isWinnerSlot = i === WIN_POS;
+          const shouldBlur = isMagic && !landed && !isWinnerSlot;
+          return (
+            <div key={i} className="flex items-center gap-2 px-3 flex-shrink-0" style={{ height: ITEM_H }}>
+              <div
+                className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getRarityColor(item?.rarity || 'common')} flex-shrink-0 flex items-center justify-center overflow-hidden transition-all`}
+                style={shouldBlur ? { filter: 'blur(6px)' } : {}}
+              >
+                {item?.image_url
+                  ? <img src={item.image_url} alt={item?.name} className="w-11 h-11 object-contain" />
+                  : <span className="text-2xl">📦</span>}
+              </div>
+              <div className="flex-1 min-w-0" style={shouldBlur ? { filter: 'blur(4px)' } : {}}>
+                <p className="text-[11px] text-white/80 font-medium truncate">{item?.name || '—'}</p>
+                <p className="text-xs text-amber-400 font-bold">{item?.value?.toLocaleString() || 0}</p>
+              </div>
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] text-white/80 font-medium truncate">{item?.name || '—'}</p>
-              <p className="text-xs text-amber-400 font-bold">{item?.value?.toLocaleString() || 0}</p>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </motion.div>
     </div>
   );
 }
 
 /* ─── Item Chip ──────────────────────────────────────────────────────────────── */
-function ItemChip({ item, hidden }) {
+function ItemChip({ item }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
-      className={`flex items-center gap-1.5 p-1.5 rounded-lg border ${hidden ? 'border-white/10' : getRarityBorder(item?.rarity)} bg-white/[0.02]`}
+      className={`flex items-center gap-1.5 p-1.5 rounded-lg border ${getRarityBorder(item?.rarity)} bg-white/[0.02]`}
     >
-      {hidden ? (
-        <>
-          <div className="w-7 h-7 rounded-lg bg-white/10 flex-shrink-0 flex items-center justify-center">
-            <EyeOff className="w-3.5 h-3.5 text-white/30" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] text-white/30 truncate">Hidden item</p>
-            <p className="text-[10px] text-white/20 font-bold">???</p>
-          </div>
-        </>
-      ) : (
-        <>
-          <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${getRarityColor(item?.rarity || 'common')} flex-shrink-0 flex items-center justify-center overflow-hidden`}>
-            {item?.image_url
-              ? <img src={item.image_url} alt={item.name} className="w-6 h-6 object-contain" />
-              : <span className="text-xs">📦</span>}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] text-white/70 truncate">{item?.name}</p>
-            <p className="text-[10px] text-amber-400 font-bold">{item?.value?.toLocaleString()}</p>
-          </div>
-        </>
-      )}
+      <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${getRarityColor(item?.rarity || 'common')} flex-shrink-0 flex items-center justify-center overflow-hidden`}>
+        {item?.image_url
+          ? <img src={item.image_url} alt={item.name} className="w-6 h-6 object-contain" />
+          : <span className="text-xs">📦</span>}
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-[10px] text-white/70 truncate">{item?.name}</p>
+        <p className="text-[10px] text-amber-400 font-bold">{item?.value?.toLocaleString()}</p>
+      </div>
     </motion.div>
   );
 }
 
 /* ─── Player Column ──────────────────────────────────────────────────────────── */
-function PlayerColumn({ player, playerColor, isWinner, wonItems, isSpinning, caseItems, spinnerKey, spinnerItem, onSpinDone, fast, magicSpinActive, pct, grandTotal, showPct }) {
-  const [showMagicOverlay, setShowMagicOverlay] = useState(false);
-  const [magicSpinnerVisible, setMagicSpinnerVisible] = useState(false);
-  const [magicItem, setMagicItem] = useState(null);
-  const prevSpinning = useRef(false);
-
+// spinPhase: 'idle' | 'spinning' | 'magic_overlay' | 'magic_spin' | 'done'
+function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, caseItems, spinnerKey, spinnerItem, magicItem, onSpinDone, onMagicSpinDone, fast, showPct, pct, grandTotal }) {
   const total = wonItems.reduce((s, it) => s + (it?.value || 0), 0);
+  const isMagic = !!magicItem;
 
-  // When spin finishes and this player hit magic spin, show overlay then bonus spinner
-  useEffect(() => {
-    if (!magicSpinActive) return;
-    if (prevSpinning.current && !isSpinning) {
-      // Spin just ended for this player → trigger magic overlay
-      setShowMagicOverlay(true);
-    }
-    prevSpinning.current = isSpinning;
-  }, [isSpinning, magicSpinActive]);
-
-  const handleMagicOverlayDone = () => {
-    setShowMagicOverlay(false);
-    // The item is already the top-rolled one; just show an extra spinner animation
-    setMagicItem(wonItems[wonItems.length - 1] || spinnerItem);
-    setMagicSpinnerVisible(true);
-  };
-
-  const handleMagicSpinnerDone = () => {
-    setMagicSpinnerVisible(false);
-  };
+  const TOP_RARITIES = ['epic', 'legendary'];
+  const topItems = caseItems.filter(it => TOP_RARITIES.includes(it.rarity));
+  const magicCaseItems = topItems.length > 0 ? topItems : caseItems;
 
   return (
     <div
       className={`relative flex-1 min-w-0 flex flex-col rounded-2xl border transition-all duration-500
         ${isWinner ? 'border-amber-400/60 shadow-lg shadow-amber-400/10' : ''}
-        ${magicSpinActive ? 'shadow-lg shadow-cyan-400/20' : ''}`}
+        ${isMagic && spinPhase !== 'idle' ? 'shadow-lg shadow-cyan-400/20' : ''}`}
       style={{
-        borderColor: isWinner ? undefined : magicSpinActive ? 'rgba(56,189,248,0.5)' : playerColor + '55',
+        borderColor: isWinner ? undefined : (isMagic && spinPhase !== 'idle') ? 'rgba(56,189,248,0.5)' : playerColor + '55',
         background: isWinner ? 'rgba(245,158,11,0.05)' : (playerColor + '0d'),
       }}
     >
-      {/* Magic spin overlay */}
+      {/* Magic overlay — shown AFTER normal spin lands, before bonus spin */}
       <AnimatePresence>
-        {showMagicOverlay && (
-          <MagicSpinOverlay playerName={player.name} onDone={handleMagicOverlayDone} />
+        {spinPhase === 'magic_overlay' && (
+          <MagicSpinOverlay onDone={onMagicSpinDone} />
         )}
       </AnimatePresence>
+
+      {/* Header */}
       <div className="flex items-center gap-2 px-3 pt-3 pb-1">
         <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold"
           style={{ background: playerColor + '33', color: playerColor, border: `2px solid ${playerColor}66` }}>
@@ -246,7 +219,7 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, isSpinning, cas
 
       <p className="text-xl font-black text-amber-400 text-center py-1">{total.toLocaleString()}</p>
 
-      {/* Live percentage bar — only shown in jackpot mode */}
+      {/* Jackpot percentage bar */}
       {showPct && grandTotal > 0 && (
         <div className="px-3 pb-1">
           <div className="flex justify-between items-center mb-0.5">
@@ -264,43 +237,29 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, isSpinning, cas
         </div>
       )}
 
-      {/* Normal round spinner */}
-      {isSpinning && caseItems.length > 0 && (
+      {/* Spinner area — normal spin OR magic bonus spin, same slot */}
+      {(spinPhase === 'spinning' || spinPhase === 'magic_spin') && caseItems.length > 0 && (
         <div className="px-2 pb-2">
+          {spinPhase === 'magic_spin' && (
+            <div className="text-center mb-1">
+              <span className="text-[10px] font-bold text-cyan-300 tracking-widest uppercase">✦ Magic Spin ✦</span>
+            </div>
+          )}
           <VerticalSpinner
-            key={spinnerKey}
-            items={caseItems}
-            winnerItem={spinnerItem}
-            onDone={onSpinDone}
+            key={spinPhase === 'magic_spin' ? `magic-${spinnerKey}` : spinnerKey}
+            items={spinPhase === 'magic_spin' ? magicCaseItems : caseItems}
+            winnerItem={spinPhase === 'magic_spin' ? magicItem : spinnerItem}
+            onDone={spinPhase === 'magic_spin' ? onMagicSpinDone : onSpinDone}
             fast={fast}
+            isMagic={spinPhase === 'magic_spin'}
           />
         </div>
       )}
 
-      {/* Magic Spin bonus spinner — only top items */}
-      {magicSpinnerVisible && magicItem && (() => {
-        const TOP_RARITIES = ['epic', 'legendary'];
-        const topItems = caseItems.filter(it => TOP_RARITIES.includes(it.rarity));
-        const spinItems = topItems.length > 0 ? topItems : caseItems;
-        return (
-          <div className="px-2 pb-2">
-            <div className="text-center mb-1">
-              <span className="text-[10px] font-bold text-cyan-300 tracking-widest uppercase">✦ Magic Spin ✦</span>
-            </div>
-            <VerticalSpinner
-              key={`magic-${spinnerKey}`}
-              items={spinItems}
-              winnerItem={magicItem}
-              onDone={handleMagicSpinnerDone}
-              fast={false}
-            />
-          </div>
-        );
-      })()}
-
+      {/* Won items list */}
       <div className="px-2 pb-3 space-y-1">
         {wonItems.map((item, i) => (
-          <ItemChip key={i} item={item} hidden={false} />
+          <ItemChip key={i} item={item} />
         ))}
       </div>
     </div>
@@ -312,7 +271,6 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
   const totalRounds = selectedCases.length;
   const teamList = teams || [players.map((_, i) => i)];
 
-  // --- Battle Mode flags --- (only true if explicitly set to boolean true)
   const modes       = battleModes && typeof battleModes === 'object' ? battleModes : {};
   const isCrazy     = modes.crazy     === true;
   const isTerminal  = modes.terminal  === true;
@@ -321,31 +279,28 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
   const isFastMode  = modes.fast_mode  === true;
   const isJackpot   = modes.jackpot   === true;
 
-  const [phase, setPhase]             = useState('countdown');
-  const [countdown, setCountdown]     = useState(3);
+  const [phase, setPhase]               = useState('countdown');
+  const [countdown, setCountdown]       = useState(3);
   const [currentRound, setCurrentRound] = useState(0);
-  const [spinning, setSpinning]       = useState(false);
-  const [spinners, setSpinners]       = useState([]);
-  const [playerItems, setPlayerItems] = useState(players.map(() => []));
-  const [done, setDone]               = useState(false);
+  const [playerItems, setPlayerItems]   = useState(players.map(() => []));
+  const [done, setDone]                 = useState(false);
   const [jackpotPhase, setJackpotPhase] = useState(false);
   const [winnerTeamIdx, setWinnerTeamIdx] = useState(null);
   const [showConfetti, setShowConfetti]   = useState(false);
-  // Track which players triggered magic spin this round: array of booleans
-  const [magicSpinPlayers, setMagicSpinPlayers] = useState(players.map(() => false));
+
+  // Per-player spin phase: 'idle' | 'spinning' | 'magic_overlay' | 'magic_spin' | 'done'
+  const [playerPhases, setPlayerPhases] = useState(players.map(() => 'idle'));
 
   const allRolled   = useRef(null);
-  const spinsDone   = useRef(0);
-  const rewardGiven = useRef(false);
+  // Track how many players have fully completed this round (including any magic spin)
+  const roundDoneCount = useRef(0);
   const currentRoundRef = useRef(0);
+  const rewardGiven = useRef(false);
 
-  // Roll items; in magic spin mode each player has 20% chance to trigger magic spin → re-roll from top items only
-  // Returns { item, isMagic }
   const rollWithMagicSpin = (caseItems) => {
     const item = rollItem(caseItems) || { name: 'Nothing', value: 0, rarity: 'common', image_url: null };
     if (!isMagicSpin) return { item, isMagic: false };
-    const TOP_RARITIES = ['epic', 'legendary'];
-    const topItems = caseItems.filter(it => TOP_RARITIES.includes(it.rarity));
+    const topItems = caseItems.filter(it => ['epic', 'legendary'].includes(it.rarity));
     if (topItems.length > 0 && Math.random() < 0.20) {
       return { item: rollItem(topItems) || item, isMagic: true };
     }
@@ -353,7 +308,6 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
   };
 
   useEffect(() => {
-    // allRolled stores { item, isMagic } per [round][playerIdx]
     allRolled.current = selectedCases.map(c =>
       players.map(() => rollWithMagicSpin(c.items || []))
     );
@@ -367,39 +321,75 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
   }, [phase, countdown]);
 
   const launchRound = (round) => {
-    spinsDone.current = 0;
+    roundDoneCount.current = 0;
     currentRoundRef.current = round;
     setCurrentRound(round);
-    const roundData = allRolled.current[round];
-    setSpinners(roundData.map(d => d.item));
-    // Set which players hit magic spin this round
-    setMagicSpinPlayers(roundData.map(d => d.isMagic));
-    setSpinning(true);
+    // All players start spinning simultaneously
+    setPlayerPhases(players.map(() => 'spinning'));
   };
 
-  const handleSpinDone = () => {
-    spinsDone.current += 1;
-    if (spinsDone.current < players.length) return;
-
+  // Called when a player's NORMAL spin animation ends
+  const handleNormalSpinDone = (pi) => {
     const round = currentRoundRef.current;
     const rolled = allRolled.current[round];
-    setPlayerItems(prev => prev.map((items, pi) => [...items, rolled[pi].item]));
-    setSpinning(false);
 
-    if (round + 1 >= totalRounds) {
-      setTimeout(() => {
-        if (isJackpot) {
-          setJackpotPhase(true);
-        } else {
-          finishBattle();
-        }
-      }, isFastMode ? 1200 : 2500);
+    if (rolled[pi].isMagic) {
+      // This player triggered magic spin → show overlay then bonus spin
+      setPlayerPhases(prev => {
+        const next = [...prev];
+        next[pi] = 'magic_overlay';
+        return next;
+      });
     } else {
-      setTimeout(() => launchRound(round + 1), isFastMode ? 1500 : 4500);
+      // Normal finish for this player
+      markPlayerRoundDone(pi, round);
     }
   };
 
-  // Single source of truth — always reads from allRolled.current
+  // Called when magic overlay timer ends → start the bonus magic spin
+  const handleMagicOverlayDone = (pi) => {
+    setPlayerPhases(prev => {
+      const next = [...prev];
+      next[pi] = 'magic_spin';
+      return next;
+    });
+  };
+
+  // Called when the magic spin animation ends
+  const handleMagicSpinDone = (pi) => {
+    const round = currentRoundRef.current;
+    markPlayerRoundDone(pi, round);
+  };
+
+  // Marks one player as fully done for this round
+  const markPlayerRoundDone = (pi, round) => {
+    const rolled = allRolled.current[round];
+    // Add this player's item to their won list
+    setPlayerItems(prev => {
+      const next = [...prev];
+      next[pi] = [...next[pi], rolled[pi].item];
+      return next;
+    });
+    setPlayerPhases(prev => {
+      const next = [...prev];
+      next[pi] = 'idle';
+      return next;
+    });
+
+    roundDoneCount.current += 1;
+    // Only advance when ALL players are done
+    if (roundDoneCount.current >= players.length) {
+      if (round + 1 >= totalRounds) {
+        setTimeout(() => {
+          if (isJackpot) setJackpotPhase(true);
+          else finishBattle();
+        }, isFastMode ? 1200 : 2500);
+      } else {
+        setTimeout(() => launchRound(round + 1), isFastMode ? 1500 : 4500);
+      }
+    }
+  };
+
   const getPlayerTotal = (pi) => {
     if (!allRolled.current) return 0;
     if (isTerminal) {
@@ -409,30 +399,23 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
     return allRolled.current.reduce((s, r) => s + (r[pi]?.item?.value || 0), 0);
   };
 
-  // For team battles: average per-player value so team size doesn't bias the result
   const getTeamTotal = (mi) => {
     if (mi.length === 0) return 0;
-    const sum = mi.reduce((s, pi) => s + getPlayerTotal(pi), 0);
-    return sum / mi.length; // average so 2v2 doesn't unfairly advantage bigger teams
+    return mi.reduce((s, pi) => s + getPlayerTotal(pi), 0) / mi.length;
   };
 
   const finishBattle = (forcedWinnerTi = null) => {
     let winIdx;
-
     if (forcedWinnerTi !== null) {
       winIdx = forcedWinnerTi;
     } else if (isGroup) {
       winIdx = -1;
     } else {
       const teamVals = teamList.map(mi => getTeamTotal(mi));
-      // Crazy = LOWEST average wins. Normal = HIGHEST average wins.
-      if (isCrazy) {
-        winIdx = teamVals.indexOf(Math.min(...teamVals));
-      } else {
-        winIdx = teamVals.indexOf(Math.max(...teamVals));
-      }
+      winIdx = isCrazy
+        ? teamVals.indexOf(Math.min(...teamVals))
+        : teamVals.indexOf(Math.max(...teamVals));
     }
-
     setWinnerTeamIdx(winIdx);
     setDone(true);
     setJackpotPhase(false);
@@ -441,9 +424,7 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
       rewardGiven.current = true;
       const totalPot = players.length * selectedCases.reduce((s, c) => s + (c.price || 0), 0);
       const userPi   = players.findIndex(p => p.email === userEmail);
-
       if (isGroup) {
-        // Everyone gets an equal share
         const share = Math.floor(totalPot / players.length);
         setShowConfetti(true);
         setTimeout(() => setShowConfetti(false), 5000);
@@ -459,17 +440,16 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
     }
   };
 
-  // Derived values for display
   const playerTotals = playerItems.map(items => items.reduce((s, it) => s + (it?.value || 0), 0));
   const teamTotals   = teamList.map(mi => mi.reduce((s, pi) => s + (playerTotals[pi] || 0), 0));
   const totalPot     = players.length * selectedCases.reduce((s, c) => s + (c.price || 0), 0);
 
-  // Assign unique color per player across all teams (flat index)
   const allPlayerIndices = teamList.flat();
   const playerColorMap = {};
   allPlayerIndices.forEach((pi, idx) => { playerColorMap[pi] = PLAYER_COLORS[idx % PLAYER_COLORS.length]; });
 
   const grandPlayerTotal = playerTotals.reduce((s, v) => s + v, 0);
+  const caseItems = (selectedCases[currentRound] || selectedCases[0])?.items || [];
 
   let payoutLabel = '';
   if (done) {
@@ -481,9 +461,6 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
     }
   }
 
-  const caseItems = (selectedCases[currentRound] || selectedCases[0])?.items || [];
-
-  // Active mode badges
   const activeModes = [
     isCrazy     && { icon: '🎭', label: 'Crazy', color: '#ec4899' },
     isTerminal  && { icon: '⚡', label: 'Terminal', color: '#f59e0b' },
@@ -508,7 +485,6 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
             Battle cost <span className="text-amber-400">{totalPot.toLocaleString()}</span>
           </p>
         </div>
-        {/* Active mode pills */}
         {activeModes.length > 0 && (
           <div className="flex gap-1 flex-wrap">
             {activeModes.map(m => (
@@ -533,7 +509,7 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
         </p>
       </div>
 
-      {/* ── Terminal mode notice ── */}
+      {/* ── Mode notices ── */}
       {isTerminal && !done && (
         <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-400/20 rounded-xl px-3 py-2">
           <Zap className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
@@ -543,7 +519,7 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
       {isMagicSpin && !done && (
         <div className="flex items-center gap-2 bg-cyan-500/10 border border-cyan-400/20 rounded-xl px-3 py-2">
           <Gem className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />
-          <p className="text-xs text-cyan-400/80">Magic Spin active — lucky players trigger a special bonus spin with <strong>top items only</strong>!</p>
+          <p className="text-xs text-cyan-400/80">Magic Spin active — 20% chance for a bonus spin with <strong>top items only</strong>!</p>
         </div>
       )}
       {isCrazy && !done && (
@@ -610,12 +586,11 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
         </motion.div>
       )}
 
-      {/* ── Countdown overlay ── */}
+      {/* ── Countdown ── */}
       <AnimatePresence>
         {phase === 'countdown' && (
           <motion.div key="cd" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-black/85 gap-8">
-            {/* Player color badges */}
             <div className="flex gap-4 flex-wrap justify-center">
               {allPlayerIndices.map((pi, idx) => {
                 const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
@@ -661,25 +636,37 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
                 </div>
               )}
               <div className="flex gap-2">
-                {mi.map(pi => (
-                  <PlayerColumn
-                    key={pi}
-                    player={players[pi]}
-                    playerColor={playerColorMap[pi]}
-                    isWinner={done && (isGroup || ti === winnerTeamIdx)}
-                    wonItems={playerItems[pi] || []}
-                    isSpinning={spinning}
-                    caseItems={caseItems}
-                    spinnerKey={`${currentRound}-${pi}`}
-                    spinnerItem={spinners[pi]}
-                    onSpinDone={handleSpinDone}
-                    fast={isFastMode}
-                    magicSpinActive={isMagicSpin && magicSpinPlayers[pi]}
-                    pct={grandPlayerTotal > 0 ? (playerTotals[pi] || 0) / grandPlayerTotal : 0}
-                    grandTotal={grandPlayerTotal}
-                    showPct={isJackpot}
-                  />
-                ))}
+                {mi.map(pi => {
+                  const round = currentRoundRef.current;
+                  const rolled = allRolled.current?.[round]?.[pi];
+                  return (
+                    <PlayerColumn
+                      key={pi}
+                      player={players[pi]}
+                      playerColor={playerColorMap[pi]}
+                      isWinner={done && (isGroup || ti === winnerTeamIdx)}
+                      wonItems={playerItems[pi] || []}
+                      spinPhase={playerPhases[pi]}
+                      caseItems={caseItems}
+                      spinnerKey={`${currentRound}-${pi}`}
+                      spinnerItem={rolled?.item}
+                      magicItem={rolled?.isMagic ? rolled.item : null}
+                      onSpinDone={() => handleNormalSpinDone(pi)}
+                      onMagicSpinDone={() => {
+                        // If currently in magic_overlay → go to magic_spin; if in magic_spin → done
+                        if (playerPhases[pi] === 'magic_overlay') {
+                          handleMagicOverlayDone(pi);
+                        } else {
+                          handleMagicSpinDone(pi);
+                        }
+                      }}
+                      fast={isFastMode}
+                      pct={grandPlayerTotal > 0 ? (playerTotals[pi] || 0) / grandPlayerTotal : 0}
+                      grandTotal={grandPlayerTotal}
+                      showPct={isJackpot}
+                    />
+                  );
+                })}
               </div>
             </div>
             {ti < teamList.length - 1 && (
