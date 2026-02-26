@@ -45,9 +45,9 @@ function ConfettiEffect({ active }) {
 }
 
 /* ─── Magic Spin Overlay ────────────────────────────────────────────────────── */
-function MagicSpinOverlay({ onDone }) {
+function MagicSpinOverlay({ wonItem, onDone }) {
   useEffect(() => {
-    const t = setTimeout(onDone, 2000);
+    const t = setTimeout(onDone, 2200);
     return () => clearTimeout(t);
   }, []);
 
@@ -59,28 +59,37 @@ function MagicSpinOverlay({ onDone }) {
       className="absolute inset-0 z-30 flex flex-col items-center justify-center rounded-2xl overflow-hidden"
       style={{ background: 'rgba(8,8,20,0.93)' }}
     >
+      {/* Glow rings */}
       <motion.div
-        animate={{ scale: [1, 1.6, 1], opacity: [0.6, 0, 0.6] }}
+        animate={{ scale: [1, 1.8, 1], opacity: [0.5, 0, 0.5] }}
         transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute w-28 h-28 rounded-full"
-        style={{ background: 'radial-gradient(circle, rgba(56,189,248,0.4) 0%, transparent 70%)' }}
+        className="absolute w-32 h-32 rounded-full"
+        style={{ background: 'radial-gradient(circle, rgba(56,189,248,0.35) 0%, transparent 70%)' }}
       />
+      {/* Item image */}
       <motion.div
-        animate={{ scale: [0.7, 1.15, 1], rotate: [0, -10, 10, 0] }}
-        transition={{ duration: 0.6, ease: 'easeOut' }}
-        className="relative z-10 text-5xl"
+        animate={{ scale: [0.6, 1.1, 1], rotate: [0, -8, 8, 0] }}
+        transition={{ duration: 0.7, ease: 'easeOut' }}
+        className="relative z-10"
       >
-        💎
+        <div className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${getRarityColor(wonItem?.rarity || 'epic')} flex items-center justify-center overflow-hidden`}
+          style={{ boxShadow: '0 0 30px rgba(56,189,248,0.6)' }}>
+          {wonItem?.image_url
+            ? <img src={wonItem.image_url} alt={wonItem.name} className="w-18 h-18 object-contain" style={{ width: '72px', height: '72px' }} />
+            : <span className="text-4xl">💎</span>}
+        </div>
       </motion.div>
       <motion.p
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="text-xs font-black text-cyan-300 mt-2 tracking-widest uppercase"
+        className="text-xs font-black text-cyan-300 mt-3 tracking-widest uppercase"
       >
         ✦ Magic Spin ✦
       </motion.p>
-      <p className="text-[10px] text-cyan-400/60 mt-0.5">Top items only!</p>
+      {wonItem?.name && (
+        <p className="text-[11px] text-white/70 mt-0.5 font-medium">{wonItem.name}</p>
+      )}
     </motion.div>
   );
 }
