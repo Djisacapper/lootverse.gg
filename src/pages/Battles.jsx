@@ -8,17 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import CreateBattle from '../components/game/CreateBattle';
 import BattleArena from '../components/game/BattleArena';
 
-const BOT_NAMES = ['CrateBot', 'LootBot', 'RNG_Pro', 'ShadowBot', 'CryptoBot', 'NightBot'];
-function randomBot() {
-  return { name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)], email: 'bot@system', isBot: true };
-}
 
-function buildPlayers(user, mode) {
-  // mode.total = total number of participants (e.g. 1v1 = 2, 2v2 = 4)
-  const players = [{ name: user.full_name || 'You', email: user.email, isBot: false }];
-  for (let i = 1; i < mode.total; i++) players.push(randomBot());
-  return players;
-}
 
 export default function Battles() {
   const { user, balance, updateBalance, addXp } = useWallet();
