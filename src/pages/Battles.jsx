@@ -44,13 +44,8 @@ export default function Battles() {
     const firstName = selectedCases[0].name;
     const caseName = selectedCases.length === 1 ? firstName : `${firstName} +${selectedCases.length - 1} more`;
 
-    // Check if any slots are open (non-bot, non-user = truly empty → will be filled by bots at start)
-    // We treat all non-user slots that are bots as "filled". Empty slots remain open for real players.
-    const hasOpenSlots = players.some(p => !p.isBot && p.email !== user.email);
-    const allBotsOrUser = players.every(p => p.isBot || p.email === user.email);
-
-    // If all slots are bots/user, start immediately. Otherwise save as waiting.
-    const status = allBotsOrUser ? 'in_progress' : 'waiting';
+    // Always start as waiting — let players join, don't auto-fill with bots
+    const status = 'waiting';
 
     await updateBalance(-totalCost, 'battle_entry', `Created battle: ${caseName}`);
 
