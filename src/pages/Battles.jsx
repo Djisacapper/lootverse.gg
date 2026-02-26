@@ -113,6 +113,7 @@ export default function Battles() {
         players={arenaData.players}
         teams={arenaData.teams}
         modeLabel={arenaData.modeLabel}
+        battleModes={arenaData.battleModes || {}}
         userEmail={user?.email}
         onClose={() => setView('list')}
         onReward={handleArenaReward}
