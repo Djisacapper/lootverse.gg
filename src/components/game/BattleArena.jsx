@@ -323,8 +323,8 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
 
       {/* Active round spinners */}
       {spinning && phase === 'spinning' && (
-        <div className="bg-[#0d0d1a] border border-white/10 rounded-2xl p-4 space-y-3">
-          <div className="flex items-center justify-between mb-2">
+        <div className="bg-[#0d0d1a] border border-white/10 rounded-2xl p-4">
+          <div className="flex items-center justify-between mb-3">
             <p className="text-xs text-white/40 font-medium">Round {currentRound + 1} / {totalRounds}</p>
             <div className="flex gap-1">
               {selectedCases.map((c, i) => (
@@ -332,26 +332,28 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
               ))}
             </div>
           </div>
-          {players.map((p, pi) => (
-            <div key={pi} className="space-y-1">
-              <p className="text-xs font-medium flex items-center gap-1.5" style={{ color: TEAM_COLORS[teamList.findIndex(t => t.includes(pi))] }}>
-                {p.isBot ? <Bot className="w-3 h-3" /> : <User className="w-3 h-3" />}
-                {p.name}
-              </p>
-              {caseItems.length > 0 ? (
-                <CaseSpinner
-                  key={`${currentRound}-${pi}`}
-                  items={caseItems}
-                  winnerItem={spinners[pi]?.item}
-                  onDone={handleSpinnerDone}
-                />
-              ) : (
-                <div className="h-[96px] rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-center">
-                  <p className="text-white/20 text-sm">Opening...</p>
-                </div>
-              )}
-            </div>
-          ))}
+          <div className="flex gap-3">
+            {players.map((p, pi) => (
+              <div key={pi} className="flex-1 min-w-0 space-y-1.5">
+                <p className="text-xs font-medium flex items-center gap-1.5 justify-center" style={{ color: TEAM_COLORS[teamList.findIndex(t => t.includes(pi))] }}>
+                  {p.isBot ? <Bot className="w-3 h-3" /> : <User className="w-3 h-3" />}
+                  {p.name}
+                </p>
+                {caseItems.length > 0 ? (
+                  <CaseSpinner
+                    key={`${currentRound}-${pi}`}
+                    items={caseItems}
+                    winnerItem={spinners[pi]?.item}
+                    onDone={handleSpinnerDone}
+                  />
+                ) : (
+                  <div className="h-60 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-center">
+                    <p className="text-white/20 text-sm">Opening...</p>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
