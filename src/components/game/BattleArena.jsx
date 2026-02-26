@@ -206,7 +206,14 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
         );
       })()}
 
-
+      {/* Won items display */}
+      {wonItems.length > 0 && (
+        <div className="px-2 pb-3 space-y-1 max-h-32 overflow-y-auto">
+          {wonItems.map((item, i) => (
+            <ItemChip key={i} item={item} />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
