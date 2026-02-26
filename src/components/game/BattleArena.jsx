@@ -125,6 +125,8 @@ function ItemChip({ item }) {
 /* ─── Player Column ──────────────────────────────────────────────────────────── */
 // spinPhase: 'idle' | 'spinning' | 'magic_overlay' | 'magic_spin' | 'done'
 function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, caseItems, spinnerKey, spinnerItem, magicItem, onSpinDone, onMagicSpinDone, fast, showPct, pct, grandTotal }) {
+  if (!player) return null;
+  
   const total = wonItems.reduce((s, it) => s + (it?.value || 0), 0);
   const isMagic = !!magicItem;
 
