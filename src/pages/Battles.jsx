@@ -44,14 +44,13 @@ export default function Battles() {
   };
 
   // Called from CreateBattle when user hits "Create Battle"
-  const handleCreate = async ({ selectedCases, mode, battleModes }) => {
+  const handleCreate = async ({ selectedCases, modeLabel, teams, players, battleModes }) => {
     if (!user || selectedCases.length === 0) return;
     const totalCost = selectedCases.reduce((s, c) => s + c.price, 0);
     if (totalCost > balance) return;
 
     const firstName = selectedCases[0].name;
     const caseName = selectedCases.length === 1 ? firstName : `${firstName} +${selectedCases.length - 1} more`;
-    const players = buildPlayers(user, mode);
 
     await updateBalance(-totalCost, 'battle_entry', `Created battle: ${caseName}`);
 
@@ -60,13 +59,13 @@ export default function Battles() {
       case_template_id: selectedCases[0].id,
       case_name: caseName,
       rounds: selectedCases.length,
-      max_players: mode.total,
+      max_players: players.length,
       entry_cost: totalCost,
       status: 'in_progress',
       players: players.map(p => ({ email: p.email, name: p.name, total_value: 0, items_won: [] })),
     });
 
-    setArenaData({ battle, selectedCases, players, mode });
+    setArenaData({ battle, selectedCases, players, teams, modeLabel });
     setView('arena');
     loadBattles();
   };
