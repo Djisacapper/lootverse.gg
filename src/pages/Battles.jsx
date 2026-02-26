@@ -19,9 +19,10 @@ export default function Battles() {
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // View state: 'list' | 'create' | 'arena'
+  // View state: 'list' | 'create' | 'lobby' | 'arena'
   const [view, setView] = useState('list');
   const [arenaData, setArenaData] = useState(null);
+  const [currentBattle, setCurrentBattle] = useState(null);
 
   const [tab, setTab] = useState('open');
 
