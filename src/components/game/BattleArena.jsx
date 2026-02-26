@@ -223,23 +223,29 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
       )}
 
       {/* Spinner area — normal spin OR magic bonus spin, same slot */}
-      {(spinPhase === 'spinning' || spinPhase === 'magic_spin') && caseItems.length > 0 && (
-        <div className="px-2 pb-2">
-          {spinPhase === 'magic_spin' && (
-            <div className="text-center mb-1">
-              <span className="text-[10px] font-bold text-cyan-300 tracking-widest uppercase">✦ Magic Spin ✦</span>
-            </div>
-          )}
-          <VerticalSpinner
-            key={spinPhase === 'magic_spin' ? `magic-${spinnerKey}` : spinnerKey}
-            items={spinPhase === 'magic_spin' ? magicCaseItems : caseItems}
-            winnerItem={spinPhase === 'magic_spin' ? magicItem : spinnerItem}
-            onDone={spinPhase === 'magic_spin' ? onMagicSpinDone : onSpinDone}
-            fast={fast}
-            isMagic={spinPhase === 'magic_spin'}
-          />
-        </div>
-      )}
+      {(spinPhase === 'spinning' || spinPhase === 'magic_spin') && caseItems.length > 0 && (() => {
+        // Normal spin: exclude top-rarity items from the random strip pool
+        const TOP_RARITIES = ['epic', 'legendary'];
+        const normalPool = caseItems.filter(it => !TOP_RARITIES.includes(it.rarity));
+        const spinPool = normalPool.length > 0 ? normalPool : caseItems;
+
+        return (
+          <div className="px-2 pb-2">
+            {spinPhase === 'magic_spin' && (
+              <div className="text-center mb-1">
+                <span className="text-[10px] font-bold text-cyan-300 tracking-widest uppercase">✦ Magic Spin ✦</span>
+              </div>
+            )}
+            <VerticalSpinner
+              key={spinPhase === 'magic_spin' ? `magic-${spinnerKey}` : spinnerKey}
+              items={spinPhase === 'magic_spin' ? magicCaseItems : spinPool}
+              winnerItem={spinPhase === 'magic_spin' ? magicItem : spinnerItem}
+              onDone={spinPhase === 'magic_spin' ? onMagicSpinDone : onSpinDone}
+              fast={fast}
+            />
+          </div>
+        );
+      })()}
 
       {/* Won items list */}
       <div className="px-2 pb-3 space-y-1">
