@@ -4,12 +4,6 @@ import { Button } from '@/components/ui/button';
 import { getRarityColor, getRarityBorder, rollItem } from './useWallet';
 import { motion, AnimatePresence } from 'framer-motion';
 
-// Parse mode string to get teams array e.g. "2v2" -> [2,2], "1v1v1" -> [1,1,1]
-function parseTeams(modeLabel) {
-  return modeLabel.split('v').map(Number);
-}
-
-// Simple confetti burst using canvas
 function ConfettiEffect() {
   const canvasRef = useRef(null);
   useEffect(() => {
@@ -50,7 +44,7 @@ function ConfettiEffect() {
   return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-50" />;
 }
 
-// Vertical case spinner for a single round
+// Vertical case spinner
 function CaseSpinner({ items, winnerItem, onDone }) {
   const ITEM_H = 80;
   const TOTAL = 40;
@@ -61,7 +55,7 @@ function CaseSpinner({ items, winnerItem, onDone }) {
     return items[Math.floor(Math.random() * items.length)];
   });
 
-  const VISIBLE_H = 240; // visible window height
+  const VISIBLE_H = 240;
   const targetY = -(winPos * ITEM_H - VISIBLE_H / 2 + ITEM_H / 2);
 
   useEffect(() => {
@@ -71,9 +65,7 @@ function CaseSpinner({ items, winnerItem, onDone }) {
 
   return (
     <div className="relative overflow-hidden rounded-xl bg-[#0d0d1a] border border-white/10 w-full" style={{ height: VISIBLE_H }}>
-      {/* Center line */}
       <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-amber-400 z-10 pointer-events-none" />
-      {/* Fade top/bottom */}
       <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-[#0d0d1a] to-transparent z-10 pointer-events-none" />
       <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#0d0d1a] to-transparent z-10 pointer-events-none" />
       <motion.div
@@ -102,15 +94,18 @@ function CaseSpinner({ items, winnerItem, onDone }) {
   );
 }
 
-function PlayerCard({ player, items, isWinner, teamColor }) {
+// Player column: username + spinner on top, won items below
+function PlayerColumn({ player, items, isSpinning, caseItems, spinnerItem, onSpinDone, isWinner, teamColor, done }) {
   const total = items.reduce((s, it) => s + (it?.value || 0), 0);
   return (
-    <div className={`flex-1 min-w-0 rounded-2xl border p-3 transition-all duration-500
-      ${isWinner ? 'border-amber-400/50 bg-amber-500/5' : `border-white/[0.06] bg-white/[0.02]`}`}
+    <div className={`flex-1 min-w-0 flex flex-col rounded-2xl border transition-all duration-500 overflow-hidden
+      ${isWinner ? 'border-amber-400/50 bg-amber-500/5' : 'border-white/[0.06] bg-white/[0.02]'}`}
       style={isWinner ? {} : { borderColor: teamColor + '33' }}
     >
-      <div className="flex items-center gap-2 mb-2">
-        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold" style={{ background: teamColor + '33', color: teamColor }}>
+      {/* Header */}
+      <div className="flex items-center gap-2 px-3 pt-3 pb-2">
+        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+          style={{ background: teamColor + '33', color: teamColor }}>
           {player.isBot ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
         </div>
         <div className="flex-1 min-w-0">
@@ -119,8 +114,23 @@ function PlayerCard({ player, items, isWinner, teamColor }) {
         </div>
         {isWinner && <Crown className="w-4 h-4 text-amber-400 flex-shrink-0" />}
       </div>
-      <p className="text-xl font-bold text-amber-400 text-center mb-2">{total.toLocaleString()}</p>
-      <div className="space-y-1 max-h-48 overflow-y-auto">
+
+      {/* Total value */}
+      <p className="text-xl font-bold text-amber-400 text-center pb-2">{total.toLocaleString()}</p>
+
+      {/* Spinner (active during spin) */}
+      {isSpinning && caseItems.length > 0 && (
+        <div className="px-2 pb-2">
+          <CaseSpinner
+            items={caseItems}
+            winnerItem={spinnerItem}
+            onDone={onSpinDone}
+          />
+        </div>
+      )}
+
+      {/* Won items — no scrollbar */}
+      <div className="px-2 pb-3 space-y-1">
         {items.map((item, i) => (
           <motion.div key={i} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
             className={`flex items-center gap-1.5 p-1.5 rounded-lg border ${getRarityBorder(item?.rarity)} bg-white/[0.02]`}>
@@ -142,21 +152,19 @@ const TEAM_COLORS = ['#8b5cf6', '#3b82f6', '#ef4444', '#10b981'];
 
 export default function BattleArena({ battle, selectedCases, players, teams, modeLabel, userEmail, onClose, onReward }) {
   const totalRounds = selectedCases.length;
-  const teamList = teams || [players.map((_, i) => i)]; // fallback: all in one team
+  const teamList = teams || [players.map((_, i) => i)];
 
-  // State
-  const [phase, setPhase] = useState('countdown'); // countdown | spinning | result
+  const [phase, setPhase] = useState('countdown');
   const [countdown, setCountdown] = useState(3);
   const [currentRound, setCurrentRound] = useState(0);
   const [spinning, setSpinning] = useState(false);
-  const [spinners, setSpinners] = useState([]); // [{ playerIdx, item }]
+  const [spinners, setSpinners] = useState([]);
   const [playerItems, setPlayerItems] = useState(players.map(() => []));
   const [spinDoneCount, setSpinDoneCount] = useState(0);
   const [done, setDone] = useState(false);
   const [winnerTeamIdx, setWinnerTeamIdx] = useState(null);
   const [showConfetti, setShowConfetti] = useState(false);
 
-  // Pre-roll all items for all rounds upfront
   const allRolled = useRef(null);
   useEffect(() => {
     allRolled.current = selectedCases.map(c =>
@@ -167,7 +175,6 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
     );
   }, []);
 
-  // Countdown
   useEffect(() => {
     if (phase !== 'countdown') return;
     if (countdown === 0) {
@@ -190,7 +197,6 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
     setSpinDoneCount(prev => {
       const next = prev + 1;
       if (next >= players.length) {
-        // All spinners done — reveal items
         const round = currentRound;
         const rolled = allRolled.current[round];
         setPlayerItems(prev2 => prev2.map((items, pi) => [...items, rolled[pi]]));
@@ -198,10 +204,8 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
 
         const nextRound = round + 1;
         if (nextRound >= totalRounds) {
-          // Battle done — wait so players can see the last spin result
           setTimeout(() => finishBattle(), 3500);
         } else {
-          // Wait 5s so players can clearly see what they spun before next round
           setTimeout(() => {
             setCurrentRound(nextRound);
             startRound(nextRound);
@@ -213,7 +217,6 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
   };
 
   const finishBattle = () => {
-    // Calculate team totals
     const teamTotals = teamList.map(memberIdxs =>
       memberIdxs.reduce((sum, pi) => {
         const items = allRolled.current.map(round => round[pi]);
@@ -225,19 +228,23 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
     setWinnerTeamIdx(winIdx);
     setDone(true);
 
-    // Check if user is in winner team
     const userPlayerIdx = players.findIndex(p => p.email === userEmail);
     const userInWinnerTeam = teamList[winIdx]?.includes(userPlayerIdx);
     if (userInWinnerTeam) {
       setShowConfetti(true);
+      // Total pot = all players × all cases prices
       const totalPot = players.length * selectedCases.reduce((s, c) => s + (c.price || 0), 0);
       onReward && onReward(totalPot);
     }
   };
 
-  // Build player totals
   const playerTotals = playerItems.map(items => items.reduce((s, it) => s + (it?.value || 0), 0));
   const teamTotals = teamList.map(memberIdxs => memberIdxs.reduce((sum, pi) => sum + (playerTotals[pi] || 0), 0));
+
+  // Total pot split among winning team members
+  const totalPot = players.length * selectedCases.reduce((s, c) => s + (c.price || 0), 0);
+  const winnerTeamSize = done && winnerTeamIdx !== null ? teamList[winnerTeamIdx]?.length || 1 : 1;
+  const payoutPerWinner = Math.floor(totalPot / winnerTeamSize);
 
   const caseForRound = selectedCases[currentRound] || selectedCases[0];
   const caseItems = caseForRound?.items || [];
@@ -253,11 +260,11 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
         </button>
         <div className="flex-1">
           <p className="text-xs text-white/40 font-medium">{modeLabel || '1v1'}</p>
-          <p className="text-sm font-bold text-white/60">Battle cost <span className="text-amber-400">{(players.length * selectedCases.reduce((s,c)=>s+(c.price||0),0)).toLocaleString()}</span></p>
+          <p className="text-sm font-bold text-white/60">Battle cost <span className="text-amber-400">{totalPot.toLocaleString()}</span></p>
         </div>
         <div className="flex items-center gap-2 text-sm text-white/40">
           <span>Rounds</span>
-          <span className="text-white font-bold">{Math.min(currentRound + (done ? 0 : 0), totalRounds)} / {totalRounds}</span>
+          <span className="text-white font-bold">{totalRounds}</span>
         </div>
       </div>
 
@@ -285,6 +292,18 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
         )}
       </AnimatePresence>
 
+      {/* Round indicator */}
+      {spinning && phase === 'spinning' && (
+        <div className="flex items-center justify-between bg-[#0d0d1a] border border-white/10 rounded-xl px-4 py-2">
+          <p className="text-xs text-white/40 font-medium">Round {currentRound + 1} / {totalRounds}</p>
+          <div className="flex gap-1">
+            {selectedCases.map((c, i) => (
+              <div key={i} className={`h-1.5 rounded-full transition-all ${i < currentRound ? 'w-4 bg-violet-500' : i === currentRound ? 'w-4 bg-amber-400' : 'w-3 bg-white/10'}`} />
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Battle Over Banner */}
       {done && (
         <motion.div
@@ -292,14 +311,19 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
           animate={{ opacity: 1, y: 0 }}
           className="rounded-2xl bg-gradient-to-r from-amber-500/20 to-amber-600/10 border border-amber-400/30 p-5 text-center"
         >
-          <p className="text-2xl font-black text-white mb-2">🏆 The battle is over!</p>
+          <p className="text-2xl font-black text-white mb-3">🏆 Battle Over!</p>
           <div className="flex justify-center gap-6 flex-wrap">
             {teamList.map((memberIdxs, ti) => {
               const isWinner = ti === winnerTeamIdx;
               const total = teamTotals[ti];
               return (
                 <div key={ti} className={`flex flex-col items-center gap-1 ${isWinner ? '' : 'opacity-50'}`}>
-                  <div className="flex gap-1">
+                  {isWinner && (
+                    <p className="text-xs font-bold text-amber-400 mb-1">
+                      🏆 Winner — each player gets <span className="text-white">{payoutPerWinner.toLocaleString()} coins</span>
+                    </p>
+                  )}
+                  <div className="flex gap-3">
                     {memberIdxs.map(pi => (
                       <div key={pi} className="flex flex-col items-center">
                         {isWinner && <Crown className="w-5 h-5 text-amber-400 mb-1" />}
@@ -309,10 +333,13 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
                         </div>
                         <p className="text-[10px] text-white/60 mt-1">{players[pi]?.name}</p>
                         <p className="text-[11px] text-amber-400 font-bold">{(playerTotals[pi] || 0).toLocaleString()}</p>
+                        {isWinner && (
+                          <p className="text-[10px] text-green-400 font-bold mt-0.5">+{payoutPerWinner.toLocaleString()}</p>
+                        )}
                       </div>
                     ))}
                   </div>
-                  <p className="text-sm font-bold" style={{ color: TEAM_COLORS[ti] }}>
+                  <p className="text-sm font-bold mt-1" style={{ color: TEAM_COLORS[ti] }}>
                     Team {ti + 1}: {total.toLocaleString()}
                   </p>
                 </div>
@@ -322,50 +349,14 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
         </motion.div>
       )}
 
-      {/* Active round spinners */}
-      {spinning && phase === 'spinning' && (
-        <div className="bg-[#0d0d1a] border border-white/10 rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs text-white/40 font-medium">Round {currentRound + 1} / {totalRounds}</p>
-            <div className="flex gap-1">
-              {selectedCases.map((c, i) => (
-                <div key={i} className={`h-1.5 rounded-full transition-all ${i < currentRound ? 'w-4 bg-violet-500' : i === currentRound ? 'w-4 bg-amber-400' : 'w-3 bg-white/10'}`} />
-              ))}
-            </div>
-          </div>
-          <div className="flex gap-3">
-            {players.map((p, pi) => (
-              <div key={pi} className="flex-1 min-w-0 space-y-1.5">
-                <p className="text-xs font-medium flex items-center gap-1.5 justify-center" style={{ color: TEAM_COLORS[teamList.findIndex(t => t.includes(pi))] }}>
-                  {p.isBot ? <Bot className="w-3 h-3" /> : <User className="w-3 h-3" />}
-                  {p.name}
-                </p>
-                {caseItems.length > 0 ? (
-                  <CaseSpinner
-                    key={`${currentRound}-${pi}`}
-                    items={caseItems}
-                    winnerItem={spinners[pi]?.item}
-                    onDone={handleSpinnerDone}
-                  />
-                ) : (
-                  <div className="h-60 rounded-xl bg-white/[0.02] border border-white/5 flex items-center justify-center">
-                    <p className="text-white/20 text-sm">Opening...</p>
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Team layout — player cards */}
+      {/* Players side by side — spinner lives inside each player column */}
       <div className="flex gap-2 items-start">
         {teamList.map((memberIdxs, ti) => (
           <React.Fragment key={ti}>
-            {/* Team column */}
             <div className="flex-1 min-w-0 space-y-2">
               <div className="text-center">
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{ background: TEAM_COLORS[ti] + '33', color: TEAM_COLORS[ti] }}>
+                <span className="text-xs font-bold px-2 py-0.5 rounded-full"
+                  style={{ background: TEAM_COLORS[ti] + '33', color: TEAM_COLORS[ti] }}>
                   Team {ti + 1}
                 </span>
                 {done && (
@@ -374,17 +365,21 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
               </div>
               <div className="flex gap-2">
                 {memberIdxs.map(pi => (
-                  <PlayerCard
+                  <PlayerColumn
                     key={pi}
                     player={players[pi]}
                     items={playerItems[pi] || []}
+                    isSpinning={spinning && phase === 'spinning'}
+                    caseItems={caseItems}
+                    spinnerItem={spinners[pi]?.item}
+                    onSpinDone={handleSpinnerDone}
                     isWinner={done && ti === winnerTeamIdx}
                     teamColor={TEAM_COLORS[ti]}
+                    done={done}
                   />
                 ))}
               </div>
             </div>
-            {/* VS between teams */}
             {ti < teamList.length - 1 && (
               <div className="flex items-center justify-center px-2 pt-6">
                 <div className="text-white/20 font-black text-base">VS</div>
