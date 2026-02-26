@@ -264,6 +264,7 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, isSpinning, cas
         </div>
       )}
 
+      {/* Normal round spinner */}
       {isSpinning && caseItems.length > 0 && (
         <div className="px-2 pb-2">
           <VerticalSpinner
@@ -276,11 +277,31 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, isSpinning, cas
         </div>
       )}
 
+      {/* Magic Spin bonus spinner — only top items */}
+      {magicSpinnerVisible && magicItem && (() => {
+        const TOP_RARITIES = ['epic', 'legendary'];
+        const topItems = caseItems.filter(it => TOP_RARITIES.includes(it.rarity));
+        const spinItems = topItems.length > 0 ? topItems : caseItems;
+        return (
+          <div className="px-2 pb-2">
+            <div className="text-center mb-1">
+              <span className="text-[10px] font-bold text-cyan-300 tracking-widest uppercase">✦ Magic Spin ✦</span>
+            </div>
+            <VerticalSpinner
+              key={`magic-${spinnerKey}`}
+              items={spinItems}
+              winnerItem={magicItem}
+              onDone={handleMagicSpinnerDone}
+              fast={false}
+            />
+          </div>
+        );
+      })()}
+
       <div className="px-2 pb-3 space-y-1">
-        {wonItems.map((item, i) => {
-          const isHidden = magicSpin && HIDDEN_RARITIES.includes(item?.rarity);
-          return <ItemChip key={i} item={item} hidden={isHidden} />;
-        })}
+        {wonItems.map((item, i) => (
+          <ItemChip key={i} item={item} hidden={false} />
+        ))}
       </div>
     </div>
   );
