@@ -347,14 +347,13 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
   };
 
   // Single source of truth — always reads from allRolled.current
-  // In team battles, we compare team totals. In 1v1 each "team" is a single player.
   const getPlayerTotal = (pi) => {
     if (!allRolled.current) return 0;
     if (isTerminal) {
       const lastRound = allRolled.current[totalRounds - 1];
-      return lastRound?.[pi]?.value || 0;
+      return lastRound?.[pi]?.item?.value || 0;
     }
-    return allRolled.current.reduce((s, r) => s + (r[pi]?.value || 0), 0);
+    return allRolled.current.reduce((s, r) => s + (r[pi]?.item?.value || 0), 0);
   };
 
   // For team battles: average per-player value so team size doesn't bias the result
