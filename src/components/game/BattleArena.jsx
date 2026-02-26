@@ -44,55 +44,7 @@ function ConfettiEffect({ active }) {
   return <canvas ref={ref} className="fixed inset-0 pointer-events-none z-50" />;
 }
 
-/* ─── Magic Spin Announcement ─────────────────────────────────────────────── */
-// This is a brief fullscreen announcement that plays BEFORE the bonus spin
-function MagicSpinOverlay({ onDone }) {
-  useEffect(() => {
-    const t = setTimeout(onDone, 1800);
-    return () => clearTimeout(t);
-  }, []);
 
-  return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center pointer-events-none"
-      style={{ background: 'rgba(4,4,16,0.88)' }}
-    >
-      <motion.div
-        animate={{ scale: [1, 1.8, 1], opacity: [0.5, 0, 0.5] }}
-        transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
-        className="absolute w-48 h-48 rounded-full"
-        style={{ background: 'radial-gradient(circle, rgba(56,189,248,0.4) 0%, transparent 70%)' }}
-      />
-      <motion.div
-        initial={{ scale: 0.4, rotate: -15 }}
-        animate={{ scale: 1, rotate: 0 }}
-        transition={{ duration: 0.5, ease: 'backOut' }}
-        className="text-6xl relative z-10"
-      >
-        💎
-      </motion.div>
-      <motion.p
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="text-2xl font-black text-cyan-300 mt-4 tracking-widest uppercase"
-      >
-        ✦ Magic Spin! ✦
-      </motion.p>
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.6 }}
-        className="text-sm text-cyan-400/70 mt-1"
-      >
-        Bonus spin — top items only!
-      </motion.p>
-    </motion.div>
-  );
-}
 
 /* ─── Vertical Spinner ──────────────────────────────────────────────────────── */
 function VerticalSpinner({ items, winnerItem, onDone, fast }) {
