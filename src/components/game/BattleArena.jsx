@@ -198,13 +198,14 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
 
         const nextRound = round + 1;
         if (nextRound >= totalRounds) {
-          // Battle done
-          setTimeout(() => finishBattle(), 600);
+          // Battle done — wait so players can see the last spin result
+          setTimeout(() => finishBattle(), 3500);
         } else {
+          // Wait 5s so players can clearly see what they spun before next round
           setTimeout(() => {
             setCurrentRound(nextRound);
             startRound(nextRound);
-          }, 800);
+          }, 5000);
         }
       }
       return next;
