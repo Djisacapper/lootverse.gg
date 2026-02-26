@@ -86,15 +86,13 @@ function MagicSpinOverlay({ onDone }) {
 }
 
 /* ─── Vertical Spinner ──────────────────────────────────────────────────────── */
-function VerticalSpinner({ items, winnerItem, onDone, fast, isMagic }) {
+function VerticalSpinner({ items, winnerItem, onDone, fast }) {
   const ITEM_H = 80;
   const WIN_POS = 28;
   const TOTAL = 36;
   const VISIBLE_H = 240;
   const duration = fast ? 1.4 : 3.0;
 
-  // Build strip once — winner at WIN_POS, rest random from items
-  // For magic spin: all items in strip are top-rarity, blurred until done
   const strip = useRef(
     Array.from({ length: TOTAL }, (_, i) =>
       i === WIN_POS ? winnerItem : items[Math.floor(Math.random() * items.length)]
@@ -102,26 +100,19 @@ function VerticalSpinner({ items, winnerItem, onDone, fast, isMagic }) {
   ).current;
 
   const targetY = -(WIN_POS * ITEM_H - VISIBLE_H / 2 + ITEM_H / 2);
-  const [landed, setLanded] = useState(false);
 
   useEffect(() => {
     const spinMs = fast ? 1500 : 3100;
-    const t = setTimeout(() => {
-      setLanded(true);
-      onDone();
-    }, spinMs);
+    const t = setTimeout(onDone, spinMs);
     return () => clearTimeout(t);
   }, []);
 
   return (
     <div className="relative overflow-hidden rounded-xl border border-white/10 bg-[#08080f]" style={{ height: VISIBLE_H }}>
-      {/* Center highlight line */}
       <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 pointer-events-none z-10"
         style={{ height: ITEM_H, background: 'rgba(255,255,255,0.03)', borderTop: '1px solid rgba(245,158,11,0.5)', borderBottom: '1px solid rgba(245,158,11,0.5)' }} />
-      {/* Top fade */}
       <div className="absolute inset-x-0 top-0 h-16 pointer-events-none z-20"
         style={{ background: 'linear-gradient(to bottom, #08080f 0%, transparent 100%)' }} />
-      {/* Bottom fade */}
       <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none z-20"
         style={{ background: 'linear-gradient(to top, #08080f 0%, transparent 100%)' }} />
 
@@ -131,26 +122,20 @@ function VerticalSpinner({ items, winnerItem, onDone, fast, isMagic }) {
         animate={{ y: targetY }}
         transition={{ duration, ease: [0.04, 0.82, 0.165, 1] }}
       >
-        {strip.map((item, i) => {
-          const isWinnerSlot = i === WIN_POS;
-          const shouldBlur = isMagic && !landed && !isWinnerSlot;
-          return (
-            <div key={i} className="flex items-center gap-2 px-3 flex-shrink-0" style={{ height: ITEM_H }}>
-              <div
-                className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getRarityColor(item?.rarity || 'common')} flex-shrink-0 flex items-center justify-center overflow-hidden transition-all`}
-                style={shouldBlur ? { filter: 'blur(6px)' } : {}}
-              >
-                {item?.image_url
-                  ? <img src={item.image_url} alt={item?.name} className="w-11 h-11 object-contain" />
-                  : <span className="text-2xl">📦</span>}
-              </div>
-              <div className="flex-1 min-w-0" style={shouldBlur ? { filter: 'blur(4px)' } : {}}>
-                <p className="text-[11px] text-white/80 font-medium truncate">{item?.name || '—'}</p>
-                <p className="text-xs text-amber-400 font-bold">{item?.value?.toLocaleString() || 0}</p>
-              </div>
+        {strip.map((item, i) => (
+          <div key={i} className="flex items-center gap-2 px-3 flex-shrink-0" style={{ height: ITEM_H }}>
+            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getRarityColor(item?.rarity || 'common')} flex-shrink-0 flex items-center justify-center overflow-hidden`}>
+              {item?.image_url
+                ? <img src={item.image_url} alt={item?.name} className="w-11 h-11 object-contain" onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }} />
+                : null}
+              <span className="text-2xl" style={{ display: item?.image_url ? 'none' : 'flex' }}>📦</span>
             </div>
-          );
-        })}
+            <div className="flex-1 min-w-0">
+              <p className="text-[11px] text-white/80 font-medium truncate">{item?.name || '—'}</p>
+              <p className="text-xs text-amber-400 font-bold">{item?.value?.toLocaleString() || 0}</p>
+            </div>
+          </div>
+        ))}
       </motion.div>
     </div>
   );
