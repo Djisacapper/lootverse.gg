@@ -253,40 +253,31 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
     }
   };
 
-  // Compute team values for winner determination
-  const computeTeamValues = (allItems) => {
-    return teamList.map(mi =>
-      mi.reduce((sum, pi) => {
-        // Terminal mode: only last round
-        if (isTerminal) {
-          const lastRound = allRolled.current[totalRounds - 1];
-          return sum + (lastRound[pi]?.value || 0);
-        }
-        return sum + allItems[pi].reduce((s, it) => s + (it?.value || 0), 0);
-      }, 0)
-    );
+  // Single source of truth — always reads from allRolled.current
+  const getPlayerTotal = (pi) => {
+    if (!allRolled.current) return 0;
+    if (isTerminal) {
+      // Only last round counts
+      const lastRound = allRolled.current[totalRounds - 1];
+      return lastRound?.[pi]?.value || 0;
+    }
+    return allRolled.current.reduce((s, r) => s + (r[pi]?.value || 0), 0);
   };
+
+  const getTeamTotal = (mi) => mi.reduce((s, pi) => s + getPlayerTotal(pi), 0);
 
   const finishBattle = (forcedWinnerTi = null) => {
     let winIdx;
 
     if (forcedWinnerTi !== null) {
+      // Jackpot wheel chose the winner
       winIdx = forcedWinnerTi;
+    } else if (isGroup) {
+      winIdx = -1; // everyone wins
     } else {
-      // Always compute directly from allRolled to avoid stale state
-      const teamVals = teamList.map(mi =>
-        mi.reduce((sum, pi) => {
-          if (isTerminal) {
-            const lastRound = allRolled.current[totalRounds - 1];
-            return sum + (lastRound[pi]?.value || 0);
-          }
-          return sum + allRolled.current.reduce((s, r) => s + (r[pi]?.value || 0), 0);
-        }, 0)
-      );
-
-      if (isGroup) {
-        winIdx = -1;
-      } else if (isCrazy) {
+      const teamVals = teamList.map(mi => getTeamTotal(mi));
+      // Crazy = LOWEST value wins. Normal = HIGHEST value wins.
+      if (isCrazy) {
         winIdx = teamVals.indexOf(Math.min(...teamVals));
       } else {
         winIdx = teamVals.indexOf(Math.max(...teamVals));
