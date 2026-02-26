@@ -254,29 +254,33 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
   };
 
   // Single source of truth — always reads from allRolled.current
+  // In team battles, we compare team totals. In 1v1 each "team" is a single player.
   const getPlayerTotal = (pi) => {
     if (!allRolled.current) return 0;
     if (isTerminal) {
-      // Only last round counts
       const lastRound = allRolled.current[totalRounds - 1];
       return lastRound?.[pi]?.value || 0;
     }
     return allRolled.current.reduce((s, r) => s + (r[pi]?.value || 0), 0);
   };
 
-  const getTeamTotal = (mi) => mi.reduce((s, pi) => s + getPlayerTotal(pi), 0);
+  // For team battles: average per-player value so team size doesn't bias the result
+  const getTeamTotal = (mi) => {
+    if (mi.length === 0) return 0;
+    const sum = mi.reduce((s, pi) => s + getPlayerTotal(pi), 0);
+    return sum / mi.length; // average so 2v2 doesn't unfairly advantage bigger teams
+  };
 
   const finishBattle = (forcedWinnerTi = null) => {
     let winIdx;
 
     if (forcedWinnerTi !== null) {
-      // Jackpot wheel chose the winner
       winIdx = forcedWinnerTi;
     } else if (isGroup) {
-      winIdx = -1; // everyone wins
+      winIdx = -1;
     } else {
       const teamVals = teamList.map(mi => getTeamTotal(mi));
-      // Crazy = LOWEST value wins. Normal = HIGHEST value wins.
+      // Crazy = LOWEST average wins. Normal = HIGHEST average wins.
       if (isCrazy) {
         winIdx = teamVals.indexOf(Math.min(...teamVals));
       } else {
