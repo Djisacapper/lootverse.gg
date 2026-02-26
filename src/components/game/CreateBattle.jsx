@@ -122,12 +122,19 @@ export default function CreateBattle({ cases, balance, user, onBack, onCreate })
         </button>
         <h1 className="text-2xl font-bold text-white flex-1">Create Battle</h1>
 
-        <div className="flex items-center gap-1.5 text-sm text-white/50">
+        <div className="flex items-center gap-1.5 text-sm text-white/50 flex-wrap">
           <div className="w-4 h-4 rounded-full bg-amber-400 flex items-center justify-center">
             <span className="text-[8px] font-black text-black">$</span>
           </div>
-          <span>Total value</span>
+          <span>Battle cost</span>
           <span className="text-amber-400 font-bold">{totalCost.toLocaleString()}</span>
+          {/* Active mode icons */}
+          {Object.entries(battleModes).filter(([,v]) => v).map(([key]) => {
+            const MODE_META = { crazy: '🎭', terminal: '⚡', jackpot: '👑', group: '🔄', magic_spin: '✨', fast_mode: '💨' };
+            return MODE_META[key] ? (
+              <span key={key} title={key.replace('_',' ')} className="text-base leading-none">{MODE_META[key]}</span>
+            ) : null;
+          })}
         </div>
 
         {/* Mode dropdown */}
