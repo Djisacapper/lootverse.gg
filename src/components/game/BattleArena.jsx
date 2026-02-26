@@ -135,9 +135,8 @@ function VerticalSpinner({ items, winnerItem, onDone, fast }) {
           <div key={i} className="flex items-center gap-2 px-3 flex-shrink-0" style={{ height: ITEM_H }}>
             <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getRarityColor(item?.rarity || 'common')} flex-shrink-0 flex items-center justify-center overflow-hidden`}>
               {item?.image_url
-                ? <img src={item.image_url} alt={item?.name} className="w-11 h-11 object-contain" onError={e => { e.target.style.display='none'; e.target.nextSibling.style.display='flex'; }} />
-                : null}
-              <span className="text-2xl" style={{ display: item?.image_url ? 'none' : 'flex' }}>📦</span>
+                ? <img src={item.image_url} alt={item?.name} className="w-11 h-11 object-contain" />
+                : <span className="text-2xl">📦</span>}
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-[11px] text-white/80 font-medium truncate">{item?.name || '—'}</p>
