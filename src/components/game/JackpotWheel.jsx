@@ -47,26 +47,29 @@ export default function JackpotWheel({ teamList, players, playerTotals, onWinner
   }
   const totalStripW = curX;
 
-  // Pick winner weighted by value percentage
-  const winnerSeg = useRef(() => {
+  // Pick winner weighted by value percentage — compute once on mount
+  const winnerSeg = useRef(null);
+  if (!winnerSeg.current) {
     const r = Math.random();
     let acc = 0;
+    let picked = segments[segments.length - 1];
     for (const seg of segments) {
       acc += seg.pct;
-      if (r < acc) return seg;
+      if (r < acc) { picked = seg; break; }
     }
-    return segments[segments.length - 1];
-  }).current;
+    winnerSeg.current = picked;
+  }
+  const winner = winnerSeg.current;
 
-  // Land on the winner segment in the second-to-last repetition
-  const landingX = useRef(() => {
-    const matches = strip.filter(s => s.pi === winnerSeg.pi);
-    const target = matches[Math.max(0, matches.length - 3)]; // pick 3rd from last rep
-    if (!target) return totalStripW / 2;
-    // Land near the center of the segment with slight random offset
-    const offset = (Math.random() - 0.5) * target.w * 0.4;
-    return target.x + target.w / 2 + offset;
-  }).current;
+  // Land on winner's segment in 3rd-from-last repetition
+  const landingXRef = useRef(null);
+  if (!landingXRef.current) {
+    const matches = strip.filter(s => s.pi === winner.pi);
+    const target = matches[Math.max(0, matches.length - 3)];
+    const offset = (Math.random() - 0.5) * (target?.w || 40) * 0.4;
+    landingXRef.current = target ? target.x + target.w / 2 + offset : totalStripW / 2;
+  }
+  const landingX = landingXRef.current;
 
   // Translate so landingX aligns with the center pointer
   const targetX = -(landingX - VIEWPORT_W / 2);
