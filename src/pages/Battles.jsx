@@ -246,7 +246,15 @@ export default function Battles() {
                         <Users className="w-3.5 h-3.5" />
                         {b.players?.length || 1}/{b.max_players || 2} players
                       </div>
-                      {b.creator_email !== user?.email ? (
+                      {b.status === 'in_progress' ? (
+                        <Button
+                          onClick={() => handleWatch(b)}
+                          size="sm"
+                          className="bg-white/10 hover:bg-white/20 text-white rounded-xl"
+                        >
+                          <Eye className="w-3.5 h-3.5 mr-1.5" /> Watch
+                        </Button>
+                      ) : b.creator_email !== user?.email ? (
                         <Button
                           onClick={() => handleJoin(b)}
                           disabled={b.entry_cost > balance}
@@ -256,7 +264,7 @@ export default function Battles() {
                           <Swords className="w-3.5 h-3.5 mr-1.5" /> Join
                         </Button>
                       ) : (
-                        <Badge className="bg-white/5 text-white/30 border-white/10">Your Battle</Badge>
+                        <Badge className="bg-white/5 text-white/30 border-white/10">Waiting...</Badge>
                       )}
                     </div>
                   </div>
