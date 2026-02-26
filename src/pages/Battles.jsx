@@ -242,9 +242,12 @@ export default function Battles() {
                       </div>
                     </div>
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-xs text-white/40">
+                      <div className="flex items-center gap-2 text-xs text-white/40 flex-wrap">
                         <Users className="w-3.5 h-3.5" />
                         {b.players?.length || 1}/{b.max_players || 2} players
+                        {b.status === 'in_progress' && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-semibold">LIVE</span>
+                        )}
                       </div>
                       {b.status === 'in_progress' ? (
                         <Button
