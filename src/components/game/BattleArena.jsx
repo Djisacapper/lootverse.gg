@@ -160,8 +160,8 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, isSpinning, cas
 
       <p className="text-xl font-black text-amber-400 text-center py-1">{total.toLocaleString()}</p>
 
-      {/* Live percentage bar */}
-      {showPct && (
+      {/* Live percentage bar — only shown in jackpot mode */}
+      {showPct && grandTotal > 0 && (
         <div className="px-3 pb-1">
           <div className="flex justify-between items-center mb-0.5">
             <span className="text-[10px] font-bold" style={{ color: playerColor }}>{Math.round(pct * 100)}%</span>
