@@ -50,49 +50,51 @@ function ConfettiEffect() {
   return <canvas ref={canvasRef} className="fixed inset-0 pointer-events-none z-50" />;
 }
 
-// Horizontal case spinner for a single round
+// Vertical case spinner for a single round
 function CaseSpinner({ items, winnerItem, onDone }) {
-  const ITEM_W = 80;
-  const VISIBLE = 7;
+  const ITEM_H = 80;
   const TOTAL = 40;
-  const winPos = 32; // winner lands here
+  const winPos = 32;
 
-  // Build strip: random items, last few are winnerItem at position winPos
   const strip = Array.from({ length: TOTAL }, (_, i) => {
     if (i === winPos) return winnerItem;
     return items[Math.floor(Math.random() * items.length)];
   });
 
-  const targetX = -(winPos * ITEM_W - (VISIBLE * ITEM_W) / 2 + ITEM_W / 2);
+  const VISIBLE_H = 240; // visible window height
+  const targetY = -(winPos * ITEM_H - VISIBLE_H / 2 + ITEM_H / 2);
 
   useEffect(() => {
-    const t = setTimeout(onDone, 2600);
+    const t = setTimeout(onDone, 3000);
     return () => clearTimeout(t);
   }, []);
 
   return (
-    <div className="relative w-full overflow-hidden rounded-xl bg-[#0d0d1a] border border-white/10" style={{ height: 96 }}>
+    <div className="relative overflow-hidden rounded-xl bg-[#0d0d1a] border border-white/10 w-full" style={{ height: VISIBLE_H }}>
       {/* Center line */}
-      <div className="absolute top-0 bottom-0 left-1/2 -translate-x-1/2 w-0.5 bg-amber-400 z-10 pointer-events-none" />
-      {/* Fade edges */}
-      <div className="absolute inset-y-0 left-0 w-16 bg-gradient-to-r from-[#0d0d1a] to-transparent z-10 pointer-events-none" />
-      <div className="absolute inset-y-0 right-0 w-16 bg-gradient-to-l from-[#0d0d1a] to-transparent z-10 pointer-events-none" />
+      <div className="absolute left-0 right-0 top-1/2 -translate-y-1/2 h-0.5 bg-amber-400 z-10 pointer-events-none" />
+      {/* Fade top/bottom */}
+      <div className="absolute inset-x-0 top-0 h-16 bg-gradient-to-b from-[#0d0d1a] to-transparent z-10 pointer-events-none" />
+      <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-[#0d0d1a] to-transparent z-10 pointer-events-none" />
       <motion.div
-        className="flex items-center absolute top-0 bottom-0"
-        initial={{ x: 0 }}
-        animate={{ x: targetX }}
-        transition={{ duration: 2.4, ease: [0.1, 0.7, 0.3, 1] }}
+        className="flex flex-col items-center absolute left-0 right-0 top-0"
+        initial={{ y: 0 }}
+        animate={{ y: targetY }}
+        transition={{ duration: 2.8, ease: [0.1, 0.7, 0.3, 1] }}
       >
         {strip.map((item, i) => (
           <div
             key={i}
-            className={`flex-shrink-0 flex flex-col items-center justify-center gap-1 mx-0.5 rounded-lg border bg-white/[0.04] ${i === winPos ? getRarityBorder(item?.rarity) : 'border-white/5'}`}
-            style={{ width: ITEM_W - 4, height: 88 }}
+            className={`flex-shrink-0 flex items-center gap-3 w-full px-3 rounded-lg border my-0.5 bg-white/[0.04] ${i === winPos ? getRarityBorder(item?.rarity) : 'border-white/5'}`}
+            style={{ height: ITEM_H - 4 }}
           >
-            <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getRarityColor(item?.rarity || 'common')} flex items-center justify-center overflow-hidden`}>
-              {item?.image_url ? <img src={item.image_url} alt={item.name} className="w-9 h-9 object-contain" /> : <span className="text-lg">📦</span>}
+            <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${getRarityColor(item?.rarity || 'common')} flex items-center justify-center overflow-hidden flex-shrink-0`}>
+              {item?.image_url ? <img src={item.image_url} alt={item.name} className="w-11 h-11 object-contain" /> : <span className="text-xl">📦</span>}
             </div>
-            <p className="text-[9px] text-white/50 truncate px-1 max-w-full text-center">{item?.name}</p>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-white/70 font-medium truncate">{item?.name}</p>
+              <p className="text-xs text-amber-400 font-bold">{item?.value?.toLocaleString()}</p>
+            </div>
           </div>
         ))}
       </motion.div>
