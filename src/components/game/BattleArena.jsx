@@ -333,25 +333,16 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
     const rolled = allRolled.current[round];
 
     if (rolled[pi].isMagic) {
-      // This player triggered magic spin → show overlay then bonus spin
+      // This player triggered magic spin → go straight to magic spin (no overlay)
       setPlayerPhases(prev => {
         const next = [...prev];
-        next[pi] = 'magic_overlay';
+        next[pi] = 'magic_spin';
         return next;
       });
     } else {
       // Normal finish for this player
       markPlayerRoundDone(pi, round);
     }
-  };
-
-  // Called when magic overlay timer ends → start the bonus magic spin
-  const handleMagicOverlayDone = (pi) => {
-    setPlayerPhases(prev => {
-      const next = [...prev];
-      next[pi] = 'magic_spin';
-      return next;
-    });
   };
 
   // Called when the magic spin animation ends
