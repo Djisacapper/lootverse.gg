@@ -196,12 +196,7 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
         );
       })()}
 
-      {/* Won items list */}
-      <div className="px-2 pb-3 space-y-1">
-        {wonItems.map((item, i) => (
-          <ItemChip key={i} item={item} />
-        ))}
-      </div>
+
     </div>
   );
 }
