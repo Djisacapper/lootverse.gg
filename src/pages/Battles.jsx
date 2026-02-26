@@ -250,59 +250,64 @@ export default function Battles() {
       )}
 
       {/* Create Dialog */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="bg-[#16161f] border-white/10 text-white">
+      <Dialog open={showCreate} onOpenChange={(v) => { setShowCreate(v); if (!v) setSelectedCases([]); }}>
+        <DialogContent className="bg-[#13131e] border-white/10 text-white max-w-lg">
           <DialogHeader>
             <DialogTitle>Create Battle</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 pt-2">
             <div>
-              <label className="text-sm text-white/50 mb-2 block">Select Case</label>
-              <Select value={selectedCaseId} onValueChange={setSelectedCaseId}>
-                <SelectTrigger className="bg-white/5 border-white/10 text-white rounded-xl">
-                  <SelectValue placeholder="Choose a case" />
-                </SelectTrigger>
-                <SelectContent>
-                  {cases.map(c => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {c.name} ({c.price} coins)
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-sm text-white/50 mb-2 block">Rounds</label>
-              <div className="flex gap-2">
-                {[1, 2, 3, 5].map(r => (
-                  <button
-                    key={r}
-                    onClick={() => setRounds(r)}
-                    className={`px-4 py-2 rounded-xl text-sm font-medium transition-all
-                      ${rounds === r ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-white/5 text-white/40 border border-white/10'}`}
-                  >
-                    {r}R
-                  </button>
+              <label className="text-sm text-white/50 mb-2 block">Selected Cases ({selectedCases.length} rounds)</label>
+              <div className="grid grid-cols-4 gap-2 min-h-[80px]">
+                {selectedCases.map((c, i) => (
+                  <div key={i} className="relative bg-white/5 border border-white/10 rounded-xl p-2 flex flex-col items-center gap-1">
+                    <button
+                      onClick={() => handleRemoveCase(i)}
+                      className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 rounded-full flex items-center justify-center"
+                    >
+                      <X className="w-2.5 h-2.5 text-white" />
+                    </button>
+                    <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center overflow-hidden">
+                      {c.image_url ? <img src={c.image_url} alt={c.name} className="w-full h-full object-cover" /> : <span className="text-lg">📦</span>}
+                    </div>
+                    <p className="text-[9px] text-white/50 text-center leading-tight truncate w-full text-center">{c.name}</p>
+                  </div>
                 ))}
+                <button
+                  onClick={() => setShowCasePicker(true)}
+                  className="bg-white/[0.03] border border-dashed border-white/15 rounded-xl flex flex-col items-center justify-center gap-1 py-3 hover:border-violet-400/40 hover:bg-violet-500/5 transition-all min-h-[80px]"
+                >
+                  <Plus className="w-5 h-5 text-white/30" />
+                  <span className="text-[10px] text-white/30">Add Cases</span>
+                </button>
               </div>
             </div>
-            {selectedCaseId && (
+
+            {selectedCases.length > 0 && (
               <p className="text-sm text-white/40">
-                Entry cost: <span className="text-amber-400 font-semibold">
-                  {((cases.find(c => c.id === selectedCaseId)?.price || 0) * rounds).toLocaleString()} coins
-                </span>
+                Entry cost: <span className="text-amber-400 font-semibold">{totalCost.toLocaleString()} coins</span>
+                {totalCost > balance && <span className="text-red-400 ml-2">(insufficient balance)</span>}
               </p>
             )}
+
             <Button
               onClick={handleCreate}
-              disabled={!selectedCaseId}
+              disabled={selectedCases.length === 0 || totalCost > balance}
               className="w-full bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 rounded-xl h-12"
             >
-              Create Battle
+              Create Battle · {selectedCases.length} round{selectedCases.length !== 1 ? 's' : ''}
             </Button>
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Case Picker Modal */}
+      <CasePickerModal
+        open={showCasePicker}
+        onOpenChange={setShowCasePicker}
+        cases={cases}
+        onAddCase={(c) => { handleAddCase(c); }}
+      />
     </div>
   );
 }
