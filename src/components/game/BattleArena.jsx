@@ -412,8 +412,8 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
         <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
           <JackpotWheel
             teamList={teamList}
-            teamTotals={teamList.map(mi => getTeamTotal(mi))}
             players={players}
+            playerTotals={players.map((_, pi) => getPlayerTotal(pi))}
             onWinner={(winnerTi) => setTimeout(() => finishBattle(winnerTi), 800)}
           />
         </motion.div>
