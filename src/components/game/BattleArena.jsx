@@ -520,7 +520,7 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
                   <PlayerColumn
                     key={pi}
                     player={players[pi]}
-                    teamColor={TEAM_COLORS[ti]}
+                    playerColor={playerColorMap[pi]}
                     isWinner={done && (isGroup || ti === winnerTeamIdx)}
                     wonItems={playerItems[pi] || []}
                     isSpinning={spinning}
@@ -530,6 +530,8 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
                     onSpinDone={handleSpinDone}
                     fast={isFastMode}
                     magicSpin={isMagicSpin && !done}
+                    pct={grandPlayerTotal > 0 ? (playerTotals[pi] || 0) / grandPlayerTotal : 0}
+                    grandTotal={grandPlayerTotal}
                   />
                 ))}
               </div>
