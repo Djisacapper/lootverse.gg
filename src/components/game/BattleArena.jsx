@@ -225,10 +225,15 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
 
       {/* Spinner area — normal spin OR magic bonus spin, same slot */}
       {(spinPhase === 'spinning' || spinPhase === 'magic_spin') && caseItems.length > 0 && (() => {
-        // Normal spin: exclude top-rarity items from the random strip pool
         const TOP_RARITIES = ['epic', 'legendary'];
+        
+        // Normal spin: exclude top-rarity items from the random strip pool
         const normalPool = caseItems.filter(it => !TOP_RARITIES.includes(it.rarity));
-        const spinPool = normalPool.length > 0 ? normalPool : caseItems;
+        const normalSpinPool = normalPool.length > 0 ? normalPool : caseItems;
+        
+        // Magic spin: use TOP items only for the bonus spin sequence
+        const topItems = caseItems.filter(it => TOP_RARITIES.includes(it.rarity));
+        const magicSpinPool = topItems.length > 0 ? topItems : caseItems;
 
         return (
           <div className="px-2 pb-2">
@@ -239,7 +244,7 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
             )}
             <VerticalSpinner
               key={spinPhase === 'magic_spin' ? `magic-${spinnerKey}` : spinnerKey}
-              items={spinPhase === 'magic_spin' ? magicCaseItems : spinPool}
+              items={spinPhase === 'magic_spin' ? magicSpinPool : normalSpinPool}
               winnerItem={spinPhase === 'magic_spin' ? magicItem : spinnerItem}
               onDone={spinPhase === 'magic_spin' ? onMagicSpinDone : onSpinDone}
               fast={fast}
