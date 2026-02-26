@@ -108,6 +108,7 @@ export default function Battles() {
       <CreateBattle
         cases={cases}
         balance={balance}
+        user={user}
         onBack={() => setView('list')}
         onCreate={handleCreate}
       />
@@ -120,6 +121,8 @@ export default function Battles() {
         battle={arenaData.battle}
         selectedCases={arenaData.selectedCases}
         players={arenaData.players}
+        teams={arenaData.teams}
+        modeLabel={arenaData.modeLabel}
         userEmail={user?.email}
         onClose={() => setView('list')}
         onReward={handleArenaReward}
