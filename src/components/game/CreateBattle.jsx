@@ -156,7 +156,7 @@ export default function CreateBattle({ cases, balance, user, onBack, onCreate })
           )}
         </div>
 
-        <Button onClick={handleCreate} disabled={selectedCases.length === 0 || totalCost > balance}
+        <Button onClick={handleCreate} disabled={!canCreate}
           className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 rounded-xl font-bold px-6 disabled:opacity-40">
           <Plus className="w-4 h-4 mr-1.5" /> Create Battle
         </Button>
