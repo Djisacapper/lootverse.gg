@@ -169,8 +169,13 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
   const isMagic = !!magicItem;
 
   const TOP_RARITIES = ['epic', 'legendary'];
-  const topItems = caseItems.filter(it => TOP_RARITIES.includes(it.rarity));
-  const magicCaseItems = topItems.length > 0 ? topItems : caseItems;
+    const topItems = caseItems.filter(it => TOP_RARITIES.includes(it.rarity));
+    const magicCaseItems = topItems.length > 0 ? topItems : caseItems;
+    // Add a diamond visual marker to each magic spin item so the image shows
+    const magicCaseItemsWithIcon = magicCaseItems.map(it => ({
+      ...it,
+      _magicIcon: true,
+    }));
 
   return (
     <div
