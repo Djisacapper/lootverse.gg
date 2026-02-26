@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Plus, X, ChevronDown, Coins } from 'lucide-react';
+import { ArrowLeft, Plus, X, ChevronDown, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import CasePickerModal from './CasePickerModal';
 import { getRarityColor } from './useWallet';
 
+// Parse mode to get teams array: "2v2" -> [2,2], "1v1v1" -> [1,1,1]
+export function parseMode(modeLabel) {
+  return modeLabel.split('v').map(Number);
+}
+
 const MODES = [
-  { label: '1v1', total: 2 },
-  { label: '1v1v1', total: 3 },
-  { label: '1v1v1v1', total: 4 },
-  { label: '1v1v1v1v1', total: 5 },
-  { label: '2v2', total: 4 },
-  { label: '3v3', total: 6 },
-  { label: '2v2v2', total: 6 },
+  { label: '1v1' },
+  { label: '1v1v1' },
+  { label: '1v1v1v1' },
+  { label: '1v1v1v1v1' },
+  { label: '2v2' },
+  { label: '3v3' },
+  { label: '2v2v2' },
 ];
 
 const BATTLE_MODES = [
@@ -23,7 +28,10 @@ const BATTLE_MODES = [
   { key: 'fast_mode', icon: '⚡', label: 'Fast Mode', desc: 'Faster gameplay with reduced animation times.' },
 ];
 
-export default function CreateBattle({ cases, balance, onBack, onCreate }) {
+const BOT_NAMES = ['CrateBot', 'LootBot', 'RNG_Pro', 'ShadowBot', 'CryptoBot', 'NightBot'];
+const TEAM_COLORS = ['#8b5cf6', '#3b82f6', '#ef4444', '#10b981'];
+
+export default function CreateBattle({ cases, balance, user, onBack, onCreate }) {
   const [selectedCases, setSelectedCases] = useState([]);
   const [showPicker, setShowPicker] = useState(false);
   const [modeLabel, setModeLabel] = useState('1v1');
@@ -31,38 +39,98 @@ export default function CreateBattle({ cases, balance, onBack, onCreate }) {
   const [battleModes, setBattleModes] = useState({});
 
   const totalCost = selectedCases.reduce((sum, c) => sum + c.price, 0);
-  const selectedMode = MODES.find(m => m.label === modeLabel) || MODES[0];
+  const teamSizes = parseMode(modeLabel);
+  const totalPlayers = teamSizes.reduce((a, b) => a + b, 0);
 
-  const handleAddCase = (c) => setSelectedCases(prev => [...prev, c]);
-  const handleRemoveCase = (i) => setSelectedCases(prev => prev.filter((_, idx) => idx !== i));
+  // Slot state: array of length totalPlayers. slot 0 is always the user.
+  // Each slot: null (empty) or { name, email, isBot }
+  const initSlots = () => {
+    const s = Array(totalPlayers).fill(null);
+    if (user) s[0] = { name: user.full_name || 'You', email: user.email, isBot: false };
+    return s;
+  };
+  const [slots, setSlots] = useState(initSlots);
+
+  // When mode changes rebuild slots
+  const handleModeChange = (label) => {
+    setModeLabel(label);
+    const sizes = label.split('v').map(Number);
+    const total = sizes.reduce((a, b) => a + b, 0);
+    const s = Array(total).fill(null);
+    if (user) s[0] = { name: user.full_name || 'You', email: user.email, isBot: false };
+    setSlots(s);
+    setShowModeDropdown(false);
+  };
+
+  const fillWithBots = () => {
+    const usedNames = new Set();
+    setSlots(prev => prev.map((slot, i) => {
+      if (slot) return slot;
+      let name;
+      do { name = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)]; } while (usedNames.has(name));
+      usedNames.add(name);
+      return { name, email: `bot_${i}@system`, isBot: true };
+    }));
+  };
+
+  const removeSlot = (i) => {
+    if (i === 0) return; // can't remove self
+    setSlots(prev => { const n = [...prev]; n[i] = null; return n; });
+  };
+
   const toggleBattleMode = (key) => setBattleModes(prev => ({ ...prev, [key]: !prev[key] }));
+
+  // Build teams array for arena: [[0,1],[2,3]] for 2v2
+  const buildTeams = () => {
+    const teams = [];
+    let idx = 0;
+    for (const size of teamSizes) {
+      teams.push(Array.from({ length: size }, (_, j) => idx + j));
+      idx += size;
+    }
+    return teams;
+  };
 
   const handleCreate = () => {
     if (selectedCases.length === 0 || totalCost > balance) return;
-    onCreate({ selectedCases, mode: selectedMode, battleModes });
+    // Auto-fill empty slots with bots
+    const filledSlots = slots.map((slot, i) => {
+      if (slot) return slot;
+      return { name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)], email: `bot_${i}@system`, isBot: true };
+    });
+    onCreate({ selectedCases, modeLabel, teams: buildTeams(), players: filledSlots, battleModes });
+  };
+
+  const allFilled = slots.every(s => s !== null);
+
+  // Get team index for a slot index
+  const getTeamIdx = (slotIdx) => {
+    let idx = 0;
+    for (let ti = 0; ti < teamSizes.length; ti++) {
+      if (slotIdx < idx + teamSizes[ti]) return ti;
+      idx += teamSizes[ti];
+    }
+    return 0;
   };
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3 flex-wrap">
         <button onClick={onBack} className="text-white/40 hover:text-white transition-colors">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h1 className="text-2xl font-bold text-white flex-1">Create Battle</h1>
 
-        {/* Total value */}
-        <div className="flex items-center gap-2 text-white/60 text-sm">
-          <span>Total value</span>
-          <div className="flex items-center gap-1 text-amber-400 font-bold">
-            <div className="w-4 h-4 rounded-full bg-amber-400 flex items-center justify-center">
-              <span className="text-[8px] font-black text-black">$</span>
-            </div>
-            {totalCost.toLocaleString()}
+        <div className="flex items-center gap-1.5 text-sm text-white/50">
+          <div className="w-4 h-4 rounded-full bg-amber-400 flex items-center justify-center">
+            <span className="text-[8px] font-black text-black">$</span>
           </div>
+          <span>Total value</span>
+          <span className="text-amber-400 font-bold">{totalCost.toLocaleString()}</span>
         </div>
 
-        {/* Mode selector */}
+        {/* Mode dropdown */}
         <div className="relative">
           <button
             onClick={() => setShowModeDropdown(!showModeDropdown)}
@@ -74,12 +142,9 @@ export default function CreateBattle({ cases, balance, onBack, onCreate }) {
           {showModeDropdown && (
             <div className="absolute right-0 top-full mt-1 bg-[#1a1a2e] border border-white/10 rounded-xl overflow-hidden z-50 min-w-[140px] shadow-2xl">
               {MODES.map(m => (
-                <button
-                  key={m.label}
-                  onClick={() => { setModeLabel(m.label); setShowModeDropdown(false); }}
+                <button key={m.label} onClick={() => handleModeChange(m.label)}
                   className={`w-full text-left px-4 py-2.5 text-sm font-medium transition-colors
-                    ${modeLabel === m.label ? 'bg-pink-500 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}
-                >
+                    ${modeLabel === m.label ? 'bg-pink-500 text-white' : 'text-white/60 hover:bg-white/5 hover:text-white'}`}>
                   {m.label}
                 </button>
               ))}
@@ -87,12 +152,8 @@ export default function CreateBattle({ cases, balance, onBack, onCreate }) {
           )}
         </div>
 
-        {/* Create Button */}
-        <Button
-          onClick={handleCreate}
-          disabled={selectedCases.length === 0 || totalCost > balance}
-          className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 rounded-xl font-bold px-6 disabled:opacity-40"
-        >
+        <Button onClick={handleCreate} disabled={selectedCases.length === 0 || totalCost > balance}
+          className="bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-400 hover:to-cyan-400 rounded-xl font-bold px-6 disabled:opacity-40">
           <Plus className="w-4 h-4 mr-1.5" /> Create Battle
         </Button>
       </div>
@@ -112,32 +173,85 @@ export default function CreateBattle({ cases, balance, onBack, onCreate }) {
             const rarity = c.price >= 5000 ? 'legendary' : c.price >= 1000 ? 'epic' : c.price >= 500 ? 'rare' : c.price >= 100 ? 'uncommon' : 'common';
             return (
               <div key={i} className="relative group">
-                <div className="bg-white/[0.04] border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 w-[110px] hover:border-white/20 transition-all">
-                  <div className={`w-16 h-16 rounded-xl bg-gradient-to-br ${getRarityColor(rarity)} flex items-center justify-center overflow-hidden`}>
+                <div className="bg-white/[0.04] border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 w-[100px]">
+                  <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${getRarityColor(rarity)} flex items-center justify-center overflow-hidden`}>
                     {c.image_url ? <img src={c.image_url} alt={c.name} className="w-full h-full object-cover" /> : <span className="text-2xl">📦</span>}
                   </div>
-                  <p className="text-[10px] text-white/60 text-center leading-tight">{c.name}</p>
+                  <p className="text-[10px] text-white/60 text-center leading-tight truncate w-full">{c.name}</p>
                   <p className="text-[10px] text-amber-400 font-bold">{c.price?.toLocaleString()}</p>
                 </div>
-                <button
-                  onClick={() => handleRemoveCase(i)}
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full items-center justify-center hidden group-hover:flex"
-                >
+                <button onClick={() => setSelectedCases(prev => prev.filter((_, idx) => idx !== i))}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-red-500 rounded-full items-center justify-center hidden group-hover:flex">
                   <X className="w-3 h-3 text-white" />
                 </button>
               </div>
             );
           })}
-          {/* Add Cases tile */}
-          <button
-            onClick={() => setShowPicker(true)}
-            className="w-[110px] h-[142px] bg-white/[0.02] border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-violet-400/40 hover:bg-violet-500/5 transition-all"
-          >
-            <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center">
-              <Plus className="w-5 h-5 text-white/30" />
-            </div>
+          <button onClick={() => setShowPicker(true)}
+            className="w-[100px] h-[130px] bg-white/[0.02] border-2 border-dashed border-white/10 rounded-xl flex flex-col items-center justify-center gap-2 hover:border-violet-400/40 hover:bg-violet-500/5 transition-all">
+            <Plus className="w-6 h-6 text-white/30" />
             <span className="text-xs text-white/30">Add Cases</span>
           </button>
+        </div>
+      </div>
+
+      {/* Players / Teams */}
+      <div className="bg-[#12121c] border border-white/[0.06] rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base font-bold text-white">Players</h2>
+          {!allFilled && (
+            <button onClick={fillWithBots}
+              className="flex items-center gap-1.5 text-xs text-purple-400 border border-purple-400/30 rounded-lg px-3 py-1.5 hover:bg-purple-500/10 transition-all">
+              <Bot className="w-3.5 h-3.5" /> Fill with Bots
+            </button>
+          )}
+        </div>
+        <div className="flex gap-4 flex-wrap">
+          {teamSizes.map((size, ti) => {
+            const startIdx = teamSizes.slice(0, ti).reduce((a, b) => a + b, 0);
+            const color = TEAM_COLORS[ti];
+            return (
+              <div key={ti} className="flex-1 min-w-[120px]">
+                <p className="text-xs font-bold mb-2" style={{ color }}>{`Team ${ti + 1}`}</p>
+                <div className="space-y-2">
+                  {Array.from({ length: size }, (_, j) => {
+                    const slotIdx = startIdx + j;
+                    const slot = slots[slotIdx];
+                    return (
+                      <div key={slotIdx}
+                        className="flex items-center gap-2 p-2 rounded-xl border transition-all"
+                        style={{ borderColor: slot ? color + '44' : 'rgba(255,255,255,0.06)', background: slot ? color + '11' : 'rgba(255,255,255,0.02)' }}>
+                        {slot ? (
+                          <>
+                            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                              style={{ background: color + '33', color }}>
+                              {slot.isBot ? '🤖' : slot.name?.[0]?.toUpperCase()}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-xs text-white font-medium truncate">{slot.name}</p>
+                              {slot.isBot && <p className="text-[9px]" style={{ color }}>BOT</p>}
+                            </div>
+                            {slotIdx !== 0 && (
+                              <button onClick={() => removeSlot(slotIdx)} className="text-white/20 hover:text-red-400 transition-colors">
+                                <X className="w-3 h-3" />
+                              </button>
+                            )}
+                          </>
+                        ) : (
+                          <div className="flex-1 flex items-center gap-2 text-white/20">
+                            <div className="w-7 h-7 rounded-full border-2 border-dashed border-white/10 flex items-center justify-center">
+                              <Plus className="w-3 h-3" />
+                            </div>
+                            <span className="text-xs">Empty slot</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -146,12 +260,8 @@ export default function CreateBattle({ cases, balance, onBack, onCreate }) {
         <h2 className="text-base font-bold text-white mb-4">Battle mode</h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {BATTLE_MODES.map(m => (
-            <div
-              key={m.key}
-              className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer
-                ${battleModes[m.key] ? 'border-violet-500/40 bg-violet-500/10' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}
-              onClick={() => toggleBattleMode(m.key)}
-            >
+            <div key={m.key} onClick={() => toggleBattleMode(m.key)} className={`flex items-start gap-3 p-3 rounded-xl border transition-all cursor-pointer
+              ${battleModes[m.key] ? 'border-violet-500/40 bg-violet-500/10' : 'border-white/[0.06] bg-white/[0.02] hover:bg-white/[0.04]'}`}>
               <span className="text-xl mt-0.5">{m.icon}</span>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-white">{m.label}</p>
@@ -169,7 +279,7 @@ export default function CreateBattle({ cases, balance, onBack, onCreate }) {
         <p className="text-center text-red-400 text-sm">Insufficient balance — need {totalCost.toLocaleString()} coins</p>
       )}
 
-      <CasePickerModal open={showPicker} onOpenChange={setShowPicker} cases={cases} onAddCase={handleAddCase} />
+      <CasePickerModal open={showPicker} onOpenChange={setShowPicker} cases={cases} onAddCase={(c) => setSelectedCases(prev => [...prev, c])} />
     </div>
   );
 }
