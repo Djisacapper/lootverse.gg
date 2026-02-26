@@ -170,7 +170,7 @@ export default function Battles() {
   // List view — tab state
   const [tab, setTab] = useState('open');
 
-  const waitingBattles = battles.filter(b => b.status === 'waiting');
+  const waitingBattles = battles.filter(b => b.status === 'waiting' || b.status === 'in_progress');
 
   // Completed battles: only show those finished within the last 3 minutes
   const THREE_MIN_MS = 3 * 60 * 1000;
