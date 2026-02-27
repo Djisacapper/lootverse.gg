@@ -113,60 +113,56 @@ export default function Battles() {
     loadBattles();
   };
 
-  const startBattle = async (current, updatedPlayers) => {
-    const battle = current.battle;
-    await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers, status: 'in_progress' });
-    const updatedBattle = { ...battle, players: updatedPlayers, status: 'in_progress' };
-    arenaDataRef.current = { ...current, battle: updatedBattle };
-    setArenaData(prev => prev ? { ...prev, battle: updatedBattle } : null);
-    loadBattles();
+  const makeBot = () => ({
+    name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)],
+    email: `bot_${Date.now()}_${Math.random().toString(36).slice(2)}@system`,
+    isBot: true,
+    total_value: 0,
+    items_won: []
+  });
+
+  const applyUpdatedPlayers = (current, updatedPlayers, startNow) => {
+    const updatedBattle = { ...current.battle, players: updatedPlayers, ...(startNow ? { status: 'in_progress' } : {}) };
+    const updatedArena = { ...current, battle: updatedBattle };
+    arenaDataRef.current = updatedArena;
+    setArenaData(updatedArena);
   };
 
-  // Add one bot to the current arena battle
+  // Add one bot to the next empty slot
   const handleAddBotToArena = async () => {
     const current = arenaDataRef.current;
     if (!current) return;
     const battle = current.battle;
     const maxPlayers = battle.max_players || 2;
-    const existingPlayers = (battle.players || []).filter(p => p && p.email);
-    if (existingPlayers.length >= maxPlayers) return;
+    // Build a full-length array of slots (null for empty)
+    const slots = Array.from({ length: maxPlayers }, (_, i) => (battle.players || [])[i] || null);
+    const nextEmptyIdx = slots.findIndex(p => !p || !p.email);
+    if (nextEmptyIdx === -1) return; // all filled
 
-    const updatedPlayers = [...existingPlayers, {
-      name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)],
-      email: `bot_${Date.now()}@system`,
-      isBot: true,
-      total_value: 0,
-      items_won: []
-    }];
+    slots[nextEmptyIdx] = makeBot();
+    const updatedPlayers = slots.filter(Boolean);
+    const allFilled = updatedPlayers.length >= maxPlayers;
 
-    if (updatedPlayers.length >= maxPlayers) {
-      await startBattle(current, updatedPlayers);
-    } else {
-      await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers });
-      const updatedBattle = { ...battle, players: updatedPlayers };
-      arenaDataRef.current = { ...current, battle: updatedBattle };
-      setArenaData(prev => prev ? { ...prev, battle: updatedBattle } : null);
-      loadBattles();
-    }
+    await base44.entities.CaseBattle.update(battle.id, {
+      players: updatedPlayers,
+      ...(allFilled ? { status: 'in_progress' } : {})
+    });
+    applyUpdatedPlayers(current, updatedPlayers, allFilled);
+    loadBattles();
   };
 
-  // Fill all empty slots with bots and start
+  // Fill ALL empty slots with bots and start
   const handleFillBots = async () => {
     const current = arenaDataRef.current;
     if (!current) return;
     const battle = current.battle;
     const maxPlayers = battle.max_players || 2;
-    const updatedPlayers = [...(battle.players || []).filter(p => p && p.email)];
-    while (updatedPlayers.length < maxPlayers) {
-      updatedPlayers.push({
-        name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)],
-        email: `bot_${Date.now()}_${updatedPlayers.length}@system`,
-        isBot: true,
-        total_value: 0,
-        items_won: []
-      });
-    }
-    await startBattle(current, updatedPlayers);
+    const slots = Array.from({ length: maxPlayers }, (_, i) => (battle.players || [])[i] || null);
+    const updatedPlayers = slots.map(p => (p && p.email) ? p : makeBot());
+
+    await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers, status: 'in_progress' });
+    applyUpdatedPlayers(current, updatedPlayers, true);
+    loadBattles();
   };
 
   // Watch / spectate an in-progress battle
