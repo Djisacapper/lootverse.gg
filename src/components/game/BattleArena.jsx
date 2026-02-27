@@ -452,22 +452,18 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
             </p>
           </div>
           <div className="flex-1" />
-          <Button
-            onClick={onStart}
-            disabled={!isCreator || !allFilled}
-            className={`rounded-xl ${allFilled && isCreator ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500' : 'bg-white/10 text-white/30 cursor-not-allowed'}`}
-          >
-            {allFilled ? 'Start Battle' : `Waiting (${filledCount}/${maxPlayers})`}
-          </Button>
-          {isCreator && !allFilled && (
+          {isCreator && (
             <Button
               onClick={onFillBots}
-              size="sm"
-              className="bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs"
+              disabled={allFilled}
+              className="bg-white/10 hover:bg-white/20 text-white rounded-xl"
             >
-              <Bot className="w-3 h-3 mr-1" /> Fill with Bots
+              <Bot className="w-4 h-4 mr-1.5" /> Fill with Bots
             </Button>
           )}
+          <span className="text-sm text-white/40 font-medium">
+            {filledCount}/{maxPlayers} players
+          </span>
         </div>
 
         {/* Team grid — same structure as battle arena */}
