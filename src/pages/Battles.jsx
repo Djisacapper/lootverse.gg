@@ -121,11 +121,14 @@ export default function Battles() {
     items_won: []
   });
 
-  const applyUpdatedPlayers = (current, updatedPlayers, startNow) => {
-    const updatedBattle = { ...current.battle, players: updatedPlayers, ...(startNow ? { status: 'in_progress' } : {}) };
-    const updatedArena = { ...current, battle: updatedBattle };
-    arenaDataRef.current = updatedArena;
-    setArenaData(updatedArena);
+  // Centralized function to update arena state & ref together
+  const updateArena = (updatedBattle) => {
+    setArenaData(prev => {
+      if (!prev) return prev;
+      const next = { ...prev, battle: updatedBattle };
+      arenaDataRef.current = next;
+      return next;
+    });
   };
 
   // Add one bot to the next empty slot
@@ -133,35 +136,36 @@ export default function Battles() {
     const current = arenaDataRef.current;
     if (!current) return;
     const battle = current.battle;
+    if (!battle?.id) return;
     const maxPlayers = battle.max_players || 2;
-    // Build a full-length array of slots (null for empty)
-    const slots = Array.from({ length: maxPlayers }, (_, i) => (battle.players || [])[i] || null);
-    const nextEmptyIdx = slots.findIndex(p => !p || !p.email);
-    if (nextEmptyIdx === -1) return; // all filled
+    const existingPlayers = (battle.players || []).filter(p => p && p.email);
+    if (existingPlayers.length >= maxPlayers) return;
 
-    slots[nextEmptyIdx] = makeBot();
-    const updatedPlayers = slots.filter(Boolean);
+    const updatedPlayers = [...existingPlayers, makeBot()];
     const allFilled = updatedPlayers.length >= maxPlayers;
+    const patch = { players: updatedPlayers, ...(allFilled ? { status: 'in_progress' } : {}) };
 
-    await base44.entities.CaseBattle.update(battle.id, {
-      players: updatedPlayers,
-      ...(allFilled ? { status: 'in_progress' } : {})
-    });
-    applyUpdatedPlayers(current, updatedPlayers, allFilled);
+    await base44.entities.CaseBattle.update(battle.id, patch);
+    updateArena({ ...battle, ...patch });
     loadBattles();
   };
 
-  // Fill ALL empty slots with bots and start
+  // Fill ALL empty slots with bots and start immediately
   const handleFillBots = async () => {
     const current = arenaDataRef.current;
     if (!current) return;
     const battle = current.battle;
+    if (!battle?.id) return;
     const maxPlayers = battle.max_players || 2;
-    const slots = Array.from({ length: maxPlayers }, (_, i) => (battle.players || [])[i] || null);
-    const updatedPlayers = slots.map(p => (p && p.email) ? p : makeBot());
+    const existingPlayers = (battle.players || []).filter(p => p && p.email);
+    const updatedPlayers = [...existingPlayers];
+    while (updatedPlayers.length < maxPlayers) {
+      updatedPlayers.push(makeBot());
+    }
+    const patch = { players: updatedPlayers, status: 'in_progress' };
 
-    await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers, status: 'in_progress' });
-    applyUpdatedPlayers(current, updatedPlayers, true);
+    await base44.entities.CaseBattle.update(battle.id, patch);
+    updateArena({ ...battle, ...patch });
     loadBattles();
   };
 
