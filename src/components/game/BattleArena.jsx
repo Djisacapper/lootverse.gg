@@ -410,7 +410,11 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
       payoutLabel = `Everyone gets ${Math.floor(totalPot / players.length).toLocaleString()} coins`;
     } else if (winnerTeamIdx >= 0) {
       const winnerCount = teamList[winnerTeamIdx]?.length || 1;
-      payoutLabel = `Each winner gets ${Math.floor(totalPot / winnerCount).toLocaleString()} coins`;
+      if (winnerCount === 1) {
+        payoutLabel = `Winner takes the pot: ${totalPot.toLocaleString()} coins`;
+      } else {
+        payoutLabel = `Each winner gets ${Math.floor(totalPot / winnerCount).toLocaleString()} coins (split ${winnerCount} ways)`;
+      }
     }
   }
 
