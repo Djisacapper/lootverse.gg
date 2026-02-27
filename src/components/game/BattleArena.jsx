@@ -221,7 +221,7 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
 }
 
 /* ─── Battle Arena ──────────────────────────────────────────────────────────── */
-export default function BattleArena({ battle, selectedCases, players, teams, modeLabel, battleModes = {}, userEmail, onClose, onReward, onJoin, onAddBot, onFillBots, onStart, balance = 0 }) {
+export default function BattleArena({ battle, selectedCases, players, teams, modeLabel, battleModes = {}, userEmail, onClose, onReward, onJoin, onAddBot, onFillBots, balance = 0 }) {
   const totalRounds = selectedCases.length;
   const teamList = teams || [players.map((_, i) => i)];
   const isWaiting = battle?.status === 'waiting';
@@ -247,7 +247,6 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
   const [playerPhases, setPlayerPhases] = useState(players.map(() => 'idle'));
 
   const allRolled   = useRef(null);
-  // Track how many players have fully completed this round (including any magic spin)
   const roundDoneCount = useRef(0);
   const currentRoundRef = useRef(0);
   const rewardGiven = useRef(false);
@@ -263,17 +262,19 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
   };
 
   useEffect(() => {
+    if (isWaiting) return; // don't pre-roll until battle actually starts
     allRolled.current = selectedCases.map(c =>
       players.map(() => rollWithMagicSpin(c.items || []))
     );
-  }, []);
+  }, [isWaiting]);
 
   useEffect(() => {
+    if (isWaiting) return;
     if (phase !== 'countdown') return;
     if (countdown === 0) { setPhase('spinning'); launchRound(0); return; }
     const t = setTimeout(() => setCountdown(c => c - 1), 1000);
     return () => clearTimeout(t);
-  }, [phase, countdown]);
+  }, [phase, countdown, isWaiting]);
 
   const launchRound = (round) => {
     roundDoneCount.current = 0;
