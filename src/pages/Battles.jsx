@@ -113,7 +113,16 @@ export default function Battles() {
     loadBattles();
   };
 
-  // Add bot to the current arena battle (reads live ref so it always has fresh players)
+  const startBattle = async (current, updatedPlayers) => {
+    const battle = current.battle;
+    await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers, status: 'in_progress' });
+    const updatedBattle = { ...battle, players: updatedPlayers, status: 'in_progress' };
+    arenaDataRef.current = { ...current, battle: updatedBattle };
+    setArenaData(prev => prev ? { ...prev, battle: updatedBattle } : null);
+    loadBattles();
+  };
+
+  // Add one bot to the current arena battle
   const handleAddBotToArena = async () => {
     const current = arenaDataRef.current;
     if (!current) return;
@@ -122,23 +131,26 @@ export default function Battles() {
     const existingPlayers = (battle.players || []).filter(p => p && p.email);
     if (existingPlayers.length >= maxPlayers) return;
 
-    const botSlot = {
+    const updatedPlayers = [...existingPlayers, {
       name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)],
       email: `bot_${Date.now()}@system`,
       isBot: true,
       total_value: 0,
       items_won: []
-    };
-    const updatedPlayers = [...existingPlayers, botSlot];
+    }];
 
-    await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers });
-    const updatedBattle = { ...battle, players: updatedPlayers };
-    arenaDataRef.current = { ...current, battle: updatedBattle };
-    setArenaData(prev => prev ? { ...prev, battle: updatedBattle } : null);
-    loadBattles();
+    if (updatedPlayers.length >= maxPlayers) {
+      await startBattle(current, updatedPlayers);
+    } else {
+      await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers });
+      const updatedBattle = { ...battle, players: updatedPlayers };
+      arenaDataRef.current = { ...current, battle: updatedBattle };
+      setArenaData(prev => prev ? { ...prev, battle: updatedBattle } : null);
+      loadBattles();
+    }
   };
 
-  // Fill all empty slots with bots
+  // Fill all empty slots with bots and start
   const handleFillBots = async () => {
     const current = arenaDataRef.current;
     if (!current) return;
@@ -154,25 +166,7 @@ export default function Battles() {
         items_won: []
       });
     }
-    await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers });
-    const updatedBattle = { ...battle, players: updatedPlayers };
-    arenaDataRef.current = { ...current, battle: updatedBattle };
-    setArenaData(prev => prev ? { ...prev, battle: updatedBattle } : null);
-    loadBattles();
-  };
-
-  // Start waiting battle — only when all slots are filled
-  const handleStartBattle = async () => {
-    const current = arenaDataRef.current;
-    if (!current) return;
-    const battle = current.battle;
-    const maxPlayers = battle.max_players || 2;
-    if ((battle.players || []).length < maxPlayers) return;
-    await base44.entities.CaseBattle.update(battle.id, { status: 'in_progress' });
-    const updatedBattle = { ...battle, status: 'in_progress' };
-    arenaDataRef.current = { ...current, battle: updatedBattle };
-    setArenaData(prev => prev ? { ...prev, battle: updatedBattle } : null);
-    loadBattles();
+    await startBattle(current, updatedPlayers);
   };
 
   // Watch / spectate an in-progress battle
