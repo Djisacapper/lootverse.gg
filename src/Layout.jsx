@@ -28,12 +28,7 @@ const NAV_SECTIONS = [
       { name: 'Leaderboard', icon: Award, page: 'Leaderboard' },
     ]
   },
-  {
-    label: 'OTHER',
-    items: [
-      { name: 'Inventory', icon: Backpack, page: 'Inventory' },
-    ]
-  }
+
 ];
 
 export default function Layout({ children, currentPageName }) {
