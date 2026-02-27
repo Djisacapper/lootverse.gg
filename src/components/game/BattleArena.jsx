@@ -416,90 +416,138 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
     isJackpot   && { icon: '👑', label: 'Jackpot', color: '#f59e0b' },
   ].filter(Boolean);
 
-  // If waiting, don't render battle logic yet
+  // If waiting, render arena-style lobby
   if (isWaiting) {
+    const maxPlayers = battle.max_players || 2;
+    const isCreator = battle.creator_email === userEmail;
+    const hasJoined = players.some(p => p.email === userEmail);
+    const emptySlots = maxPlayers - players.length;
+    const allFilled = players.length >= maxPlayers;
+
+    // Build a flat list of slots: filled players + empty slots
+    const slots = [
+      ...players.map((p, i) => ({ filled: true, player: p, idx: i })),
+      ...Array.from({ length: emptySlots }, (_, i) => ({ filled: false, idx: players.length + i })),
+    ];
+
     return (
       <div className="space-y-4">
-        <div className="flex items-center gap-3">
+        {/* Header */}
+        <div className="flex items-center gap-3 flex-wrap">
           <button onClick={onClose} className="text-white/40 hover:text-white transition-colors">
             <ArrowLeft className="w-5 h-5" />
           </button>
           <div>
-            <p className="text-xs text-white/40">{modeLabel || '1v1'}</p>
+            <p className="text-xs text-white/40">{modeLabel || '1v1'} · {battle.case_name}</p>
             <p className="text-sm font-bold text-white/60">
-              Waiting for players...
+              Entry: <span className="text-amber-400">{battle.entry_cost?.toLocaleString()}</span>
+              <span className="mx-2 text-white/20">·</span>
+              <span className="text-white/40">{players.length}/{maxPlayers} players</span>
             </p>
           </div>
-        </div>
-
-        {/* Waiting overlay content */}
-        <div className="glass rounded-2xl border border-white/5 p-6 space-y-4">
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <p className="text-[11px] text-white/40 uppercase">Players</p>
-              <p className="text-2xl font-bold text-white">{players.length}/{battle.max_players || 2}</p>
-            </div>
-            <div>
-              <p className="text-[11px] text-white/40 uppercase">Entry</p>
-              <p className="text-sm font-bold text-amber-400">{battle.entry_cost?.toLocaleString()}</p>
-            </div>
-            <div>
-              <p className="text-[11px] text-white/40 uppercase">Status</p>
-              <p className="text-sm font-bold text-amber-400">Waiting</p>
-            </div>
-          </div>
-
-          {/* Player slots grid */}
-          <div className="grid grid-cols-2 gap-3">
-            {players.map((p, idx) => (
-              <div key={idx} className="p-3 rounded-lg bg-white/5 border border-white/10">
-                <p className="text-xs font-semibold text-white">{p.name}</p>
-                {p.isBot && <p className="text-[9px] text-white/40 mt-0.5">BOT</p>}
-              </div>
-            ))}
-            {Array.from({ length: (battle.max_players || 2) - players.length }).map((_, idx) => (
-              <div key={`empty-${idx}`} className="p-3 rounded-lg bg-white/5 border border-dashed border-white/10 flex flex-col items-center justify-center min-h-[60px]">
-                {battle.creator_email === userEmail ? (
-                  <Button
-                    onClick={() => onAddBot()}
-                    size="sm"
-                    className="text-[10px] h-7 px-2"
-                  >
-                    <Plus className="w-2.5 h-2.5 mr-1" /> Add Bot
-                  </Button>
-                ) : (
-                  <p className="text-xs text-white/30">Empty</p>
-                )}
-              </div>
-            ))}
-          </div>
-
-          {/* Join button */}
-          {!players.some(p => p.email === userEmail) && battle.creator_email !== userEmail && (
-            <Button
-              onClick={() => onJoin()}
-              disabled={battle.entry_cost > balance}
-              className="w-full bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500"
-            >
-              {battle.entry_cost > balance ? 'Insufficient Balance' : 'Join Battle'}
-            </Button>
-          )}
-
-          {/* Start button (creator only) */}
-          {battle.creator_email === userEmail && players.length === (battle.max_players || 2) && (
+          {/* Creator: start when full */}
+          {isCreator && allFilled && (
             <Button
               onClick={() => onStart()}
-              className="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500"
+              className="ml-auto bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 rounded-xl"
             >
               Start Battle
             </Button>
           )}
+        </div>
 
-          {/* Waiting message */}
-          {!battle.creator_email === userEmail && players.some(p => p.email === userEmail) && (
-            <div className="text-center p-3 rounded-lg bg-blue-500/10 border border-blue-400/20">
-              <p className="text-xs text-blue-400">Waiting for creator to start...</p>
-            </div>
+        {/* Arena-style slot grid */}
+        <div className="flex gap-2 items-stretch overflow-x-auto max-w-full">
+          {slots.map((slot, si) => {
+            const color = PLAYER_COLORS[si % PLAYER_COLORS.length];
+            const isEmptySlot = !slot.filled;
+            const isMyEmptySlot = isEmptySlot && !hasJoined && !isCreator;
+
+            return (
+              <React.Fragment key={si}>
+                {si > 0 && si % Math.ceil(maxPlayers / (teams?.length || 1)) === 0 && (
+                  <div className="flex items-center justify-center px-1">
+                    <span className="text-white/20 font-black text-sm">VS</span>
+                  </div>
+                )}
+                <div
+                  className="flex-1 min-w-[120px] flex flex-col rounded-2xl border transition-all duration-300 overflow-hidden"
+                  style={{
+                    borderColor: isEmptySlot ? 'rgba(255,255,255,0.08)' : color + '55',
+                    background: isEmptySlot ? 'rgba(255,255,255,0.02)' : color + '0d',
+                    minHeight: 180,
+                  }}
+                >
+                  {slot.filled ? (
+                    /* Filled player slot */
+                    <div className="flex flex-col items-center justify-center flex-1 gap-3 p-4">
+                      <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold"
+                        style={{ background: color + '33', border: `2px solid ${color}88` }}>
+                        {slot.player.isBot ? '🤖' : (slot.player.name?.[0]?.toUpperCase() || '?')}
+                      </div>
+                      <div className="text-center">
+                        <p className="text-sm font-bold text-white truncate max-w-[100px]">{slot.player.name}</p>
+                        {slot.player.isBot && <p className="text-[9px] font-semibold mt-0.5" style={{ color }}>BOT</p>}
+                      </div>
+                      <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-green-500/15 border border-green-400/30">
+                        <CheckCircle2 className="w-3 h-3 text-green-400" />
+                        <span className="text-[10px] font-bold text-green-400">Ready</span>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Empty slot */
+                    <div className="flex flex-col items-center justify-center flex-1 gap-3 p-4">
+                      <div className="relative w-12 h-12 flex items-center justify-center">
+                        <Loader2 className="w-10 h-10 text-white/20 animate-spin" />
+                      </div>
+                      <p className="text-xs text-white/30 font-medium">Waiting for player...</p>
+                      {/* Buttons shown in the empty slot */}
+                      {isMyEmptySlot && (
+                        <div className="flex gap-2 mt-1">
+                          <Button
+                            onClick={() => onJoin()}
+                            disabled={battle.entry_cost > balance}
+                            size="sm"
+                            className="h-7 px-3 text-xs bg-blue-500 hover:bg-blue-400 rounded-lg"
+                          >
+                            Join
+                          </Button>
+                        </div>
+                      )}
+                      {isCreator && (
+                        <div className="flex gap-2 mt-1">
+                          <Button
+                            onClick={() => onAddBot()}
+                            size="sm"
+                            className="h-7 px-3 text-xs bg-white/10 hover:bg-white/20 text-white rounded-lg"
+                          >
+                            <Bot className="w-3 h-3 mr-1" /> Bot
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </React.Fragment>
+            );
+          })}
+        </div>
+
+        {/* Bottom bar */}
+        <div className="flex items-center justify-between px-1">
+          <p className="text-xs text-white/25">{allFilled ? 'All players ready!' : `Waiting for ${emptySlots} more player${emptySlots > 1 ? 's' : ''}...`}</p>
+          {isCreator && !allFilled && (
+            <Button
+              onClick={() => {
+                // Fill all empty slots with bots
+                for (let i = 0; i < emptySlots; i++) onAddBot();
+              }}
+              size="sm"
+              variant="ghost"
+              className="text-xs text-white/40 hover:text-white"
+            >
+              <Bot className="w-3 h-3 mr-1" /> Fill all with bots
+            </Button>
           )}
         </div>
       </div>
