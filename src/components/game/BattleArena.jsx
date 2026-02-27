@@ -369,9 +369,12 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
 
     if (!rewardGiven.current) {
       rewardGiven.current = true;
+      // Total pot = every player's entry cost summed
       const totalPot = players.length * selectedCases.reduce((s, c) => s + (c.price || 0), 0);
       const userPi   = players.findIndex(p => p.email === userEmail);
+
       if (isGroup) {
+        // Group mode: split evenly among all players (including bots — user only gets their share)
         const share = Math.floor(totalPot / players.length);
         setShowConfetti(true);
         setTimeout(() => setShowConfetti(false), 5000);
@@ -381,7 +384,10 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
         if (userWins) {
           setShowConfetti(true);
           setTimeout(() => setShowConfetti(false), 5000);
-          onReward && onReward(totalPot);
+          // Per-winner payout = full pot divided by number of winners on winning team
+          const winnerCount = teamList[winIdx]?.length || 1;
+          const payout = Math.floor(totalPot / winnerCount);
+          onReward && onReward(payout);
         }
       }
     }
