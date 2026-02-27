@@ -109,12 +109,14 @@ export default function Battles() {
     loadBattles();
   };
 
-  // Add bot to waiting battle
-  const handleAddBot = async (battle) => {
+  // Add bot to the current arena battle (reads live ref so it always has fresh players)
+  const handleAddBotToArena = async () => {
+    const current = arenaDataRef.current;
+    if (!current) return;
+    const battle = current.battle;
+    const maxPlayers = battle.max_players || 2;
     const updatedPlayers = [...(battle.players || [])];
-    // Find a truly empty slot (no email or placeholder)
-    const emptyIdx = updatedPlayers.findIndex(p => !p || !p.email || p.email === '');
-    if (emptyIdx === -1 && updatedPlayers.length >= (battle.max_players || 2)) return;
+    if (updatedPlayers.length >= maxPlayers) return;
 
     const botSlot = {
       name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)],
@@ -123,25 +125,49 @@ export default function Battles() {
       total_value: 0,
       items_won: []
     };
-
-    if (emptyIdx >= 0) {
-      updatedPlayers[emptyIdx] = botSlot;
-    } else {
-      updatedPlayers.push(botSlot);
-    }
+    updatedPlayers.push(botSlot);
 
     await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers });
     const updatedBattle = { ...battle, players: updatedPlayers };
+    arenaDataRef.current = { ...current, battle: updatedBattle };
     setArenaData(prev => prev ? { ...prev, battle: updatedBattle } : null);
     loadBattles();
   };
 
-  // Start waiting battle when all slots filled
-  const handleStartBattle = async (battle) => {
+  // Fill all empty slots with bots
+  const handleFillBots = async () => {
+    const current = arenaDataRef.current;
+    if (!current) return;
+    const battle = current.battle;
     const maxPlayers = battle.max_players || 2;
-    if ((battle.players || []).length < maxPlayers) return; // guard
+    const updatedPlayers = [...(battle.players || [])];
+    while (updatedPlayers.length < maxPlayers) {
+      updatedPlayers.push({
+        name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)],
+        email: `bot_${Date.now()}_${updatedPlayers.length}@system`,
+        isBot: true,
+        total_value: 0,
+        items_won: []
+      });
+    }
+    await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers });
+    const updatedBattle = { ...battle, players: updatedPlayers };
+    arenaDataRef.current = { ...current, battle: updatedBattle };
+    setArenaData(prev => prev ? { ...prev, battle: updatedBattle } : null);
+    loadBattles();
+  };
+
+  // Start waiting battle — only when all slots are filled
+  const handleStartBattle = async () => {
+    const current = arenaDataRef.current;
+    if (!current) return;
+    const battle = current.battle;
+    const maxPlayers = battle.max_players || 2;
+    if ((battle.players || []).length < maxPlayers) return;
     await base44.entities.CaseBattle.update(battle.id, { status: 'in_progress' });
-    setArenaData(prev => prev ? { ...prev, battle: { ...prev.battle, status: 'in_progress' } } : null);
+    const updatedBattle = { ...battle, status: 'in_progress' };
+    arenaDataRef.current = { ...current, battle: updatedBattle };
+    setArenaData(prev => prev ? { ...prev, battle: updatedBattle } : null);
     loadBattles();
   };
 
