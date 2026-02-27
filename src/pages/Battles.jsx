@@ -336,12 +336,14 @@ export default function Battles() {
                       ) : (
                         <Button
                           onClick={() => {
-                            const rounds = b.rounds || 1;
-                            const caseTemplate = cases.find(c => c.id === b.case_template_id);
-                            const selectedCasesArr = caseTemplate ? Array.from({ length: rounds }, () => caseTemplate) : [];
-                            const teams = b.teams_config ? JSON.parse(b.teams_config) : [b.players?.map((_, i) => i) || []];
-                            setArenaData({ battle: b, selectedCases: selectedCasesArr, teams, modeLabel: b.mode_label || '1v1', battleModes: b.battle_modes || {} });
-                            setView('arena');
+                          const rounds = b.rounds || 1;
+                          const caseTemplate = cases.find(c => c.id === b.case_template_id);
+                          const selectedCasesArr = caseTemplate ? Array.from({ length: rounds }, () => caseTemplate) : [];
+                          const teams = b.teams_config ? JSON.parse(b.teams_config) : [b.players?.map((_, i) => i) || []];
+                          const viewData = { battle: b, selectedCases: selectedCasesArr, teams, modeLabel: b.mode_label || '1v1', battleModes: b.battle_modes || {} };
+                          arenaDataRef.current = viewData;
+                          setArenaData(viewData);
+                          setView('arena');
                           }}
                           size="sm"
                           className="bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-xl"
