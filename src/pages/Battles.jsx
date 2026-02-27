@@ -100,13 +100,15 @@ export default function Battles() {
 
     // Show arena to joined player
     const teams = battle.teams_config ? JSON.parse(battle.teams_config) : [updatedPlayers.map((_, i) => i)];
-    setArenaData({ 
+    const joinArenaData = { 
       battle: { ...battle, players: updatedPlayers },
       selectedCases: selectedCasesArr, 
       teams,
       modeLabel: battle.mode_label || '1v1',
       battleModes: battle.battle_modes || {}
-    });
+    };
+    arenaDataRef.current = joinArenaData;
+    setArenaData(joinArenaData);
     setView('arena');
     loadBattles();
   };
