@@ -5,7 +5,7 @@ import { base44 } from '@/api/base44Client';
 import LiveChat from './components/game/LiveChat';
 import {
   Box, Swords, Coins, TrendingUp, Gift, Award, Users,
-  Menu, X, Home, Backpack, LogOut, Zap, ChevronLeft,
+  Menu, X, Home, LogOut, Zap, ChevronLeft,
   ChevronRight, Wallet, Plus
 } from 'lucide-react';
 
