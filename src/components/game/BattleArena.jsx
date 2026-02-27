@@ -453,11 +453,11 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
           </div>
           <div className="flex-1" />
           <Button
-            onClick={() => onStart()}
+            onClick={onStart}
             disabled={!isCreator || !allFilled}
             className={`rounded-xl ${allFilled && isCreator ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500' : 'bg-white/10 text-white/30 cursor-not-allowed'}`}
           >
-            {allFilled ? 'Start Battle' : `Waiting (${players.length}/${maxPlayers})`}
+            {allFilled ? 'Start Battle' : `Waiting (${filledCount}/${maxPlayers})`}
           </Button>
           {isCreator && !allFilled && (
             <Button
