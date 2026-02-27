@@ -262,11 +262,11 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
   };
 
   useEffect(() => {
-    if (isWaiting) return; // don't pre-roll until battle actually starts
+    if (isWaiting) return;
     allRolled.current = selectedCases.map(c =>
       players.map(() => rollWithMagicSpin(c.items || []))
     );
-  }, [isWaiting]);
+  }, []); // runs once on mount; component is remounted when status flips to in_progress
 
   useEffect(() => {
     if (isWaiting) return;
