@@ -370,17 +370,15 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
     if (!rewardGiven.current) {
       rewardGiven.current = true;
 
-      // Use battle.max_players so pot is always full lobby size × entry cost
-      // even if some slots were bots added mid-lobby
+      // totalPot = every slot's entry_cost summed (max_players × entry_cost)
       const maxPlayers = battle?.max_players || players.length;
-      const costPerPlayer = selectedCases.reduce((s, c) => s + (c.price || 0), 0);
-      const totalPot = maxPlayers * costPerPlayer;
+      const pot = maxPlayers * (battle?.entry_cost || 0);
 
       const userPi = players.findIndex(p => p.email === userEmail);
 
       if (isGroup) {
-        // Everyone shares equally — user gets their share only
-        const share = Math.floor(totalPot / maxPlayers);
+        // Group: split evenly — user gets their equal share
+        const share = Math.floor(pot / maxPlayers);
         setShowConfetti(true);
         setTimeout(() => setShowConfetti(false), 5000);
         onReward && onReward(share);
@@ -389,9 +387,9 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
         if (userWins) {
           setShowConfetti(true);
           setTimeout(() => setShowConfetti(false), 5000);
-          // Solo (1 winner on team) → full pot. Team → split evenly among winners.
+          // Winner(s) split the full pot
           const winnerCount = teamList[winIdx]?.length || 1;
-          const payout = Math.floor(totalPot / winnerCount);
+          const payout = Math.floor(pot / winnerCount);
           onReward && onReward(payout);
         }
       }
