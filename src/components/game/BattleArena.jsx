@@ -421,8 +421,9 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
     const maxPlayers = battle.max_players || 2;
     const isCreator = battle.creator_email === userEmail;
     const hasJoined = players.some(p => p.email === userEmail);
-    const emptySlots = maxPlayers - players.length;
-    const allFilled = players.length >= maxPlayers;
+    const filledCount = players.filter(p => p && p.email).length;
+    const emptySlots = maxPlayers - filledCount;
+    const allFilled = filledCount >= maxPlayers;
 
     // Use teams config to determine team sizes, fallback to splitting evenly
     const waitingTeamList = teams && teams.length > 0
