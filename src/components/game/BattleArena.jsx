@@ -461,7 +461,7 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
           </Button>
           {isCreator && !allFilled && (
             <Button
-              onClick={() => { for (let i = 0; i < emptySlots; i++) onAddBot(); }}
+              onClick={onFillBots}
               size="sm"
               className="bg-white/10 hover:bg-white/20 text-white rounded-xl text-xs"
             >
