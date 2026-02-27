@@ -144,7 +144,7 @@ export default function Battles() {
     if (!current) return;
     const battle = current.battle;
     const maxPlayers = battle.max_players || 2;
-    const updatedPlayers = [...(battle.players || [])];
+    const updatedPlayers = [...(battle.players || []).filter(p => p && p.email)];
     while (updatedPlayers.length < maxPlayers) {
       updatedPlayers.push({
         name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)],
