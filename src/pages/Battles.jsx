@@ -111,18 +111,27 @@ export default function Battles() {
   // Add bot to waiting battle
   const handleAddBot = async (battle) => {
     const updatedPlayers = [...(battle.players || [])];
-    const emptyIdx = updatedPlayers.findIndex(p => !p || !p.email);
-    if (emptyIdx === -1) return;
-    
-    updatedPlayers[emptyIdx] = {
+    // Find a truly empty slot (no email or placeholder)
+    const emptyIdx = updatedPlayers.findIndex(p => !p || !p.email || p.email === '');
+    if (emptyIdx === -1 && updatedPlayers.length >= (battle.max_players || 2)) return;
+
+    const botSlot = {
       name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)],
-      email: `bot_${Date.now()}_${emptyIdx}@system`,
+      email: `bot_${Date.now()}@system`,
       isBot: true,
       total_value: 0,
       items_won: []
     };
+
+    if (emptyIdx >= 0) {
+      updatedPlayers[emptyIdx] = botSlot;
+    } else {
+      updatedPlayers.push(botSlot);
+    }
+
     await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers });
-    setArenaData(prev => prev ? { ...prev, battle: { ...battle, players: updatedPlayers } } : null);
+    const updatedBattle = { ...battle, players: updatedPlayers };
+    setArenaData(prev => prev ? { ...prev, battle: updatedBattle } : null);
     loadBattles();
   };
 
