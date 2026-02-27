@@ -334,7 +334,7 @@ export default function Battles() {
               <div className="text-center py-16 glass rounded-2xl">
                 <Trophy className="w-12 h-12 text-white/10 mx-auto mb-3" />
                 <p className="text-white/30">No recently finished battles</p>
-                <p className="text-white/20 text-xs mt-1">Finished battles disappear after 3 minutes</p>
+                <p className="text-white/20 text-xs mt-1">Finished battles disappear after 1 minute</p>
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
