@@ -23,12 +23,15 @@ export default function Battles() {
   const [arenaData, setArenaData] = useState(null);
 
   const [tab, setTab] = useState('open');
+  const [, setTick] = useState(0);
 
   useEffect(() => {
     loadBattles();
     base44.entities.CaseTemplate.list().then(all => setCases(all.filter(c => c.is_active !== false)));
     const unsub = base44.entities.CaseBattle.subscribe(() => loadBattles());
-    return unsub;
+    // Re-render every second so expiry countdowns update in real-time
+    const ticker = setInterval(() => setTick(t => t + 1), 1000);
+    return () => { unsub(); clearInterval(ticker); };
   }, []);
 
   const loadBattles = async () => {
