@@ -341,7 +341,7 @@ export default function Battles() {
                 {completedBattles.map((b) => {
                   const pot = (b.entry_cost || 0) * (b.max_players || 2);
                   const elapsed = Date.now() - new Date(b.updated_date).getTime();
-                  const remaining = Math.max(0, THREE_MIN_MS - elapsed);
+                  const remaining = Math.max(0, ONE_MIN_MS - elapsed);
                   const secLeft = Math.ceil(remaining / 1000);
                   return (
                     <div key={b.id} className="glass rounded-2xl p-5 border border-white/5 border-green-400/10">
