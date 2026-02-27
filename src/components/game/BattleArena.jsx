@@ -451,14 +451,13 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
             </p>
           </div>
           <div className="flex-1" />
-          {isCreator && allFilled && (
-            <Button
-              onClick={() => onStart()}
-              className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 rounded-xl"
-            >
-              Start Battle
-            </Button>
-          )}
+          <Button
+            onClick={() => onStart()}
+            disabled={!isCreator || !allFilled}
+            className={`rounded-xl ${allFilled && isCreator ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500' : 'bg-white/10 text-white/30 cursor-not-allowed'}`}
+          >
+            {allFilled ? 'Start Battle' : `Waiting (${players.length}/${maxPlayers})`}
+          </Button>
           {isCreator && !allFilled && (
             <Button
               onClick={() => { for (let i = 0; i < emptySlots; i++) onAddBot(); }}
