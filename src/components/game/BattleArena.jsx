@@ -537,9 +537,9 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
                             {/* Creator: add bot to this slot */}
                             {isCreator && (
                               <Button
-                                onClick={() => onAddBot()}
+                                onClick={onAddBot}
                                 size="sm"
-                                className="h-7 px-3 text-xs bg-white/8 hover:bg-white/15 text-white/60 hover:text-white rounded-lg border border-white/10 mt-1"
+                                className="h-7 px-3 text-xs bg-white/[0.08] hover:bg-white/15 text-white/60 hover:text-white rounded-lg border border-white/10 mt-1"
                               >
                                 <Bot className="w-3 h-3 mr-1" /> Add Bot
                               </Button>
