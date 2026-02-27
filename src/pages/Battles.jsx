@@ -229,13 +229,10 @@ export default function Battles() {
         balance={balance}
         onClose={() => setView('list')}
         onReward={handleArenaReward}
-        onJoin={() => {
-          if (arenaData.battle) {
-            handleJoin(arenaData.battle);
-          }
-        }}
-        onAddBot={() => handleAddBot(arenaData.battle)}
-        onStart={() => handleStartBattle(arenaData.battle)}
+        onJoin={() => arenaData.battle && handleJoin(arenaData.battle)}
+        onAddBot={handleAddBotToArena}
+        onFillBots={handleFillBots}
+        onStart={handleStartBattle}
       />
     );
   }
