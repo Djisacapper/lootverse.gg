@@ -400,7 +400,9 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
 
   const playerTotals = playerItems.map(items => items.reduce((s, it) => s + (it?.value || 0), 0));
   const teamTotals   = teamList.map(mi => mi.reduce((s, pi) => s + (playerTotals[pi] || 0), 0));
-  const totalPot     = players.length * selectedCases.reduce((s, c) => s + (c.price || 0), 0);
+  // Use battle.max_players for pot so bots always count toward the full pot
+  const costPerPlayer = selectedCases.reduce((s, c) => s + (c.price || 0), 0);
+  const totalPot = (battle?.max_players || players.length) * costPerPlayer;
 
   const allPlayerIndices = teamList.flat();
   const playerColorMap = {};
