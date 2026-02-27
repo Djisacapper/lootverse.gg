@@ -203,16 +203,8 @@ export default function Battles() {
             handleJoin(arenaData.battle);
           }
         }}
-        onAddBot={() => {
-          if (arenaData.battle) {
-            handleAddBot(arenaData.battle);
-          }
-        }}
-        onStart={() => {
-          if (arenaData.battle) {
-            handleStartBattle(arenaData.battle);
-          }
-        }}
+        onAddBot={() => handleAddBot(arenaData.battle)}
+        onStart={() => handleStartBattle(arenaData.battle)}
       />
     );
   }
