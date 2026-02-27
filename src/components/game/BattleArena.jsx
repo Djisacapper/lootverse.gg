@@ -376,9 +376,14 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
 
       const userPi = players.findIndex(p => p.email === userEmail);
 
+      // Total items value rolled by ALL players across all rounds
+      const totalItemsValue = allRolled.current.reduce((roundSum, round) =>
+        roundSum + round.reduce((pSum, rolled) => pSum + (rolled?.item?.value || 0), 0), 0
+      );
+
       if (isGroup) {
         // Group: split evenly — user gets their equal share
-        const share = Math.floor(pot / maxPlayers);
+        const share = Math.floor(totalItemsValue / players.length);
         setShowConfetti(true);
         setTimeout(() => setShowConfetti(false), 5000);
         onReward && onReward(share);
@@ -387,9 +392,9 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
         if (userWins) {
           setShowConfetti(true);
           setTimeout(() => setShowConfetti(false), 5000);
-          // Winner(s) split the full pot
+          // Winner(s) split the total items value
           const winnerCount = teamList[winIdx]?.length || 1;
-          const payout = Math.floor(pot / winnerCount);
+          const payout = Math.floor(totalItemsValue / winnerCount);
           onReward && onReward(payout);
         }
       }
