@@ -523,13 +523,22 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
                             )}
                             {/* Creator: add bot to this slot */}
                             {isCreator && (
-                              <Button
-                                onClick={onAddBot}
-                                size="sm"
-                                className="h-7 px-3 text-xs bg-white/[0.08] hover:bg-white/15 text-white/60 hover:text-white rounded-lg border border-white/10 mt-1"
-                              >
-                                <Bot className="w-3 h-3 mr-1" /> Add Bot
-                              </Button>
+                              <div className="flex flex-col gap-1 mt-1">
+                                <Button
+                                  onClick={onAddBot}
+                                  size="sm"
+                                  className="h-7 px-3 text-xs bg-white/[0.08] hover:bg-white/15 text-white/60 hover:text-white rounded-lg border border-white/10"
+                                >
+                                  <Bot className="w-3 h-3 mr-1" /> Add Bot
+                                </Button>
+                                <Button
+                                  onClick={onFillBots}
+                                  size="sm"
+                                  className="h-7 px-3 text-xs bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 hover:text-violet-200 rounded-lg border border-violet-400/20"
+                                >
+                                  Fill
+                                </Button>
+                              </div>
                             )}
                           </div>
                         )}
