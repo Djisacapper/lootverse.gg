@@ -452,15 +452,6 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
             </p>
           </div>
           <div className="flex-1" />
-          {isCreator && (
-            <Button
-              onClick={onFillBots}
-              disabled={allFilled}
-              className="bg-white/10 hover:bg-white/20 text-white rounded-xl"
-            >
-              <Bot className="w-4 h-4 mr-1.5" /> Fill with Bots
-            </Button>
-          )}
           <span className="text-sm text-white/40 font-medium">
             {filledCount}/{maxPlayers} players
           </span>
