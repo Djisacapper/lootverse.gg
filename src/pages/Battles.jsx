@@ -119,8 +119,8 @@ export default function Battles() {
     if (!current) return;
     const battle = current.battle;
     const maxPlayers = battle.max_players || 2;
-    const updatedPlayers = [...(battle.players || [])];
-    if (updatedPlayers.length >= maxPlayers) return;
+    const existingPlayers = (battle.players || []).filter(p => p && p.email);
+    if (existingPlayers.length >= maxPlayers) return;
 
     const botSlot = {
       name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)],
@@ -129,7 +129,7 @@ export default function Battles() {
       total_value: 0,
       items_won: []
     };
-    updatedPlayers.push(botSlot);
+    const updatedPlayers = [...existingPlayers, botSlot];
 
     await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers });
     const updatedBattle = { ...battle, players: updatedPlayers };
