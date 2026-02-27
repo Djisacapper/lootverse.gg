@@ -207,12 +207,12 @@ export default function Battles() {
 
   const waitingBattles = battles.filter(b => b.status === 'waiting' || b.status === 'in_progress');
 
-  // Completed battles: only show those finished within the last 3 minutes
-  const THREE_MIN_MS = 3 * 60 * 1000;
+  // Completed battles: only show those finished within the last 1 minute
+  const ONE_MIN_MS = 1 * 60 * 1000;
   const completedBattles = battles.filter(b => {
     if (b.status !== 'completed') return false;
     const updatedAt = b.updated_date ? new Date(b.updated_date).getTime() : 0;
-    return Date.now() - updatedAt < THREE_MIN_MS;
+    return Date.now() - updatedAt < ONE_MIN_MS;
   });
 
   return (
