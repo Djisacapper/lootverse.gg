@@ -190,11 +190,11 @@ export default function Battles() {
     setView('arena');
   };
 
-  // Called from BattleArena when battle finishes
-  const handleArenaReward = async (totalPot) => {
+  // Called from BattleArena when battle finishes — payout is already the correct per-winner amount
+  const handleArenaReward = async (payout) => {
     if (!user) return;
     if (!arenaData?.spectate) {
-      await updateBalance(totalPot, 'battle_win', `Won battle — ${totalPot} coins`);
+      await updateBalance(payout, 'battle_win', `Won battle — ${payout.toLocaleString()} coins`);
       await addXp(150);
     }
     if (arenaData?.battle?.id) {
