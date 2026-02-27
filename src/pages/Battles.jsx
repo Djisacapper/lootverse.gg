@@ -137,10 +137,10 @@ export default function Battles() {
 
   // Start waiting battle when all slots filled
   const handleStartBattle = async (battle) => {
+    const maxPlayers = battle.max_players || 2;
+    if ((battle.players || []).length < maxPlayers) return; // guard
     await base44.entities.CaseBattle.update(battle.id, { status: 'in_progress' });
-    if (arenaData) {
-      setArenaData(prev => ({ ...prev, battle: { ...battle, status: 'in_progress' } }));
-    }
+    setArenaData(prev => prev ? { ...prev, battle: { ...prev.battle, status: 'in_progress' } } : null);
     loadBattles();
   };
 
