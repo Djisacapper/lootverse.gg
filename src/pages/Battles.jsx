@@ -24,6 +24,7 @@ export default function Battles() {
 
   const [tab, setTab] = useState('open');
   const [, setTick] = useState(0);
+  const arenaDataRef = React.useRef(null);
 
   useEffect(() => {
     loadBattles();
