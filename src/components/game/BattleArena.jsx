@@ -413,16 +413,21 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
   const grandPlayerTotal = playerTotals.reduce((s, v) => s + v, 0);
   const caseItems = (selectedCases[currentRound] || selectedCases[0])?.items || [];
 
+  const totalItemsValue = allRolled.current
+    ? allRolled.current.reduce((roundSum, round) =>
+        roundSum + round.reduce((pSum, rolled) => pSum + (rolled?.item?.value || 0), 0), 0)
+    : 0;
+
   let payoutLabel = '';
   if (done) {
     if (isGroup) {
-      payoutLabel = `Everyone gets ${Math.floor(totalPot / players.length).toLocaleString()} coins`;
+      payoutLabel = `Everyone gets ${Math.floor(totalItemsValue / players.length).toLocaleString()} coins`;
     } else if (winnerTeamIdx >= 0) {
       const winnerCount = teamList[winnerTeamIdx]?.length || 1;
       if (winnerCount === 1) {
-        payoutLabel = `Winner takes the pot: ${totalPot.toLocaleString()} coins`;
+        payoutLabel = `Winner takes all items value: ${totalItemsValue.toLocaleString()} coins`;
       } else {
-        payoutLabel = `Each winner gets ${Math.floor(totalPot / winnerCount).toLocaleString()} coins (split ${winnerCount} ways)`;
+        payoutLabel = `Each winner gets ${Math.floor(totalItemsValue / winnerCount).toLocaleString()} coins (split ${winnerCount} ways)`;
       }
     }
   }
