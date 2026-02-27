@@ -207,11 +207,16 @@ export default function Battles() {
 
 
   if (view === 'arena' && arenaData) {
+    const arenaBattle = arenaData.battle;
+    const arenaPlayers = arenaBattle?.players || [];
+    const arenaStatus = arenaBattle?.status || 'waiting';
+
     return (
       <BattleArena
-        battle={arenaData.battle}
+        key={`${arenaBattle?.id}-${arenaStatus}-${arenaPlayers.length}`}
+        battle={arenaBattle}
         selectedCases={arenaData.selectedCases}
-        players={arenaData.battle?.players || []}
+        players={arenaPlayers}
         teams={arenaData.teams}
         modeLabel={arenaData.modeLabel}
         battleModes={arenaData.battleModes || {}}
@@ -219,10 +224,9 @@ export default function Battles() {
         balance={balance}
         onClose={() => setView('list')}
         onReward={handleArenaReward}
-        onJoin={() => arenaData.battle && handleJoin(arenaData.battle)}
+        onJoin={() => arenaBattle && handleJoin(arenaBattle)}
         onAddBot={handleAddBotToArena}
         onFillBots={handleFillBots}
-        onStart={handleFillBots}
       />
     );
   }
