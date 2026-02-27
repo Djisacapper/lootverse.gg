@@ -68,7 +68,9 @@ export default function Battles() {
 
     // Show arena immediately
     const selectedCasesArr = Array.from({ length: selectedCases.length }, (_, i) => selectedCases[i]);
-    setArenaData({ battle, selectedCases: selectedCasesArr, teams, modeLabel, battleModes });
+    const newArenaData = { battle, selectedCases: selectedCasesArr, teams, modeLabel, battleModes };
+    arenaDataRef.current = newArenaData;
+    setArenaData(newArenaData);
     setView('arena');
     loadBattles();
   };
