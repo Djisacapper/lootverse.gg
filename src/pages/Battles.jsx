@@ -42,7 +42,7 @@ export default function Battles() {
   };
 
   // Called from CreateBattle when user hits "Create Battle"
-  const handleCreate = async ({ selectedCases, modeLabel, teams, players, battleModes }) => {
+  const handleCreate = async ({ selectedCases, modeLabel, teams, players, battleModes, totalPlayers }) => {
     if (!user || selectedCases.length === 0) return;
     const totalCost = selectedCases.reduce((s, c) => s + c.price, 0);
     if (totalCost > balance) return;
@@ -52,22 +52,29 @@ export default function Battles() {
 
     await updateBalance(-totalCost, 'battle_entry', `Created battle: ${caseName}`);
 
+    // Store only filled players, but max_players = full lobby size
+    const filledPlayers = players.map(p => ({ email: p.email, name: p.name, isBot: p.isBot, total_value: 0, items_won: [] }));
+    const maxPlayers = totalPlayers; // full lobby size (including empty slots)
+
+    // If all slots filled (e.g. user filled with bots), start immediately
+    const allFilled = filledPlayers.length >= maxPlayers;
+    const status = allFilled ? 'in_progress' : 'waiting';
+
     const battle = await base44.entities.CaseBattle.create({
       creator_email: user.email,
       case_template_id: selectedCases[0].id,
       case_name: caseName,
       rounds: selectedCases.length,
-      max_players: players.length,
+      max_players: maxPlayers,
       entry_cost: totalCost,
-      status: 'waiting',
+      status,
       battle_modes: battleModes,
       mode_label: modeLabel,
       teams_config: JSON.stringify(teams),
-      players: players.map(p => ({ email: p.email, name: p.name, isBot: p.isBot, total_value: 0, items_won: [] })),
+      players: filledPlayers,
     });
 
-    // Show arena immediately
-    const selectedCasesArr = Array.from({ length: selectedCases.length }, (_, i) => selectedCases[i]);
+    const selectedCasesArr = [...selectedCases];
     const newArenaData = { battle, selectedCases: selectedCasesArr, teams, modeLabel, battleModes };
     arenaDataRef.current = newArenaData;
     setArenaData(newArenaData);
