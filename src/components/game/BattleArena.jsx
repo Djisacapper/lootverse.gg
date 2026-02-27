@@ -434,9 +434,9 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
 
     // Build slot info: player at global index or empty
     const getSlot = (globalIdx) => {
-      return globalIdx < players.length
-        ? { filled: true, player: players[globalIdx] }
-        : { filled: false };
+      const p = players[globalIdx];
+      if (p && p.email) return { filled: true, player: p };
+      return { filled: false };
     };
 
     return (
