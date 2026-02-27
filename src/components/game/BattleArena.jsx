@@ -420,7 +420,7 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
   if (isWaiting) {
     const maxPlayers = battle.max_players || 2;
     const isCreator = battle.creator_email === userEmail;
-    const hasJoined = players.some(p => p.email === userEmail);
+    const hasJoined = players.some(p => p && p.email === userEmail && !p.isBot);
     const filledCount = players.filter(p => p && p.email).length;
     const emptySlots = maxPlayers - filledCount;
     const allFilled = filledCount >= maxPlayers;
