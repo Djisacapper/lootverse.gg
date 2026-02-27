@@ -416,6 +416,17 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
     isJackpot   && { icon: '👑', label: 'Jackpot', color: '#f59e0b' },
   ].filter(Boolean);
 
+  // Auto-start when all slots are filled
+  React.useEffect(() => {
+    if (!isWaiting) return;
+    const maxPlayers = battle?.max_players || 2;
+    const filledCount = (players || []).filter(p => p && p.email).length;
+    const isCreator = battle?.creator_email === userEmail;
+    if (isCreator && filledCount >= maxPlayers) {
+      onStart && onStart();
+    }
+  }, [players?.length, isWaiting]);
+
   // If waiting, render arena-style lobby matching the battle grid exactly
   if (isWaiting) {
     const maxPlayers = battle.max_players || 2;
