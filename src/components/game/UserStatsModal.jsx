@@ -12,12 +12,26 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
 
   useEffect(() => {
     const fetchStats = async () => {
-      const response = await base44.functions.invoke('getUserStats', { userName });
-      setStats(response.data);
-      setLoading(false);
+      try {
+        const response = await base44.functions.invoke('getPlayerStats', { userEmail });
+        setStats(response.data);
+      } catch (err) {
+        console.error('Failed to fetch stats:', err);
+      } finally {
+        setLoading(false);
+      }
     };
     fetchStats();
-  }, [userName]);
+    
+    // Subscribe to transaction updates for real-time stats
+    const unsubTrans = base44.entities.Transaction.subscribe((event) => {
+      if (event.data?.user_email === userEmail) {
+        fetchStats();
+      }
+    });
+    
+    return () => unsubTrans();
+  }, [userName, userEmail]);
 
   const handleTip = async () => {
     if (!tipAmount || isNaN(tipAmount) || parseInt(tipAmount) <= 0) {
