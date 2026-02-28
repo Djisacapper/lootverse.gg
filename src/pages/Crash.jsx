@@ -9,7 +9,8 @@ import { Input } from '@/components/ui/input';
 const BETTING_DURATION = 30; // seconds
 
 function generateCrashPoint() {
-  return Math.max(1.01, Math.floor((1 / (1 - 0.04) / Math.random()) * 100) / 100);
+  const r = Math.random();
+  return Math.max(1.01, Math.floor((1 / (1 - 0.04) / r) * 100) / 100);
 }
 
 function mColor(m, crashed) {
@@ -19,27 +20,32 @@ function mColor(m, crashed) {
   return '#f97316';
 }
 
+// Multiplier based on elapsed seconds since "running" started
+function calcMultiplier(elapsedSec) {
+  return Math.max(1.0, Math.floor(Math.pow(Math.E, elapsedSec * 0.15) * 100) / 100);
+}
+
 export default function Crash() {
   const { user, balance, updateBalance, addXp } = useWallet();
 
   const [round, setRound] = useState(null);
-  const [phase, setPhase] = useState('loading');
+  const [phase, setPhase] = useState('loading');   // loading | betting | running | crashed
   const [countdown, setCountdown] = useState(BETTING_DURATION);
   const [multiplier, setMultiplier] = useState(1.0);
   const [history, setHistory] = useState([]);
 
-  // Per-user bet state — keyed by round ID so they reset properly
+  // Bet state — roundId tracks which round the bet belongs to
   const [betRoundId, setBetRoundId] = useState(null);
   const [betAmount, setBetAmount] = useState(100);
   const [autoCashout, setAutoCashout] = useState('');
   const [cashedOut, setCashedOut] = useState(false);
   const [cashoutAt, setCashoutAt] = useState(null);
 
-  // Derive hasBet from whether betRoundId matches current round
   const hasBet = betRoundId !== null && betRoundId === round?.id;
 
+  // Refs for use inside RAF/intervals
   const animRef = useRef(null);
-  const animStartRef = useRef(null); // wall-clock time when running phase started locally
+  const runStartRef = useRef(null);   // wall-clock ms when THIS client started the running animation
   const roundRef = useRef(null);
   const phaseRef = useRef('loading');
   const betRoundIdRef = useRef(null);
@@ -50,7 +56,7 @@ export default function Crash() {
   const creatingRef = useRef(false);
   const historyRef = useRef([]);
 
-  // Keep refs in sync
+  // Sync refs
   phaseRef.current = phase;
   roundRef.current = round;
   betRoundIdRef.current = betRoundId;
@@ -75,7 +81,6 @@ export default function Crash() {
     const winnings = Math.floor(betAmountRef.current * atMultiplier);
     await updateBalance(winnings, 'crash_win', `Crash cashout at ${atMultiplier.toFixed(2)}x`);
     await addXp(Math.floor(winnings / 20));
-    // Update bets array in DB
     const r = roundRef.current;
     if (r?.id && user?.email) {
       try {
@@ -95,25 +100,26 @@ export default function Crash() {
 
   const startRunningAnimation = useCallback((crashPoint) => {
     stopAnimation();
-    animStartRef.current = Date.now();
+    runStartRef.current = Date.now();
 
     const animate = () => {
-      const elapsed = (Date.now() - animStartRef.current) / 1000;
-      const cur = Math.max(1.0, Math.floor(Math.pow(Math.E, elapsed * 0.15) * 100) / 100);
+      const elapsed = (Date.now() - runStartRef.current) / 1000;
+      const cur = calcMultiplier(elapsed);
       multiplierRef.current = cur;
       setMultiplier(cur);
 
-      // Auto cashout
+      // Auto cashout check
       const ac = parseFloat(autoCashoutRef.current);
       const hasBetNow = betRoundIdRef.current === roundRef.current?.id;
       if (!isNaN(ac) && ac >= 1.01 && cur >= ac && hasBetNow && !cashedOutRef.current) {
-        doCashout(cur);
+        doCashout(ac);
       }
 
       if (cur >= crashPoint) {
+        // Hit crash point — update DB and stop
         setMultiplier(crashPoint);
+        multiplierRef.current = crashPoint;
         stopAnimation();
-        // Mark round as crashed in DB
         const r = roundRef.current;
         if (r?.id) {
           base44.entities.CrashRound.update(r.id, { status: 'crashed' }).catch(() => {});
@@ -125,19 +131,24 @@ export default function Crash() {
     animRef.current = requestAnimationFrame(animate);
   }, [stopAnimation, doCashout]);
 
-  // Main sync: poll DB and drive state machine
+  const resetBetState = useCallback(() => {
+    setCashedOut(false);
+    cashedOutRef.current = false;
+    setCashoutAt(null);
+    setMultiplier(1.0);
+    multiplierRef.current = 1.0;
+  }, []);
+
   const syncRound = useCallback(async () => {
     try {
       const rounds = await base44.entities.CrashRound.list('-created_date', 1);
       const r = rounds?.[0];
 
       if (!r) {
-        // No round exists — create one
         if (!creatingRef.current) {
           creatingRef.current = true;
-          const cp = generateCrashPoint();
           const newRound = await base44.entities.CrashRound.create({
-            crash_point: cp,
+            crash_point: generateCrashPoint(),
             status: 'betting',
             bets: [],
             start_time: Date.now(),
@@ -153,49 +164,38 @@ export default function Crash() {
       }
 
       const isNewRound = roundRef.current?.id !== r.id;
-
       if (isNewRound) {
-        // Reset player-side state for the new round
+        stopAnimation();
         setRound(r);
         roundRef.current = r;
-        setCashedOut(false);
-        cashedOutRef.current = false;
-        setCashoutAt(null);
-        setMultiplier(1.0);
-        multiplierRef.current = 1.0;
-        stopAnimation();
+        resetBetState();
+        // betRoundId intentionally NOT reset here — hasBet becomes false naturally since IDs differ
       } else {
         setRound(r);
         roundRef.current = r;
       }
 
-      // Advance DB state if needed (one client does this)
       const now = Date.now();
-
-      // Kill stale running rounds (stuck for > 5 min)
-      if (r.status === 'running') {
-        const updatedAt = new Date(r.updated_date).getTime();
-        if ((now - updatedAt) > 5 * 60 * 1000) {
-          await base44.entities.CrashRound.update(r.id, { status: 'crashed' });
-          return;
-        }
-      }
 
       if (r.status === 'betting') {
         const startMs = r.start_time || now;
         const elapsed = (now - startMs) / 1000;
+
+        // Transition to running when betting time is up
         if (elapsed >= BETTING_DURATION) {
-          await base44.entities.CrashRound.update(r.id, { status: 'running' });
-          return; // will pick up on next poll
+          await base44.entities.CrashRound.update(r.id, {
+            status: 'running',
+            run_start_time: Date.now(), // store when running actually started
+          });
+          return;
         }
-        // Drive local phase
+
         if (phaseRef.current !== 'betting') {
           setPhase('betting');
           phaseRef.current = 'betting';
           stopAnimation();
         }
-        const remaining = Math.max(0, BETTING_DURATION - Math.floor((now - startMs) / 1000));
-        setCountdown(remaining);
+        setCountdown(Math.max(0, BETTING_DURATION - Math.floor(elapsed)));
 
       } else if (r.status === 'running') {
         if (phaseRef.current !== 'running') {
@@ -211,19 +211,16 @@ export default function Crash() {
           setMultiplier(r.crash_point);
           multiplierRef.current = r.crash_point;
           stopAnimation();
-          // Add to history
           historyRef.current = [r.crash_point, ...historyRef.current].slice(0, 20);
           setHistory([...historyRef.current]);
         }
 
-        // After 5s create next round
-        const updated = new Date(r.updated_date).getTime();
-        const elapsed = (now - updated) / 1000;
-        if (elapsed >= 5 && !creatingRef.current) {
+        // Create next round after 5s
+        const updatedAt = new Date(r.updated_date).getTime();
+        if ((now - updatedAt) >= 5000 && !creatingRef.current) {
           creatingRef.current = true;
-          const cp = generateCrashPoint();
           await base44.entities.CrashRound.create({
-            crash_point: cp,
+            crash_point: generateCrashPoint(),
             status: 'betting',
             bets: [],
             start_time: Date.now(),
@@ -233,8 +230,9 @@ export default function Crash() {
       }
     } catch (e) {
       console.error('syncRound error', e);
+      creatingRef.current = false;
     }
-  }, [startRunningAnimation, stopAnimation]);
+  }, [startRunningAnimation, stopAnimation, resetBetState]);
 
   useEffect(() => {
     syncRound();
@@ -275,6 +273,11 @@ export default function Crash() {
   const canBet = phase === 'betting' && !hasBet && betAmount > 0 && betAmount <= balance;
   const canCashout = phase === 'running' && hasBet && !cashedOut;
   const col = mColor(multiplier, phase === 'crashed');
+
+  // Only show "Lost" if: crashed AND had a bet on THIS round AND did NOT cash out
+  const showLost = phase === 'crashed' && hasBet && !cashedOut;
+  // Only show "Cashed out" if: cashed out on THIS round
+  const showCashedOut = cashedOut && cashoutAt !== null && betRoundId === round?.id;
 
   return (
     <div className="space-y-4 max-w-3xl mx-auto">
@@ -338,7 +341,7 @@ export default function Crash() {
                   <motion.p initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }}
                     className="text-red-400 text-xl font-black tracking-widest">CRASHED!</motion.p>
                 )}
-                {cashedOut && cashoutAt && (
+                {showCashedOut && (
                   <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
                     className="px-4 py-1.5 rounded-full bg-green-500/20 border border-green-400/30">
                     <p className="text-green-400 text-sm font-bold">
@@ -346,7 +349,7 @@ export default function Crash() {
                     </p>
                   </motion.div>
                 )}
-                {phase === 'crashed' && hasBet && !cashedOut && (
+                {showLost && (
                   <p className="text-red-400/70 text-sm font-semibold">Lost {betAmount.toLocaleString()} coins</p>
                 )}
               </div>
