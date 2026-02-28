@@ -99,11 +99,13 @@ function GameCard({ game, user, balance, onJoin }) {
   );
 }
 
+const BOT_NAMES = ['CoinBot', 'FlipMaster', 'LuckyBot', 'RNGod', 'ShadowBot', 'CryptoBot'];
+
 function CreatePanel({ balance, onClose, onCreate }) {
   const [amount, setAmount] = useState(1000);
   const [side, setSide] = useState('heads');
+  const [vsBot, setVsBot] = useState(false);
 
-  const handleQuick = (v) => setAmount(v);
   const canCreate = amount > 0 && amount <= balance;
 
   return (
@@ -117,6 +119,25 @@ function CreatePanel({ balance, onClose, onCreate }) {
         <p className="font-bold text-white text-base">Create Coinflip</p>
         <button onClick={onClose} className="text-white/30 hover:text-white transition-colors">
           <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Opponent picker */}
+      <p className="text-xs text-white/40 mb-2 uppercase tracking-wider">Opponent</p>
+      <div className="flex gap-3 mb-5">
+        <button
+          onClick={() => setVsBot(false)}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-bold transition-all
+            ${!vsBot ? 'border-blue-400/50 bg-blue-500/10 text-blue-300' : 'border-white/[0.07] bg-white/[0.03] text-white/40 hover:bg-white/[0.06]'}`}
+        >
+          <span>👤</span> Real Player
+        </button>
+        <button
+          onClick={() => setVsBot(true)}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl border text-sm font-bold transition-all
+            ${vsBot ? 'border-violet-400/50 bg-violet-500/10 text-violet-300' : 'border-white/[0.07] bg-white/[0.03] text-white/40 hover:bg-white/[0.06]'}`}
+        >
+          <span>🤖</span> vs Bot
         </button>
       </div>
 
@@ -147,7 +168,7 @@ function CreatePanel({ balance, onClose, onCreate }) {
         {QUICK_AMOUNTS.map(v => (
           <button
             key={v}
-            onClick={() => handleQuick(v)}
+            onClick={() => setAmount(v)}
             className={`py-1.5 rounded-lg text-xs font-bold transition-all
               ${amount === v ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-white/[0.04] text-white/40 hover:bg-white/[0.08] hover:text-white border border-transparent'}`}
           >
@@ -166,11 +187,11 @@ function CreatePanel({ balance, onClose, onCreate }) {
       <p className="text-[11px] text-white/25 mb-4">Balance: {balance?.toLocaleString()} coins</p>
 
       <Button
-        onClick={() => onCreate(amount, side)}
+        onClick={() => onCreate(amount, side, vsBot)}
         disabled={!canCreate}
         className="w-full h-11 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 font-bold text-white disabled:opacity-40"
       >
-        Create Game — Win {(amount * 2).toLocaleString()} coins
+        {vsBot ? '🤖 Play vs Bot' : '🎲 Create Game'} — Win {(amount * 2).toLocaleString()} coins
       </Button>
     </motion.div>
   );
