@@ -11,22 +11,8 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
 
   useEffect(() => {
     const fetchStats = async () => {
-      const users = await base44.asServiceRole.entities.User.list();
-      const targetUser = users.find(u => u.full_name === userName);
-      if (targetUser) {
-        const transactions = await base44.asServiceRole.entities.Transaction.filter({ user_email: targetUser.email });
-        const deposits = transactions.filter(t => t.type === 'deposit').reduce((sum, t) => sum + (t.amount || 0), 0);
-        const wagered = transactions.filter(t => ['case_purchase', 'battle_entry', 'coinflip_bet', 'crash_bet'].includes(t.type)).reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
-        
-        setStats({
-          ...targetUser,
-          deposits,
-          wagered,
-          level: targetUser.level || 1,
-          balance: targetUser.balance || 0,
-          xp: targetUser.xp || 0
-        });
-      }
+      const response = await base44.functions.invoke('getUserStats', { userName });
+      setStats(response.data);
       setLoading(false);
     };
     fetchStats();
