@@ -23,14 +23,14 @@ export default function LiveChat() {
 
   useEffect(() => {
     base44.auth.me().then(setUser).catch(() => {});
-    base44.entities.UserInventory.list('-created_date', 10).then(d => setRecentDrops(d.filter(i => i.status === 'owned')));
+    base44.entities.UserInventory.list('-created_date', 10).then(d => setRecentDrops(d.filter(i => i.status === 'owned' && ['case_opening', 'battle_win'].includes(i.source))));
 
-    const unsub = base44.entities.UserInventory.subscribe((event) => {
-      if (event.type === 'create') {
+    const unsubInventory = base44.entities.UserInventory.subscribe((event) => {
+      if (event.type === 'create' && ['case_opening', 'battle_win'].includes(event.data.source)) {
         setRecentDrops(prev => [event.data, ...prev].slice(0, 10));
       }
     });
-    return unsub;
+    return unsubInventory;
   }, []);
 
   useEffect(() => {
