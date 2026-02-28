@@ -166,6 +166,8 @@ export default function Crash() {
       const isNewRound = roundRef.current?.id !== r.id;
       if (isNewRound) {
         stopAnimation();
+        roundRef._crashedAt = null;
+        creatingRef.current = false;
         setRound(r);
         roundRef.current = r;
         resetBetState();
