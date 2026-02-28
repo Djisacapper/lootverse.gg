@@ -157,11 +157,11 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
         {isWinner && <Crown className="w-4 h-4 text-amber-400 flex-shrink-0" />}
       </div>
 
-      <p className="text-xl font-black text-amber-400 text-center py-1">{total.toLocaleString()}</p>
+      <p className="text-xl font-black text-amber-400 text-center py-1 flex-shrink-0">{total.toLocaleString()}</p>
 
       {/* Jackpot percentage bar */}
       {showPct && grandTotal > 0 && (
-        <div className="px-3 pb-1">
+        <div className="px-3 pb-1 flex-shrink-0">
           <div className="flex justify-between items-center mb-0.5">
             <span className="text-[10px] font-bold" style={{ color: playerColor }}>{Math.round(pct * 100)}%</span>
           </div>
