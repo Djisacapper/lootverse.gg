@@ -17,7 +17,7 @@ const NAV_SECTIONS = [
       { name: 'Cases', icon: Box, page: 'Cases' },
       { name: 'Coinflip', icon: Coins, page: 'Coinflip' },
       { name: 'Crash', icon: TrendingUp, page: 'Crash' },
-      { name: 'Upgrade', icon: Zap, page: 'Upgrade' },
+
     ]
   },
   {
