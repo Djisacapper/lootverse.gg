@@ -388,6 +388,7 @@ export default function Crash() {
     saveBet({ roundId: rid, amount: amt, autoCashout: ac });
 
     await updateBalance(-amt, 'crash_bet', `Crash bet ${amt}`);
+    addRakeback(amt);
 
     try {
       const fresh = await base44.entities.CrashRound.list('-created_date', 1);

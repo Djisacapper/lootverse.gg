@@ -324,6 +324,7 @@ export default function Coinflip() {
   const handleCreate = async (amount, side, vsBot = false) => {
     if (amount <= 0 || amount > balance) return;
     await updateBalance(-amount, 'coinflip_bet', `Created coinflip for ${amount}`);
+    addRakeback(amount);
 
     if (vsBot) {
       // Instantly resolve vs a bot
@@ -371,6 +372,7 @@ export default function Coinflip() {
   const handleJoin = async (game) => {
     if (game.bet_amount > balance) return;
     await updateBalance(-game.bet_amount, 'coinflip_bet', `Joined coinflip for ${game.bet_amount}`);
+    addRakeback(game.bet_amount);
     const result = Math.random() < 0.5 ? 'heads' : 'tails';
     const winnerEmail = result === game.creator_side ? game.creator_email : user.email;
     setFlipping(game.id);

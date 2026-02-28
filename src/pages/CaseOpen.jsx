@@ -56,6 +56,17 @@ export default function CaseOpen() {
     await base44.auth.updateMe({ balance: costDeducted });
     setUser({ ...user, balance: costDeducted });
 
+    // Accrue rakeback from wager
+    const { addRakeback } = await import('../components/game/useWallet');
+    // use direct base44 call since CaseOpen manages its own user state
+    const me = await base44.auth.me();
+    await base44.auth.updateMe({
+      rakeback_instant: Math.floor((me.rakeback_instant || 0) + caseData.price * 0.005),
+      rakeback_daily:   Math.floor((me.rakeback_daily   || 0) + caseData.price * 0.003),
+      rakeback_weekly:  Math.floor((me.rakeback_weekly  || 0) + caseData.price * 0.002),
+      rakeback_monthly: Math.floor((me.rakeback_monthly || 0) + caseData.price * 0.001),
+    });
+
     setSpinning(true);
     setShowResult(false);
   };
