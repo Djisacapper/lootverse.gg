@@ -510,7 +510,7 @@ export default function Crash() {
                   min={1}
                 />
                 <button
-                  onClick={() => setBetAmount(Math.max(1, Math.floor(balance / 2)))}
+                  onClick={() => setBetAmount(b => Math.max(1, Math.floor(b / 2)))}
                   disabled={phase !== 'betting' || hasBet}
                   className="flex-shrink-0 px-3 py-2 rounded-xl text-xs font-bold bg-white/[0.06] hover:bg-white/[0.1] border border-white/10 text-white/60 hover:text-white transition-all disabled:opacity-30 disabled:cursor-not-allowed"
                 >½</button>
