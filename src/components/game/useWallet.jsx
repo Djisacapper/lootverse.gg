@@ -88,6 +88,8 @@ export function calculateLevelFromXp(totalXp) {
 }
 
 export function getXpProgressForLevel(level, totalXp) {
+  if (level >= 200) return 100;
+  
   let xpSpent = 0;
   for (let i = 1; i < level; i++) {
     xpSpent += getXpForLevel(i);
