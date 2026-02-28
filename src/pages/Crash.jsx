@@ -222,12 +222,13 @@ export default function Crash() {
       const updated = new Date(r.updated_date).getTime();
       const elapsed = (now - updated) / 1000;
       if (elapsed >= 5) {
-        // Create next round
+        // Create next round with explicit start_time
         const cp = generateCrashPoint();
         await base44.entities.CrashRound.create({
           crash_point: cp,
           status: 'betting',
           bets: [],
+          start_time: Date.now(),
         });
       }
     }
