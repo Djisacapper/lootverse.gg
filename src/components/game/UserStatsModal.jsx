@@ -66,11 +66,11 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
   );
 
   return (
-    <div className="fixed inset-0 z-[999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 pointer-events-auto">
+    <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="bg-[#1a1a2e] rounded-2xl border border-white/10 max-w-sm w-full overflow-hidden max-h-[80vh] overflow-y-auto"
+        className="bg-[#1a1a2e] rounded-2xl border border-white/10 w-full max-w-sm overflow-hidden"
       >
         {/* Header */}
         <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
@@ -130,54 +130,29 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
               </div>
             )}
 
-            {/* Stats Section */}
+            {/* Account Stats */}
             <div className="border-t border-white/10 pt-4">
-              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-3">STATS</p>
-              <div className="grid grid-cols-3 gap-3 text-center">
-                <div>
-                  <p className="text-[10px] text-white/40 mb-1">FAVORITE GAME</p>
-                  <p className="text-sm font-bold text-white">Battles</p>
+              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-3">ACCOUNT</p>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-white/50 text-xs">Deposits</span>
+                  <span className="text-white font-semibold text-xs">💰 {(stats.deposits || 0).toLocaleString()}</span>
                 </div>
-                <div>
-                  <p className="text-[10px] text-white/40 mb-1">LUCKIEST WIN</p>
-                  <p className="text-sm font-bold text-white">13.84x</p>
+                <div className="flex justify-between">
+                  <span className="text-white/50 text-xs">Current Balance</span>
+                  <span className="text-white font-semibold text-xs">💰 {(stats.balance || 0).toLocaleString()}</span>
                 </div>
-                <div>
-                  <p className="text-[10px] text-white/40 mb-1">BIGGEST WIN</p>
-                  <p className="text-sm font-bold text-white">💰 23,691</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Game Stats */}
-            <div className="border-t border-white/10 pt-4">
-              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-3">GAME STATS</p>
-              <div className="space-y-2 text-xs">
-                <div className="flex items-center justify-between">
-                  <span className="text-white/50">Roulette</span>
-                  <span className="text-white/60">💰 -258</span>
-                  <span className="text-white/50 ml-auto">Cases</span>
-                  <span className="text-white/60">💰 0</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-white/50">Battles</span>
-                  <span className="text-white/60">💰 -10,555</span>
-                  <span className="text-white/50 ml-auto">Mines</span>
-                  <span className="text-white/60">💰 -8,161</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-white/50">Upgrader</span>
-                  <span className="text-white/60">💰 -1,109</span>
-                  <span className="text-white/50 ml-auto">Blackjack</span>
-                  <span className="text-white/60">💰 213</span>
+                <div className="flex justify-between">
+                  <span className="text-white/50 text-xs">Total XP</span>
+                  <span className="text-white font-semibold text-xs">{(stats.xp || 0).toLocaleString()}</span>
                 </div>
               </div>
             </div>
 
             {/* Total Wagered */}
-            <div className="border-t border-white/10 pt-4 flex items-center justify-between">
-              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider">TOTAL WAGERED</p>
-              <p className="text-lg font-bold text-white">💰 188,969</p>
+            <div className="border-t border-white/10 pt-4">
+              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">TOTAL WAGERED</p>
+              <p className="text-2xl font-bold text-white">💰 {(stats.wagered || 0).toLocaleString()}</p>
             </div>
           </div>
         )}
