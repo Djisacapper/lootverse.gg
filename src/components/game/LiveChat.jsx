@@ -20,6 +20,8 @@ export default function LiveChat() {
   const [user, setUser] = useState(null);
   const [tab, setTab] = useState('chat'); // 'chat' | 'drops'
   const [recentDrops, setRecentDrops] = useState([]);
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [userRoles, setUserRoles] = useState({});
   const bottomRef = useRef(null);
 
   useEffect(() => {
