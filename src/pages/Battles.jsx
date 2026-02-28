@@ -264,7 +264,6 @@ export default function Battles() {
 
   // Completed battles: only show those finished within the last 1 minute
   const ONE_MIN_MS = 1 * 60 * 1000;
-  const [sortBy, setSortBy] = useState('recent');
   const completedBattles = battles.filter(b => {
     if (b.status !== 'completed') return false;
     const updatedAt = b.updated_date ? new Date(b.updated_date).getTime() : 0;
