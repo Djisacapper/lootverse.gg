@@ -287,7 +287,7 @@ export default function Battles() {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="appearance-none bg-white/5 border border-white/10 text-white text-sm px-3 py-2 rounded-lg pl-3 pr-8 hover:border-white/20 transition-all"
+              className="appearance-none bg-[#1a1a2e] border border-white/10 text-white text-sm px-3 py-2 rounded-lg pl-3 pr-8 hover:border-white/20 transition-all [&_option]:bg-[#1a1a2e] [&_option]:text-white"
             >
               <option value="recent">Sort By: Recent</option>
               <option value="price_desc">Sort By: Price Descending</option>
