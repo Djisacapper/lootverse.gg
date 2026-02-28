@@ -283,6 +283,8 @@ export default function Crash() {
           if (phaseRef.current !== 'running') {
             phaseRef.current = 'running';
             setPhase('running');
+            // Always use the DB-stored run_start_time so the multiplier is correct
+            // even if the player navigated away and came back mid-round
             startAnimation(r.crash_point, r.run_start_time);
           }
 
