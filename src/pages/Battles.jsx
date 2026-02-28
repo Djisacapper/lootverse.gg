@@ -175,6 +175,25 @@ export default function Battles() {
     loadBattles();
   };
 
+  // Called from BattleArena when it detects the battle updated in DB
+  const handleBattleUpdated = (updatedBattle) => {
+    const caseTemplate = cases.find(c => c.id === updatedBattle.case_template_id);
+    if (!caseTemplate) return;
+    const rounds = updatedBattle.rounds || 1;
+    const selectedCasesArr = Array.from({ length: rounds }, () => caseTemplate);
+    const teams = updatedBattle.teams_config ? JSON.parse(updatedBattle.teams_config) : [(updatedBattle.players || []).map((_, i) => i)];
+    const newData = {
+      battle: updatedBattle,
+      selectedCases: selectedCasesArr,
+      teams,
+      modeLabel: updatedBattle.mode_label || '1v1',
+      battleModes: updatedBattle.battle_modes || {},
+    };
+    arenaDataRef.current = newData;
+    setArenaData(newData);
+    loadBattles();
+  };
+
   // Watch / spectate an in-progress battle
   const handleWatch = (battle) => {
     const caseTemplate = cases.find(c => c.id === battle.case_template_id);
