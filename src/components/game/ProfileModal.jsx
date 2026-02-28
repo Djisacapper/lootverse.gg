@@ -1,12 +1,34 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { X, LogOut, Settings, History, Wallet } from 'lucide-react';
+import { X, LogOut, Settings, History, Wallet, TrendingUp, ArrowDown, ArrowUp } from 'lucide-react';
 import { getXpForLevel, getXpProgressForLevel } from './useWallet';
 
 export default function ProfileModal({ user, onClose, onNavigate }) {
   const [activeTab, setActiveTab] = useState('overview');
+  const [stats, setStats] = useState({ deposits: 0, wagered: 0, withdrawals: 0 });
+  const [loading, setLoading] = useState(true);
   const level = user?.level || 1;
   const xpProgress = getXpProgressForLevel(level, user?.xp || 0);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      const transactions = await base44.entities.Transaction.filter({ user_email: user?.email });
+      const deposits = transactions
+        .filter(t => t.type === 'deposit')
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+      const wagered = transactions
+        .filter(t => ['case_purchase', 'battle_entry', 'coinflip_bet', 'crash_bet'].includes(t.type))
+        .reduce((sum, t) => sum + Math.abs(t.amount || 0), 0);
+      const withdrawals = transactions
+        .filter(t => t.type === 'item_sell')
+        .reduce((sum, t) => sum + (t.amount || 0), 0);
+      setStats({ deposits, wagered, withdrawals });
+      setLoading(false);
+    };
+    fetchStats();
+    const interval = setInterval(fetchStats, 3000);
+    return () => clearInterval(interval);
+  }, [user?.email]);
 
   const tabs = [
     { id: 'overview', label: 'Overview' },
