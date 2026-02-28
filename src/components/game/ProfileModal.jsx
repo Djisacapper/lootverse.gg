@@ -152,16 +152,19 @@ export default function ProfileModal({ user, onClose, onNavigate }) {
                 </div>
               </div>
 
-              <div className="bg-white/5 rounded-lg p-4">
-                <p className="text-white/40 text-xs mb-3 font-semibold">Account Status</p>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-white/60">Member Since</span>
-                    <span className="text-white">{user?.created_date ? new Date(user.created_date).toLocaleDateString() : 'N/A'}</span>
+              <div className="bg-gradient-to-br from-white/5 to-white/[0.02] border border-white/10 rounded-xl p-4">
+                <p className="text-white/50 text-xs font-semibold uppercase tracking-wider mb-4">Account Status</p>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between pb-3 border-b border-white/5">
+                    <span className="text-white/60 text-sm">Member Since</span>
+                    <span className="text-white font-medium">{user?.created_date ? new Date(user.created_date).toLocaleDateString() : 'N/A'}</span>
                   </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-white/60">Status</span>
-                    <span className="text-green-400 font-semibold">Active</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-white/60 text-sm">Status</span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 border border-green-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                      <span className="text-green-400 text-xs font-semibold">Active</span>
+                    </span>
                   </div>
                 </div>
               </div>
