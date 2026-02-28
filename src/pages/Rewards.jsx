@@ -204,6 +204,8 @@ export default function Rewards() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {RAKEBACK_TIERS.map((tier) => {
             const amount = rakeback[tier.key] || 0;
+            const cooldownLeft = getCooldownLeft(tier.key);
+            const onCooldown = cooldownLeft > 0;
             return (
               <div key={tier.key}
                 className={`rounded-2xl p-4 border bg-gradient-to-b ${tier.color} ${tier.border} flex flex-col items-center gap-3 text-center`}>
@@ -216,14 +218,20 @@ export default function Rewards() {
                     <p className="text-xs font-bold text-white">{amount.toLocaleString()}</p>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleClaimRakeback(tier.key)}
-                  disabled={amount <= 0 || claiming[tier.key]}
-                  className="w-full py-2 rounded-xl font-bold text-sm text-white disabled:opacity-40 transition-all"
-                  style={{ background: 'linear-gradient(90deg, #e040fb, #f06292)' }}
-                >
-                  {claiming[tier.key] ? '...' : 'Claim now'}
-                </button>
+                {onCooldown ? (
+                  <div className="w-full py-2 rounded-xl text-xs font-bold text-white/50 bg-white/5 border border-white/10 text-center">
+                    ⏳ {formatTimeLeft(cooldownLeft)}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => handleClaimRakeback(tier.key)}
+                    disabled={amount <= 0 || claiming[tier.key]}
+                    className="w-full py-2 rounded-xl font-bold text-sm text-white disabled:opacity-40 transition-all"
+                    style={{ background: 'linear-gradient(90deg, #e040fb, #f06292)' }}
+                  >
+                    {claiming[tier.key] ? '...' : 'Claim now'}
+                  </button>
+                )}
               </div>
             );
           })}
