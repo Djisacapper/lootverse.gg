@@ -21,8 +21,7 @@ export default function Battles() {
   // View state: 'list' | 'create' | 'arena'
   const [view, setView] = useState('list');
   const [arenaData, setArenaData] = useState(null);
-
-  const [tab, setTab] = useState('open');
+  const [sortBy, setSortBy] = useState('recent');
   const [, setTick] = useState(0);
   const arenaDataRef = React.useRef(null);
 
