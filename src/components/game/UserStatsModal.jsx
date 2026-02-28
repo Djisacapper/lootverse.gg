@@ -66,14 +66,14 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
   );
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+    <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="bg-[#1a1a2e] rounded-2xl border border-white/10 w-full max-w-sm overflow-y-auto max-h-[90vh] my-auto"
+        className="bg-[#1a1a2e] rounded-2xl border border-white/10 w-full max-w-sm max-h-[85vh] overflow-y-auto"
       >
         {/* Header */}
-        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
+        <div className="sticky top-0 px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#1a1a2e]/95 backdrop-blur-sm">
           <h2 className="text-sm font-bold text-white uppercase tracking-wider">User profile</h2>
           <button onClick={onClose} className="text-white/50 hover:text-white p-1.5 hover:bg-white/10 rounded-lg transition-colors">
             <X className="w-4 h-4" />
@@ -83,36 +83,28 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
         {stats && (
           <div className="p-6 space-y-6">
             {/* User Info */}
-            <div className="flex items-start gap-4">
-              <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-yellow-300 to-yellow-500 flex items-center justify-center text-4xl flex-shrink-0">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-yellow-300 to-yellow-500 flex items-center justify-center text-3xl flex-shrink-0">
                 😎
               </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-white font-bold text-lg">{stats.level}</span>
-                  <span className="text-white/60 text-sm">{userName}</span>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-blue-400 font-bold text-lg">{stats.level}</span>
+                  <span className="text-white font-semibold truncate">{userName}</span>
                 </div>
-                <p className="text-xs text-white/40 mb-3">ID: #{stats.id?.slice(-4) || '687'} <button onClick={copyId} className="text-white/50 hover:text-white/70"><Copy className="w-3 h-3 inline ml-1" /></button></p>
-                {currentUser?.email !== stats.email && (
-                  <button
-                    onClick={() => setTipping(!tipping)}
-                    className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1.5 rounded text-xs font-semibold transition-colors"
-                  >
-                    Tip User
-                  </button>
-                )}
+                <p className="text-xs text-white/40">ID: #{stats.id?.slice(-4) || '480'} <button onClick={copyId} className="text-white/50 hover:text-white/70 ml-1"><Copy className="w-3 h-3 inline" /></button></p>
               </div>
             </div>
 
-            {/* Tip Input */}
+            {/* Tip Button */}
             {currentUser?.email !== stats.email && (
-              <div className="bg-white/[0.03] border border-white/10 rounded-lg p-3 space-y-2">
+              <div className="space-y-2">
                 <div className="flex gap-2">
                   <input
                     type="number"
                     value={tipAmount}
                     onChange={(e) => setTipAmount(e.target.value)}
-                    placeholder="Tip amount"
+                    placeholder="Amount"
                     min="1"
                     className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-xs placeholder-white/30 focus:outline-none focus:border-blue-500"
                   />
@@ -121,30 +113,55 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
                     disabled={tipping || !tipAmount}
                     className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white px-4 py-1.5 rounded text-xs font-semibold transition-colors whitespace-nowrap"
                   >
-                    {tipping ? 'Sending...' : 'Tip'}
+                    {tipping ? '...' : 'Tip User'}
                   </button>
                 </div>
                 {currentUser && (
-                  <p className="text-[10px] text-white/40">Your balance: ${(currentUser.balance || 0).toLocaleString()}</p>
+                  <p className="text-[10px] text-white/40">Balance: ${(currentUser.balance || 0).toLocaleString()}</p>
                 )}
               </div>
             )}
 
-            {/* Game Stats */}
+            {/* Stats Section */}
             <div className="border-t border-white/10 pt-4">
-              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-3">GAME STATS</p>
-              <div className="grid grid-cols-3 gap-3 text-center">
+              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-4">STATS</p>
+              <div className="grid grid-cols-3 gap-6 text-center">
                 <div>
-                  <p className="text-[10px] text-white/40 mb-1">FAVORITE</p>
-                  <p className="text-xs font-bold text-white capitalize">{stats.favoriteGame || 'Battles'}</p>
+                  <p className="text-[10px] text-white/50 mb-2">FAVORITE GAME</p>
+                  <p className="text-sm font-bold text-white capitalize">{stats.favoriteGame || 'Mines'}</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-white/40 mb-1">BIGGEST WIN</p>
-                  <p className="text-xs font-bold text-amber-400">💰 {(stats.biggestWin || 0).toLocaleString()}</p>
+                  <p className="text-[10px] text-white/50 mb-2">LUCKIEST WIN</p>
+                  <p className="text-sm font-bold text-white">{stats.luckiestWin || '64.50'}x</p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-white/40 mb-1">WIN RATE</p>
-                  <p className="text-xs font-bold text-green-400">{stats.winRate || '0'}%</p>
+                  <p className="text-[10px] text-white/50 mb-2">BIGGEST WIN</p>
+                  <p className="text-sm font-bold text-amber-400">💰 {(stats.biggestWin || 0).toLocaleString()}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Game Stats Grid */}
+            <div className="border-t border-white/10 pt-4">
+              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-4">GAME STATS</p>
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <span className="text-white/60 text-xs">Roulette</span>
+                  <span className="text-amber-400 font-semibold text-xs">💰 {(stats.roulette || 0).toLocaleString()}</span>
+                  <span className="text-white/60 text-xs">Cases</span>
+                  <span className="text-amber-400 font-semibold text-xs">💰 {(stats.cases || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/60 text-xs">Battles</span>
+                  <span className="text-amber-400 font-semibold text-xs">💰 {(stats.battles || 0).toLocaleString()}</span>
+                  <span className="text-white/60 text-xs">Mines</span>
+                  <span className="text-amber-400 font-semibold text-xs">💰 {(stats.mines || 0).toLocaleString()}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-white/60 text-xs">Upgrader</span>
+                  <span className="text-amber-400 font-semibold text-xs">💰 {(stats.upgrader || 0).toLocaleString()}</span>
+                  <span className="text-white/60 text-xs">Blackjack</span>
+                  <span className="text-amber-400 font-semibold text-xs">💰 {(stats.blackjack || 0).toLocaleString()}</span>
                 </div>
               </div>
             </div>
@@ -152,7 +169,7 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
             {/* Total Wagered */}
             <div className="border-t border-white/10 pt-4">
               <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-2">TOTAL WAGERED</p>
-              <p className="text-2xl font-bold text-white">💰 {(stats.wagered || 0).toLocaleString()}</p>
+              <p className="text-lg font-bold text-amber-400 text-right">💰 {(stats.wagered || 0).toLocaleString()}</p>
             </div>
           </div>
         )}
