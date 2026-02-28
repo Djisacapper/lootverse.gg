@@ -10,44 +10,51 @@ const QUICK_AMOUNTS = [100, 500, 1000, 5000, 10000, 50000];
 function CoinDisplay({ side, size = 'md', spinning = false }) {
   const sizeMap = { sm: 40, md: 64, lg: 96 };
   const px = sizeMap[size];
-  const fontSize = { sm: '1.1rem', md: '1.6rem', lg: '2.5rem' };
+  const fs = { sm: '1.1rem', md: '1.6rem', lg: '2.5rem' }[size];
+  // heads = rotateY 0 (front), tails = rotateY 180 (back)
+  // When spinning, do many full rotations and land on the correct face
+  const landAngle = side === 'tails' ? 180 : 0;
+  const spinEnd = 1440 + landAngle; // 4 full flips + land angle
 
   return (
-    <div style={{ width: px, height: px, perspective: 600, flexShrink: 0 }}>
+    <div style={{ width: px, height: px, perspective: px * 6, flexShrink: 0 }}>
       <motion.div
-        animate={spinning ? { rotateY: [0, 1800] } : { rotateY: side === 'heads' ? 0 : 180 }}
-        transition={spinning ? { duration: 2.2, ease: [0.4, 0, 0.2, 1] } : { duration: 0 }}
+        animate={spinning
+          ? { rotateY: [0, spinEnd] }
+          : { rotateY: landAngle }
+        }
+        transition={spinning
+          ? { duration: 2.4, ease: [0.25, 0.1, 0.25, 1] }
+          : { duration: 0 }
+        }
         style={{
-          width: '100%',
-          height: '100%',
+          width: '100%', height: '100%',
           position: 'relative',
           transformStyle: 'preserve-3d',
         }}
       >
-        {/* Heads face */}
+        {/* Heads face (front) */}
         <div style={{
           position: 'absolute', inset: 0,
-          backfaceVisibility: 'hidden',
-          WebkitBackfaceVisibility: 'hidden',
+          backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
           borderRadius: '50%',
-          background: 'linear-gradient(135deg, #fde68a, #f59e0b, #b45309)',
-          boxShadow: '0 0 24px rgba(245,158,11,0.55), inset 0 2px 4px rgba(255,255,255,0.3)',
+          background: 'radial-gradient(circle at 35% 35%, #fde68a, #f59e0b 50%, #92400e)',
+          boxShadow: '0 0 28px rgba(245,158,11,0.6), inset -4px -4px 12px rgba(0,0,0,0.3), inset 4px 4px 10px rgba(255,255,255,0.35)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: fontSize[size],
+          fontSize: fs,
         }}>
           👑
         </div>
-        {/* Tails face */}
+        {/* Tails face (back, rotated 180) */}
         <div style={{
           position: 'absolute', inset: 0,
-          backfaceVisibility: 'hidden',
-          WebkitBackfaceVisibility: 'hidden',
+          backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',
           borderRadius: '50%',
-          background: 'linear-gradient(135deg, #cbd5e1, #64748b, #334155)',
-          boxShadow: '0 0 24px rgba(148,163,184,0.4), inset 0 2px 4px rgba(255,255,255,0.2)',
+          background: 'radial-gradient(circle at 35% 35%, #e2e8f0, #64748b 50%, #1e293b)',
+          boxShadow: '0 0 28px rgba(148,163,184,0.5), inset -4px -4px 12px rgba(0,0,0,0.3), inset 4px 4px 10px rgba(255,255,255,0.25)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: fontSize[size],
+          fontSize: fs,
         }}>
           🔱
         </div>
