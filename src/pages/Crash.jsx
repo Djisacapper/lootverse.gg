@@ -33,7 +33,7 @@ function loadBet() { try { return JSON.parse(localStorage.getItem(BET_KEY)); } c
 function clearBet() { localStorage.removeItem(BET_KEY); }
 
 export default function Crash() {
-  const { user, balance, updateBalance, addXp } = useWallet();
+  const { user, balance, updateBalance, addXp, addRakeback } = useWallet();
 
   // ── UI State ──────────────────────────────────────────────────────────────
   const [phase, setPhase] = useState('loading');      // loading|betting|running|crashed

@@ -276,7 +276,7 @@ function FlipOverlay({ flipResult, user }) {
 }
 
 export default function Coinflip() {
-  const { user, balance, updateBalance, addXp } = useWallet();
+  const { user, balance, updateBalance, addXp, addRakeback } = useWallet();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
