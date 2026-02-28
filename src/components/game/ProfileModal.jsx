@@ -119,27 +119,36 @@ export default function ProfileModal({ user, onClose, onNavigate }) {
         <div className="flex-1 overflow-y-auto p-6">
           {activeTab === 'overview' && (
             <div className="space-y-6">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="bg-white/5 rounded-lg p-4 text-center">
-                  <p className="text-white/40 text-xs mb-1">Deposits</p>
-                  <p className="text-xl font-bold text-white flex items-center justify-center gap-1">
-                    <span className="text-yellow-400">💰</span>
-                    {(user?.total_deposits || 0).toLocaleString()}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-gradient-to-br from-green-500/10 to-emerald-500/5 border border-green-500/20 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-white/50 text-xs font-semibold uppercase tracking-wider">Deposits</p>
+                    <ArrowDown className="w-4 h-4 text-green-400" />
+                  </div>
+                  <p className="text-xl font-bold text-green-400 flex items-baseline gap-1">
+                    ${loading ? '...' : stats.deposits.toLocaleString()}
                   </p>
+                  <p className="text-[10px] text-white/30 mt-2">Total added</p>
                 </div>
-                <div className="bg-white/5 rounded-lg p-4 text-center">
-                  <p className="text-white/40 text-xs mb-1">Wagered</p>
-                  <p className="text-xl font-bold text-white flex items-center justify-center gap-1">
-                    <span className="text-yellow-400">💰</span>
-                    {(user?.total_wagered || 0).toLocaleString()}
+                <div className="bg-gradient-to-br from-blue-500/10 to-cyan-500/5 border border-blue-500/20 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-white/50 text-xs font-semibold uppercase tracking-wider">Wagered</p>
+                    <TrendingUp className="w-4 h-4 text-blue-400" />
+                  </div>
+                  <p className="text-xl font-bold text-blue-400 flex items-baseline gap-1">
+                    ${loading ? '...' : stats.wagered.toLocaleString()}
                   </p>
+                  <p className="text-[10px] text-white/30 mt-2">Total bet</p>
                 </div>
-                <div className="bg-white/5 rounded-lg p-4 text-center">
-                  <p className="text-white/40 text-xs mb-1">Withdrawals</p>
-                  <p className="text-xl font-bold text-white flex items-center justify-center gap-1">
-                    <span className="text-yellow-400">💰</span>
-                    {(user?.total_withdrawals || 0).toLocaleString()}
+                <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/5 border border-purple-500/20 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-white/50 text-xs font-semibold uppercase tracking-wider">Withdrawn</p>
+                    <ArrowUp className="w-4 h-4 text-purple-400" />
+                  </div>
+                  <p className="text-xl font-bold text-purple-400 flex items-baseline gap-1">
+                    ${loading ? '...' : stats.withdrawals.toLocaleString()}
                   </p>
+                  <p className="text-[10px] text-white/30 mt-2">Total sold</p>
                 </div>
               </div>
 
