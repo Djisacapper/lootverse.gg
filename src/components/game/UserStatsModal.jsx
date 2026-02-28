@@ -146,22 +146,16 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
               <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-4">GAME STATS</p>
               <div className="space-y-3">
                 <div className="flex justify-between">
-                  <span className="text-white/60 text-xs">Roulette</span>
-                  <span className="text-amber-400 font-semibold text-xs">💰 {(stats.roulette || 0).toLocaleString()}</span>
                   <span className="text-white/60 text-xs">Cases</span>
                   <span className="text-amber-400 font-semibold text-xs">💰 {(stats.cases || 0).toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between">
                   <span className="text-white/60 text-xs">Battles</span>
                   <span className="text-amber-400 font-semibold text-xs">💰 {(stats.battles || 0).toLocaleString()}</span>
-                  <span className="text-white/60 text-xs">Mines</span>
-                  <span className="text-amber-400 font-semibold text-xs">💰 {(stats.mines || 0).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-white/60 text-xs">Upgrader</span>
-                  <span className="text-amber-400 font-semibold text-xs">💰 {(stats.upgrader || 0).toLocaleString()}</span>
-                  <span className="text-white/60 text-xs">Blackjack</span>
-                  <span className="text-amber-400 font-semibold text-xs">💰 {(stats.blackjack || 0).toLocaleString()}</span>
+                  <span className="text-white/60 text-xs">Coinflip</span>
+                  <span className="text-amber-400 font-semibold text-xs">💰 {(stats.coinflip || 0).toLocaleString()}</span>
+                  <span className="text-white/60 text-xs">Crash</span>
+                  <span className="text-amber-400 font-semibold text-xs">💰 {(stats.crash || 0).toLocaleString()}</span>
                 </div>
               </div>
             </div>
