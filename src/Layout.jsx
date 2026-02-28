@@ -250,6 +250,11 @@ export default function Layout({ children, currentPageName }) {
         </div>
       )}
 
+      {/* Profile Modal */}
+      {profileOpen && user && (
+        <ProfileModal user={user} onClose={() => setProfileOpen(false)} />
+      )}
+
       {/* Main Content + Chat Panel */}
       <div
         className={`flex flex-1 min-h-screen pt-14 transition-all duration-300
