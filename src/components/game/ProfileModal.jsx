@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { X, LogOut, Settings, History, Wallet, TrendingUp, ArrowDown, ArrowUp } from 'lucide-react';
 import { getXpForLevel, getXpProgressForLevel } from './useWallet';
+import GameHistoryView from './GameHistoryView';
 
 export default function ProfileModal({ user, onClose, onNavigate }) {
   const [activeTab, setActiveTab] = useState('overview');
