@@ -246,6 +246,32 @@ export default function Coinflip() {
   const [flipping, setFlipping] = useState(null);
   const [flipResult, setFlipResult] = useState(null);
 
+  const handleAddBot = async (game) => {
+    const botName = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
+    const botSide = game.creator_side === 'heads' ? 'tails' : 'heads';
+    const result = Math.random() < 0.5 ? 'heads' : 'tails';
+    const winnerEmail = result === game.creator_side ? game.creator_email : 'bot@system';
+
+    await base44.entities.CoinflipGame.update(game.id, {
+      opponent_email: 'bot@system',
+      opponent_name: botName,
+      status: 'completed',
+      result,
+      winner_email: winnerEmail,
+    });
+
+    setFlipping(game.id);
+    setFlipResult({ result, winnerEmail, game });
+
+    setTimeout(async () => {
+      if (winnerEmail === user.email) {
+        await updateBalance(game.bet_amount * 2, 'coinflip_win', `Won coinflip vs bot for ${game.bet_amount * 2}`);
+        await addXp(50);
+      }
+      setTimeout(() => { setFlipping(null); setFlipResult(null); loadGames(); }, 2500);
+    }, 2000);
+  };
+
   useEffect(() => {
     loadGames();
     const unsub = base44.entities.CoinflipGame.subscribe(() => loadGames());
