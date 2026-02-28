@@ -112,12 +112,15 @@ export default function Rewards() {
   const handleClaimRakeback = async (key) => {
     const amount = rakeback[key];
     if (!amount || amount <= 0) return;
+    if (getCooldownLeft(key) > 0) return;
     setClaiming(c => ({ ...c, [key]: true }));
     const updateKey = `rakeback_${key}`;
-    await base44.auth.updateMe({
+    const updates = {
       [updateKey]: 0,
       total_rakeback_claimed: (user?.total_rakeback_claimed || 0) + amount,
-    });
+    };
+    if (key !== 'instant') updates[`rakeback_${key}_claimed_at`] = new Date().toISOString();
+    await base44.auth.updateMe(updates);
     await updateBalance(amount, 'daily_reward', `${key} rakeback claimed`);
     await reloadUser?.();
     setRakeback(r => ({ ...r, [key]: 0 }));
