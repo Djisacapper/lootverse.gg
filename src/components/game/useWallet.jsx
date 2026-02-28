@@ -45,7 +45,7 @@ export function useWallet() {
     const me = await base44.auth.me();
     const currentXp = me.xp || 0;
     const newXp = currentXp + amount;
-    const newLevel = Math.min(calculateLevelFromXp(newXp), 200);
+    const newLevel = calculateLevelFromXp(newXp);
     await base44.auth.updateMe({ xp: newXp, level: newLevel });
     setXp(newXp);
     setLevel(newLevel);
