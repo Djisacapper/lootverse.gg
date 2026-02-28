@@ -360,8 +360,8 @@ export default function Battles() {
                   {/* Right: Stats & Action */}
                   <div className="flex items-center gap-4 min-w-fit ml-auto">
                     <div className="text-right flex flex-col gap-1">
-                      <span className="text-xs text-white/40">{b.players?.length || 1}/{b.max_players || 2} Rounds</span>
-                      <span className="text-xs text-white/30">Total value</span>
+                      <span className="text-xs text-white/40">{b.rounds || 1} Rounds</span>
+                      <span className="text-xs text-white/30">{b.players?.length || 0}/{b.max_players || 2} Players</span>
                       <div className="flex items-center justify-end gap-1">
                         <span className="text-xs">💰</span>
                         <span className="font-bold text-white">{b.entry_cost?.toLocaleString()}</span>
