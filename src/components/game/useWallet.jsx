@@ -79,7 +79,7 @@ export function calculateLevelFromXp(totalXp) {
   let level = 1;
   let xpSpent = 0;
   
-  while (level < 200 && xpSpent + getXpForLevel(level) <= totalXp) {
+  while (xpSpent + getXpForLevel(level) <= totalXp) {
     xpSpent += getXpForLevel(level);
     level++;
   }
