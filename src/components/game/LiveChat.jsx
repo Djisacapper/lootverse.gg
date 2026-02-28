@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Zap, Send } from 'lucide-react';
+import { MessageCircle, Zap, Send, Crown, Shield, Badge } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
+import UserStatsModal from './UserStatsModal';
 
 const MOCK_MESSAGES = [
   { id: 1, user: 'ShadowKing', level: 9, text: 'just hit legendary on celestial!!', time: '2m' },
