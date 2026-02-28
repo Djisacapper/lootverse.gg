@@ -755,10 +755,10 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
       </AnimatePresence>
 
       {/* ── Player Grid ── */}
-      <div className="flex gap-2 items-start overflow-x-auto max-w-full">
+      <div className="w-full flex gap-2 items-start justify-between">
         {teamList.map((mi, ti) => (
           <React.Fragment key={ti}>
-            <div className="flex-1 min-w-0 space-y-2">
+            <div className="flex-1 space-y-2">
               {teamList.length > 1 && (
                 <div className="text-center">
                   <span className="text-xs font-bold px-3 py-0.5 rounded-full"
@@ -767,7 +767,7 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
                   </span>
                 </div>
               )}
-              <div className="flex gap-2">
+              <div className="flex gap-2 items-stretch">
                 {mi.map(pi => {
                   const round = currentRoundRef.current;
                   const rolled = allRolled.current?.[round]?.[pi];
