@@ -173,9 +173,13 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Avatar */}
         {user && (
-          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-xs font-bold text-white">
+          <button
+            onClick={() => setProfileOpen(true)}
+            className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-xs font-bold text-white hover:shadow-lg hover:shadow-violet-500/50 transition-all"
+            title="Open profile"
+          >
             {user.full_name?.[0]?.toUpperCase() || '?'}
-          </div>
+          </button>
         )}
       </div>
 
