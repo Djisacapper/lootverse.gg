@@ -43,12 +43,12 @@ export default function ProfileModal({ user, onClose, onNavigate }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/50 lg:bg-transparent lg:fixed lg:inset-auto lg:top-14 lg:right-0 lg:bottom-auto lg:w-96 lg:h-auto lg:rounded-b-lg lg:rounded-r-lg">
-      {/* Mobile overlay */}
-      <div className="lg:hidden absolute inset-0 bg-black/50" onClick={onClose} />
+    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center">
+      {/* Overlay */}
+      <div className="absolute inset-0" onClick={onClose} />
 
       {/* Modal */}
-      <div className="relative w-full h-full lg:h-auto lg:max-h-[calc(100vh-56px)] bg-[#16161f] rounded-lg shadow-2xl overflow-hidden flex flex-col">
+      <div className="relative w-full max-w-2xl mx-4 bg-gradient-to-b from-[#1a1a2e] to-[#16161f] rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-white/10" style={{ maxHeight: '90vh' }}>
         {/* Header */}
         <div className="p-6 border-b border-white/10">
           <div className="flex items-center justify-between mb-4">
