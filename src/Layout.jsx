@@ -105,26 +105,7 @@ export default function Layout({ children, currentPageName }) {
         ))}
       </nav>
 
-      {/* User */}
-      {user && !collapsed && (
-        <div className="p-4 border-t border-white/5">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-xs font-bold text-white flex-shrink-0">
-              {user.full_name?.[0]?.toUpperCase() || '?'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] font-medium text-white truncate">{user.full_name || 'Player'}</p>
-              <p className="text-[10px] text-white/25 truncate">{user.email}</p>
-            </div>
-            <button
-              onClick={() => base44.auth.logout()}
-              className="text-white/25 hover:text-red-400 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-      )}
+
     </>
   );
 
