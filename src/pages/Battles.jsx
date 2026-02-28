@@ -306,58 +306,85 @@ export default function Battles() {
         </div>
       </div>
 
-      {/* Open Battles Tab */}
-      {tab === 'open' && (
-        <AnimatePresence mode="wait">
-          <motion.div key="open" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            {waitingBattles.length === 0 ? (
-              <div className="text-center py-16 glass rounded-2xl">
-                <Swords className="w-12 h-12 text-white/10 mx-auto mb-3" />
-                <p className="text-white/30">No open battles right now</p>
-                <p className="text-white/20 text-xs mt-1">Create one to get started</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {waitingBattles.map((b) => (
-                  <div key={b.id} className="glass rounded-2xl p-5 border border-white/5 hover:border-red-400/20 transition-all">
-                    <div className="flex items-center justify-between mb-3">
-                      <div>
-                        <p className="text-sm font-semibold text-white">{b.case_name}</p>
-                        <p className="text-[11px] text-white/30">{b.rounds} rounds</p>
+      {/* Open Battles List */}
+      {waitingBattles.length === 0 ? (
+        <div className="text-center py-16 glass rounded-2xl">
+          <Swords className="w-12 h-12 text-white/10 mx-auto mb-3" />
+          <p className="text-white/30">No open battles right now</p>
+          <p className="text-white/20 text-xs mt-1">Create one to get started</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {sortedWaitingBattles.map((b) => {
+            const caseTemplate = cases.find(c => c.id === b.case_template_id);
+            const items = caseTemplate?.items || [];
+            const isCreator = b.creator_email === user?.email;
+            const isLive = b.status === 'in_progress';
+            
+            return (
+              <div key={b.id} className="glass border border-white/5 hover:border-white/10 rounded-2xl p-4 transition-all">
+                <div className="flex items-center justify-between gap-4">
+                  {/* Left: Rounds & Mode */}
+                  <div className="flex items-center gap-3 min-w-fit">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex items-center gap-2">
+                        <Users className="w-4 h-4 text-white/40" />
+                        <span className="text-sm font-bold text-white">{b.rounds} Rounds</span>
+                        {b.battle_modes?.crazy && <span className="text-xs px-1.5 py-0.5 rounded bg-purple-500/30 text-purple-300">Crazy</span>}
+                        {b.battle_modes?.jackpot && <span className="text-xs px-1.5 py-0.5 rounded bg-amber-500/30 text-amber-300">Jackpot</span>}
+                        {!b.battle_modes?.crazy && !b.battle_modes?.jackpot && <span className="text-xs px-1.5 py-0.5 rounded bg-white/10 text-white/60">Normal mode</span>}
                       </div>
-                      <div className="text-right">
-                        <p className="text-xs text-white/30">Entry Cost</p>
-                        <p className="text-lg font-bold text-amber-400">{b.entry_cost?.toLocaleString()}</p>
+                      <div className="flex items-center gap-2">
+                        {(b.players || []).slice(0, 4).map((p, i) => (
+                          <div key={i} className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-[10px] font-bold text-white">
+                            {p.name?.[0] || '?'}
+                          </div>
+                        ))}
                       </div>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-xs text-white/40 flex-wrap">
-                        <Users className="w-3.5 h-3.5" />
-                        {b.players?.length || 1}/{b.max_players || 2} players
-                        {b.status === 'in_progress' && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-semibold">LIVE</span>
-                        )}
+                  </div>
+
+                  {/* Middle: Case Items */}
+                  <div className="flex items-center gap-2 min-w-fit flex-shrink-0">
+                    {items.slice(0, Math.min(5, b.rounds || 1)).map((item, i) => (
+                      <div
+                        key={i}
+                        className="w-12 h-12 rounded-lg bg-white/5 border border-white/10 flex-shrink-0 overflow-hidden"
+                        style={{ backgroundImage: `url('${item.image_url}')`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                      />
+                    ))}
+                  </div>
+
+                  {/* Right: Stats & Action */}
+                  <div className="flex items-center gap-4 min-w-fit ml-auto">
+                    <div className="text-right flex flex-col gap-1">
+                      <span className="text-xs text-white/40">{b.players?.length || 1}/{b.max_players || 2} Rounds</span>
+                      <span className="text-xs text-white/30">Total value</span>
+                      <div className="flex items-center justify-end gap-1">
+                        <span className="text-xs">💰</span>
+                        <span className="font-bold text-white">{b.entry_cost?.toLocaleString()}</span>
                       </div>
-                      {b.status === 'in_progress' ? (
-                        <Button
-                          onClick={() => handleWatch(b)}
-                          size="sm"
-                          className="bg-white/10 hover:bg-white/20 text-white rounded-xl"
-                        >
-                          <Eye className="w-3.5 h-3.5 mr-1.5" /> Watch
-                        </Button>
-                      ) : b.creator_email !== user?.email ? (
-                        <Button
-                          onClick={() => handleJoin(b)}
-                          disabled={b.entry_cost > balance}
-                          size="sm"
-                          className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 rounded-xl"
-                        >
-                          <Swords className="w-3.5 h-3.5 mr-1.5" /> Join
-                        </Button>
-                      ) : (
-                        <Button
-                          onClick={() => {
+                    </div>
+                    {isLive ? (
+                      <Button
+                        onClick={() => handleWatch(b)}
+                        size="sm"
+                        className="bg-white/10 hover:bg-white/20 text-white rounded-lg min-w-max"
+                      >
+                        <Eye className="w-3.5 h-3.5 mr-1.5" /> Watch
+                      </Button>
+                    ) : !isCreator ? (
+                      <Button
+                        onClick={() => handleJoin(b)}
+                        disabled={b.entry_cost > balance}
+                        size="sm"
+                        className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-lg min-w-max"
+                      >
+                        Join Battle
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => {
                           const rounds = b.rounds || 1;
                           const caseTemplate = cases.find(c => c.id === b.case_template_id);
                           const selectedCasesArr = caseTemplate ? Array.from({ length: rounds }, () => caseTemplate) : [];
@@ -366,20 +393,19 @@ export default function Battles() {
                           arenaDataRef.current = viewData;
                           setArenaData(viewData);
                           setView('arena');
-                          }}
-                          size="sm"
-                          className="bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-xl"
-                        >
-                          View
-                        </Button>
-                      )}
-                    </div>
+                        }}
+                        size="sm"
+                        className="bg-white/5 hover:bg-white/10 text-white/60 hover:text-white rounded-lg min-w-max"
+                      >
+                        View Battle
+                      </Button>
+                    )}
                   </div>
-                ))}
+                </div>
               </div>
-            )}
-          </motion.div>
-        </AnimatePresence>
+            );
+          })}
+        </div>
       )}
 
       {/* Finished Battles Tab */}
