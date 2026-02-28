@@ -254,11 +254,15 @@ export default function Crash() {
           const elapsed = (now - startMs) / 1000;
 
           if (elapsed >= BETTING_DURATION) {
-            // Transition to running — only if not already updating
-            await base44.entities.CrashRound.update(r.id, {
-              status: 'running',
-              run_start_time: Date.now(),
-            });
+            // Only transition once — guard against multiple clients overwriting run_start_time
+            if (!r.run_start_time) {
+              await base44.entities.CrashRound.update(r.id, {
+                status: 'running',
+                run_start_time: Date.now(),
+              });
+            } else {
+              await base44.entities.CrashRound.update(r.id, { status: 'running' });
+            }
             return;
           }
 
