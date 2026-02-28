@@ -45,7 +45,7 @@ export function useWallet() {
     const me = await base44.auth.me();
     const currentXp = me.xp || 0;
     const newXp = currentXp + amount;
-    const newLevel = Math.min(calculateLevelFromXp(newXp), 200);
+    const newLevel = calculateLevelFromXp(newXp);
     await base44.auth.updateMe({ xp: newXp, level: newLevel });
     setXp(newXp);
     setLevel(newLevel);
@@ -79,7 +79,7 @@ export function calculateLevelFromXp(totalXp) {
   let level = 1;
   let xpSpent = 0;
   
-  while (level < 200 && xpSpent + getXpForLevel(level) <= totalXp) {
+  while (xpSpent + getXpForLevel(level) <= totalXp) {
     xpSpent += getXpForLevel(level);
     level++;
   }
@@ -88,8 +88,6 @@ export function calculateLevelFromXp(totalXp) {
 }
 
 export function getXpProgressForLevel(level, totalXp) {
-  if (level >= 200) return 100;
-  
   let xpSpent = 0;
   for (let i = 1; i < level; i++) {
     xpSpent += getXpForLevel(i);
