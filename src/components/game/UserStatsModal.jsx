@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { X, Copy, Zap } from 'lucide-react';
+import { X, Copy } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 export default function UserStatsModal({ userName, userEmail, onClose, currentUser }) {
