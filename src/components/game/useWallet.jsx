@@ -64,7 +64,7 @@ export function useWallet() {
     });
   }, []);
 
-  const xpProgress = ((xp % 500) / 500) * 100;
+  const xpProgress = level >= 200 ? 100 : getXpProgressForLevel(level, xp);
 
   return { user, balance, xp, level, xpProgress, loading, updateBalance, addXp, addRakeback, reload: loadUser };
 }
