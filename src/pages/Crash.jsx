@@ -246,12 +246,12 @@ export default function Crash() {
     };
   }, [syncRound, advanceRound]);
 
-  // Local countdown display (derived from round created_date)
+  // Local countdown display (use stored start_time)
   useEffect(() => {
     if (phase !== 'betting' || !round) return;
-    const created = new Date(round.created_date).getTime();
+    const startMs = round.start_time || new Date(round.created_date).getTime();
     const update = () => {
-      const elapsed = Math.floor((Date.now() - created) / 1000);
+      const elapsed = Math.floor((Date.now() - startMs) / 1000);
       setCountdown(Math.max(0, BETTING_DURATION - elapsed));
     };
     update();
