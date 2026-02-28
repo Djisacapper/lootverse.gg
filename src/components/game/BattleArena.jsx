@@ -136,7 +136,7 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
 
   return (
     <div
-      className={`relative flex-1 flex flex-col rounded-2xl border transition-all duration-500
+      className={`relative flex-1 flex flex-col rounded-2xl border transition-all duration-500 min-h-0
         ${isWinner ? 'border-amber-400/60 shadow-lg shadow-amber-400/10' : ''}
         ${isMagic && spinPhase !== 'idle' ? 'shadow-lg shadow-cyan-400/20' : ''}`}
       style={{
@@ -145,7 +145,7 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
       }}
     >
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 pt-3 pb-1">
+      <div className="flex items-center gap-2 px-3 pt-3 pb-1 flex-shrink-0">
         <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold"
           style={{ background: playerColor + '33', color: playerColor, border: `2px solid ${playerColor}66` }}>
           {player.isBot ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
