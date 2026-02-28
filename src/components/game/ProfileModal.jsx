@@ -77,14 +77,14 @@ export default function ProfileModal({ user, onClose, onNavigate }) {
         </div>
 
         {/* Tabs */}
-        <div className="border-b border-white/10 flex overflow-x-auto scrollbar-hide">
+        <div className="border-b border-white/10 grid grid-cols-4 bg-white/[0.02]">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-3 text-sm font-medium whitespace-nowrap transition-colors border-b-2 ${
+              className={`px-3 py-3 text-xs lg:text-sm font-medium transition-colors border-b-2 ${
                 activeTab === tab.id
-                  ? 'border-violet-500 text-white'
+                  ? 'border-violet-500 text-white bg-white/[0.05]'
                   : 'border-transparent text-white/40 hover:text-white'
               }`}
             >
