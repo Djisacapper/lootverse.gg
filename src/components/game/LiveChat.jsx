@@ -15,7 +15,7 @@ const MOCK_MESSAGES = [
 ];
 
 export default function LiveChat() {
-  const [messages, setMessages] = useState(MOCK_MESSAGES);
+  const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [user, setUser] = useState(null);
   const [tab, setTab] = useState('chat'); // 'chat' | 'drops'
@@ -33,6 +33,30 @@ export default function LiveChat() {
       }).catch(() => {});
     }).catch(() => {});
     
+    // Fetch initial messages
+    base44.entities.ChatMessage.list('-created_date', 50).then(msgs => {
+      setMessages(msgs.map(m => ({
+        id: m.id,
+        user: m.user_name,
+        level: m.level,
+        text: m.text,
+        time: 'recent'
+      })));
+    });
+
+    // Subscribe to new messages
+    const unsubChat = base44.entities.ChatMessage.subscribe((event) => {
+      if (event.type === 'create') {
+        setMessages(prev => [...prev, {
+          id: event.data.id,
+          user: event.data.user_name,
+          level: event.data.level,
+          text: event.data.text,
+          time: 'now'
+        }]);
+      }
+    });
+    
     base44.entities.UserInventory.list('-created_date', 10).then(d => setRecentDrops(d.filter(i => i.status === 'owned' && ['case_opening', 'battle_win'].includes(i.source))));
 
     const unsubInventory = base44.entities.UserInventory.subscribe((event) => {
@@ -40,26 +64,31 @@ export default function LiveChat() {
         setRecentDrops(prev => [event.data, ...prev].slice(0, 10));
       }
     });
-    return unsubInventory;
+    
+    return () => {
+      unsubChat();
+      unsubInventory();
+    };
   }, []);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
     if (!input.trim() || !user) return;
-    const newMsg = {
-      id: Date.now(),
-      user: user.full_name || 'Player',
-      level: user.level || 1,
-      text: input.trim(),
-      time: 'now',
-      isMe: true,
-    };
-    setMessages(prev => [...prev, newMsg]);
-    setInput('');
+    try {
+      await base44.entities.ChatMessage.create({
+        user_name: user.full_name || 'Player',
+        user_email: user.email,
+        level: user.level || 1,
+        text: input.trim()
+      });
+      setInput('');
+    } catch (err) {
+      console.error('Failed to send message:', err);
+    }
   };
 
   const RARITY_COLORS = {
