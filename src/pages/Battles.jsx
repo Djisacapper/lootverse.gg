@@ -262,6 +262,7 @@ export default function Battles() {
   }
 
   const waitingBattles = battles.filter(b => b.status === 'waiting' || b.status === 'in_progress');
+  const [sortBy, setSortBy] = useState('recent');
 
   // Completed battles: only show those finished within the last 1 minute
   const ONE_MIN_MS = 1 * 60 * 1000;
@@ -271,41 +272,38 @@ export default function Battles() {
     return Date.now() - updatedAt < ONE_MIN_MS;
   });
 
+  const sortedWaitingBattles = [...waitingBattles].sort((a, b) => {
+    if (sortBy === 'price_desc') return (b.entry_cost || 0) - (a.entry_cost || 0);
+    if (sortBy === 'price_asc') return (a.entry_cost || 0) - (b.entry_cost || 0);
+    return 0;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold text-white mb-1">Case Battles</h1>
-          <p className="text-white/40 text-sm">PvP case opening — highest total value wins</p>
+        <h1 className="text-3xl font-bold text-white flex items-center gap-2">
+          <Swords className="w-7 h-7" /> Battles
+        </h1>
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="appearance-none bg-white/5 border border-white/10 text-white text-sm px-3 py-2 rounded-lg pl-3 pr-8 hover:border-white/20 transition-all"
+            >
+              <option value="recent">Sort By: Recent</option>
+              <option value="price_desc">Sort By: Price Descending</option>
+              <option value="price_asc">Sort By: Price Ascending</option>
+            </select>
+            <ChevronDown className="absolute right-2.5 top-1/2 transform -translate-y-1/2 w-4 h-4 text-white/40 pointer-events-none" />
+          </div>
+          <Button
+            onClick={() => setView('create')}
+            className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 rounded-lg text-white font-semibold"
+          >
+            <Plus className="w-4 h-4 mr-2" /> Create Battle
+          </Button>
         </div>
-        <Button
-          onClick={() => setView('create')}
-          className="bg-gradient-to-r from-red-500 to-rose-600 hover:from-red-400 hover:to-rose-500 rounded-xl"
-        >
-          <Plus className="w-4 h-4 mr-2" /> Create Battle
-        </Button>
-      </div>
-
-      {/* Tabs */}
-      <div className="flex gap-1 p-1 bg-white/5 rounded-xl w-fit">
-        <button
-          onClick={() => setTab('open')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === 'open' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'}`}
-        >
-          <Swords className="w-4 h-4" /> Open
-          <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${tab === 'open' ? 'bg-red-500/30 text-red-300' : 'bg-white/5 text-white/30'}`}>
-            {waitingBattles.length}
-          </span>
-        </button>
-        <button
-          onClick={() => setTab('finished')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-all ${tab === 'finished' ? 'bg-white/10 text-white' : 'text-white/40 hover:text-white/70'}`}
-        >
-          <CheckCircle className="w-4 h-4" /> Finished
-          <span className={`text-xs px-1.5 py-0.5 rounded-full font-bold ${tab === 'finished' ? 'bg-green-500/30 text-green-300' : 'bg-white/5 text-white/30'}`}>
-            {completedBattles.length}
-          </span>
-        </button>
       </div>
 
       {/* Open Battles Tab */}
