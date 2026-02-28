@@ -117,10 +117,24 @@ export default function Crash() {
   const syncRound = useCallback(async () => {
     try {
       const rounds = await base44.entities.CrashRound.list('-created_date', 1);
-      const r = rounds?.[0];
+      let r = rounds?.[0];
+
+      // If the latest round is stale (no start_time or start_time is very old and still in betting), reset it
+      if (r && r.status === 'betting' && r.start_time) {
+        const elapsed = (Date.now() - r.start_time) / 1000;
+        if (elapsed > BETTING_DURATION + 5) {
+          // Stale round, mark as crashed and create new
+          await base44.entities.CrashRound.update(r.id, { status: 'crashed' });
+          r = null;
+        }
+      }
+
+      if (!r || (r.status === 'crashed' && !roundRef.current)) {
+        r = null;
+      }
 
       if (!r) {
-        // No round exists yet — create one (only one client should do this)
+        // No valid round — create one (only one client should do this)
         if (!creatingRoundRef.current) {
           creatingRoundRef.current = true;
           const cp = generateCrashPoint();
