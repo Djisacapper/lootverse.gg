@@ -128,6 +128,7 @@ export default function Crash() {
             crash_point: cp,
             status: 'betting',
             bets: [],
+            start_time: Date.now(),
           });
           setRound(newRound);
           roundRef.current = newRound;
