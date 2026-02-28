@@ -408,49 +408,7 @@ export default function Battles() {
         </div>
       )}
 
-      {/* Finished Battles Tab */}
-      {tab === 'finished' && (
-        <AnimatePresence mode="wait">
-          <motion.div key="finished" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
-            {completedBattles.length === 0 ? (
-              <div className="text-center py-16 glass rounded-2xl">
-                <Trophy className="w-12 h-12 text-white/10 mx-auto mb-3" />
-                <p className="text-white/30">No recently finished battles</p>
-                <p className="text-white/20 text-xs mt-1">Finished battles disappear after 1 minute</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {completedBattles.map((b) => {
-                  const pot = (b.entry_cost || 0) * (b.max_players || 2);
-                  const elapsed = Date.now() - new Date(b.updated_date).getTime();
-                  const remaining = Math.max(0, ONE_MIN_MS - elapsed);
-                  const secLeft = Math.ceil(remaining / 1000);
-                  return (
-                    <div key={b.id} className="glass rounded-2xl p-5 border border-white/5 border-green-400/10">
-                      <div className="flex items-center justify-between mb-2">
-                        <div>
-                          <p className="text-sm font-semibold text-white">{b.case_name}</p>
-                          <p className="text-[11px] text-white/30">{b.rounds} rounds · {b.max_players || 2} players</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-xs text-white/30">Total Pot</p>
-                          <p className="text-lg font-bold text-amber-400">{pot.toLocaleString()}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between mt-3">
-                        <span className="flex items-center gap-1.5 text-xs text-green-400/80">
-                          <CheckCircle className="w-3.5 h-3.5" /> Completed
-                        </span>
-                        <span className="text-[10px] text-white/25">Expires in {secLeft}s</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </motion.div>
-        </AnimatePresence>
-      )}
+
     </div>
   );
 }
