@@ -153,7 +153,6 @@ export default function Crash() {
         // Reset player-side state for the new round
         setRound(r);
         roundRef.current = r;
-        // Don't touch betRoundId here — it stays so hasBet stays false for new round
         setCashedOut(false);
         cashedOutRef.current = false;
         setCashoutAt(null);
@@ -167,6 +166,16 @@ export default function Crash() {
 
       // Advance DB state if needed (one client does this)
       const now = Date.now();
+
+      // Kill stale running rounds (stuck for > 5 min)
+      if (r.status === 'running') {
+        const updatedAt = new Date(r.updated_date).getTime();
+        if ((now - updatedAt) > 5 * 60 * 1000) {
+          await base44.entities.CrashRound.update(r.id, { status: 'crashed' });
+          return;
+        }
+      }
+
       if (r.status === 'betting') {
         const startMs = r.start_time || now;
         const elapsed = (now - startMs) / 1000;
