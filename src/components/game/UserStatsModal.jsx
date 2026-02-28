@@ -66,11 +66,11 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
   );
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="bg-[#1a1a2e] rounded-2xl border border-white/10 w-full max-w-sm overflow-hidden"
+        className="bg-[#1a1a2e] rounded-2xl border border-white/10 w-full max-w-sm overflow-y-auto max-h-[90vh] my-auto"
       >
         {/* Header */}
         <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
@@ -130,21 +130,21 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
               </div>
             )}
 
-            {/* Account Stats */}
+            {/* Game Stats */}
             <div className="border-t border-white/10 pt-4">
-              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-3">ACCOUNT</p>
-              <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-white/50 text-xs">Deposits</span>
-                  <span className="text-white font-semibold text-xs">💰 {(stats.deposits || 0).toLocaleString()}</span>
+              <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wider mb-3">GAME STATS</p>
+              <div className="grid grid-cols-3 gap-3 text-center">
+                <div>
+                  <p className="text-[10px] text-white/40 mb-1">FAVORITE</p>
+                  <p className="text-xs font-bold text-white capitalize">{stats.favoriteGame || 'Battles'}</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-white/50 text-xs">Current Balance</span>
-                  <span className="text-white font-semibold text-xs">💰 {(stats.balance || 0).toLocaleString()}</span>
+                <div>
+                  <p className="text-[10px] text-white/40 mb-1">BIGGEST WIN</p>
+                  <p className="text-xs font-bold text-amber-400">💰 {(stats.biggestWin || 0).toLocaleString()}</p>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-white/50 text-xs">Total XP</span>
-                  <span className="text-white font-semibold text-xs">{(stats.xp || 0).toLocaleString()}</span>
+                <div>
+                  <p className="text-[10px] text-white/40 mb-1">WIN RATE</p>
+                  <p className="text-xs font-bold text-green-400">{stats.winRate || '0'}%</p>
                 </div>
               </div>
             </div>
