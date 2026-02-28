@@ -2,24 +2,218 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useWallet } from '../components/game/useWallet';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Coins, Plus, Swords, Trophy, Crown } from 'lucide-react';
+import { Plus, Swords, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+
+const QUICK_AMOUNTS = [100, 500, 1000, 5000, 10000, 50000];
+
+function CoinDisplay({ side, size = 'md', spinning = false }) {
+  const isHeads = side === 'heads';
+  const sizes = { sm: 'w-10 h-10 text-lg', md: 'w-16 h-16 text-2xl', lg: 'w-24 h-24 text-4xl' };
+  return (
+    <motion.div
+      animate={spinning ? { rotateY: [0, 1080] } : {}}
+      transition={spinning ? { duration: 1.8, ease: 'easeInOut' } : {}}
+      className={`${sizes[size]} rounded-full flex items-center justify-center font-black shadow-lg flex-shrink-0
+        ${isHeads
+          ? 'bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600 shadow-amber-400/40'
+          : 'bg-gradient-to-br from-slate-400 via-slate-500 to-slate-700 shadow-slate-400/30'
+        }`}
+      style={{ boxShadow: isHeads ? '0 0 20px rgba(245,158,11,0.5)' : '0 0 20px rgba(148,163,184,0.3)' }}
+    >
+      <span>{isHeads ? '👑' : '🔱'}</span>
+    </motion.div>
+  );
+}
+
+function GameCard({ game, user, balance, onJoin }) {
+  const isOwn = game.creator_email === user?.email;
+  const opponentSide = game.creator_side === 'heads' ? 'tails' : 'heads';
+  const pot = game.bet_amount * 2;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 12 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative rounded-2xl border border-white/[0.07] bg-[#13131e] overflow-hidden hover:border-amber-400/20 transition-all duration-200 group"
+    >
+      {/* Top accent */}
+      <div className="h-0.5 w-full bg-gradient-to-r from-amber-400/0 via-amber-400/60 to-amber-400/0" />
+
+      <div className="p-4">
+        {/* Players row */}
+        <div className="flex items-center gap-3 mb-4">
+          {/* Creator */}
+          <div className="flex flex-col items-center gap-1.5 flex-1">
+            <CoinDisplay side={game.creator_side} size="sm" />
+            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-xs font-bold text-white">
+              {game.creator_name?.[0]?.toUpperCase() || '?'}
+            </div>
+            <p className="text-[11px] text-white/60 truncate max-w-[70px] text-center">{game.creator_name}</p>
+            <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full
+              ${game.creator_side === 'heads' ? 'bg-amber-500/15 text-amber-400' : 'bg-slate-500/15 text-slate-300'}`}>
+              {game.creator_side}
+            </span>
+          </div>
+
+          {/* VS + Pot */}
+          <div className="flex flex-col items-center gap-1">
+            <span className="text-[10px] font-black text-white/20 tracking-widest">VS</span>
+            <div className="bg-white/[0.04] border border-white/[0.07] rounded-xl px-3 py-1.5 text-center">
+              <p className="text-[9px] text-white/30 uppercase tracking-wider">Pot</p>
+              <p className="text-sm font-black text-amber-400">{pot.toLocaleString()}</p>
+            </div>
+          </div>
+
+          {/* Opponent slot */}
+          <div className="flex flex-col items-center gap-1.5 flex-1">
+            <CoinDisplay side={opponentSide} size="sm" />
+            <div className="w-8 h-8 rounded-full bg-white/[0.05] border border-dashed border-white/15 flex items-center justify-center">
+              <span className="text-white/20 text-sm">?</span>
+            </div>
+            <p className="text-[11px] text-white/25">Waiting...</p>
+            <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full
+              ${opponentSide === 'heads' ? 'bg-amber-500/15 text-amber-400' : 'bg-slate-500/15 text-slate-300'}`}>
+              {opponentSide}
+            </span>
+          </div>
+        </div>
+
+        {/* Action */}
+        {isOwn ? (
+          <div className="flex items-center justify-center h-9 rounded-xl border border-white/[0.07] bg-white/[0.03]">
+            <span className="text-xs text-white/25 font-medium">Your game — waiting for opponent</span>
+          </div>
+        ) : (
+          <Button
+            onClick={() => onJoin(game)}
+            disabled={game.bet_amount > balance}
+            className="w-full h-9 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <Swords className="w-3.5 h-3.5 mr-1.5" />
+            Join for {game.bet_amount.toLocaleString()} coins
+          </Button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
+
+function CreatePanel({ balance, onClose, onCreate }) {
+  const [amount, setAmount] = useState(1000);
+  const [side, setSide] = useState('heads');
+
+  const handleQuick = (v) => setAmount(v);
+  const canCreate = amount > 0 && amount <= balance;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -12 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -12 }}
+      className="rounded-2xl border border-amber-400/20 bg-[#13131e] p-5 mb-4"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <p className="font-bold text-white text-base">Create Coinflip</p>
+        <button onClick={onClose} className="text-white/30 hover:text-white transition-colors">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* Side picker */}
+      <p className="text-xs text-white/40 mb-2 uppercase tracking-wider">Pick your side</p>
+      <div className="flex gap-3 mb-5">
+        {['heads', 'tails'].map(s => (
+          <button
+            key={s}
+            onClick={() => setSide(s)}
+            className={`flex-1 flex flex-col items-center gap-2 py-4 rounded-xl border transition-all duration-200
+              ${side === s
+                ? s === 'heads' ? 'border-amber-400/50 bg-amber-500/10' : 'border-slate-400/50 bg-slate-500/10'
+                : 'border-white/[0.07] bg-white/[0.03] hover:bg-white/[0.06]'
+              }`}
+          >
+            <CoinDisplay side={s} size="sm" />
+            <span className={`text-xs font-bold capitalize ${side === s ? (s === 'heads' ? 'text-amber-400' : 'text-slate-300') : 'text-white/40'}`}>
+              {s}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {/* Amount */}
+      <p className="text-xs text-white/40 mb-2 uppercase tracking-wider">Bet amount</p>
+      <div className="grid grid-cols-3 gap-2 mb-3">
+        {QUICK_AMOUNTS.map(v => (
+          <button
+            key={v}
+            onClick={() => handleQuick(v)}
+            className={`py-1.5 rounded-lg text-xs font-bold transition-all
+              ${amount === v ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' : 'bg-white/[0.04] text-white/40 hover:bg-white/[0.08] hover:text-white border border-transparent'}`}
+          >
+            {v.toLocaleString()}
+          </button>
+        ))}
+      </div>
+      <input
+        type="number"
+        value={amount}
+        onChange={e => setAmount(Number(e.target.value))}
+        className="w-full bg-white/[0.05] border border-white/[0.08] rounded-xl px-3 py-2.5 text-white text-sm outline-none focus:border-amber-400/40 mb-1"
+        min={1}
+        max={balance}
+      />
+      <p className="text-[11px] text-white/25 mb-4">Balance: {balance?.toLocaleString()} coins</p>
+
+      <Button
+        onClick={() => onCreate(amount, side)}
+        disabled={!canCreate}
+        className="w-full h-11 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 font-bold text-white disabled:opacity-40"
+      >
+        Create Game — Win {(amount * 2).toLocaleString()} coins
+      </Button>
+    </motion.div>
+  );
+}
+
+function FlipOverlay({ flipResult, user }) {
+  const won = flipResult?.winnerEmail === user?.email;
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm"
+    >
+      <div className="text-center flex flex-col items-center gap-6">
+        <CoinDisplay side={flipResult?.result} size="lg" spinning />
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 2 }}
+          className="space-y-2"
+        >
+          <p className="text-3xl font-black text-white">
+            {flipResult?.result === 'heads' ? '👑 Heads!' : '🔱 Tails!'}
+          </p>
+          <p className={`text-xl font-bold ${won ? 'text-green-400' : 'text-red-400'}`}>
+            {won
+              ? `+${(flipResult.game.bet_amount * 2).toLocaleString()} coins!`
+              : 'Better luck next time!'}
+          </p>
+          <p className="text-white/30 text-sm">{won ? '🎉 You won!' : '😔 You lost'}</p>
+        </motion.div>
+      </div>
+    </motion.div>
+  );
+}
 
 export default function Coinflip() {
   const { user, balance, updateBalance, addXp } = useWallet();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
-  const [betAmount, setBetAmount] = useState(100);
-  const [selectedSide, setSelectedSide] = useState('heads');
   const [flipping, setFlipping] = useState(null);
   const [flipResult, setFlipResult] = useState(null);
 
@@ -35,14 +229,14 @@ export default function Coinflip() {
     setLoading(false);
   };
 
-  const handleCreate = async () => {
-    if (betAmount <= 0 || betAmount > balance) return;
-    await updateBalance(-betAmount, 'coinflip_bet', `Created coinflip for ${betAmount}`);
+  const handleCreate = async (amount, side) => {
+    if (amount <= 0 || amount > balance) return;
+    await updateBalance(-amount, 'coinflip_bet', `Created coinflip for ${amount}`);
     await base44.entities.CoinflipGame.create({
       creator_email: user.email,
       creator_name: user.full_name || 'Anonymous',
-      creator_side: selectedSide,
-      bet_amount: betAmount,
+      creator_side: side,
+      bet_amount: amount,
       status: 'waiting',
     });
     setShowCreate(false);
@@ -51,20 +245,14 @@ export default function Coinflip() {
 
   const handleJoin = async (game) => {
     if (game.bet_amount > balance) return;
-
     await updateBalance(-game.bet_amount, 'coinflip_bet', `Joined coinflip for ${game.bet_amount}`);
-
-    // Flip the coin
     const result = Math.random() < 0.5 ? 'heads' : 'tails';
     const winnerEmail = result === game.creator_side ? game.creator_email : user.email;
-
     setFlipping(game.id);
     setFlipResult({ result, winnerEmail, game });
 
-    // Animate
     setTimeout(async () => {
       const winnings = game.bet_amount * 2;
-
       await base44.entities.CoinflipGame.update(game.id, {
         opponent_email: user.email,
         opponent_name: user.full_name || 'Anonymous',
@@ -72,187 +260,86 @@ export default function Coinflip() {
         result,
         winner_email: winnerEmail,
       });
-
       if (winnerEmail === user.email) {
         await updateBalance(winnings, 'coinflip_win', `Won coinflip for ${winnings}`);
         await addXp(50);
       }
-
       setTimeout(() => {
         setFlipping(null);
         setFlipResult(null);
         loadGames();
-      }, 2000);
+      }, 2500);
     }, 2000);
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-5 max-w-2xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-white mb-1">Coinflip</h1>
-          <p className="text-white/40 text-sm">Pick a side, bet your coins, winner takes all</p>
+          <h1 className="text-2xl font-black text-white tracking-tight">Coinflip</h1>
+          <p className="text-white/35 text-sm mt-0.5">Pick a side · Winner takes all</p>
         </div>
         <Button
-          onClick={() => setShowCreate(true)}
-          className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl"
+          onClick={() => setShowCreate(v => !v)}
+          className="h-9 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 font-bold text-sm"
         >
-          <Plus className="w-4 h-4 mr-2" /> Create Game
+          <Plus className="w-4 h-4 mr-1.5" /> Create
         </Button>
       </div>
 
-      {/* Flip Result Overlay */}
+      {/* Create panel */}
       <AnimatePresence>
-        {flipping && flipResult && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
-          >
-            <motion.div className="text-center">
-              <motion.div
-                animate={{ rotateY: [0, 1800] }}
-                transition={{ duration: 2, ease: 'easeInOut' }}
-                className="w-32 h-32 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center mx-auto mb-6 shadow-2xl glow-gold"
-              >
-                <span className="text-4xl font-bold text-white">{flipResult.result === 'heads' ? 'H' : 'T'}</span>
-              </motion.div>
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 2 }}
-              >
-                <p className="text-2xl font-bold text-white mb-2">
-                  {flipResult.result === 'heads' ? '👑 Heads!' : '🪙 Tails!'}
-                </p>
-                <p className={`text-lg font-semibold ${flipResult.winnerEmail === user?.email ? 'text-green-400' : 'text-red-400'}`}>
-                  {flipResult.winnerEmail === user?.email ? `You won ${flipResult.game.bet_amount * 2} coins!` : 'You lost!'}
-                </p>
-              </motion.div>
-            </motion.div>
-          </motion.div>
+        {showCreate && (
+          <CreatePanel
+            balance={balance}
+            onClose={() => setShowCreate(false)}
+            onCreate={handleCreate}
+          />
         )}
       </AnimatePresence>
 
-      {/* Active Games */}
+      {/* Games grid */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {Array(4).fill(0).map((_, i) => (
-            <div key={i} className="glass rounded-2xl p-6 animate-pulse">
-              <div className="h-20 bg-white/5 rounded" />
-            </div>
+            <div key={i} className="rounded-2xl bg-[#13131e] h-44 animate-pulse border border-white/[0.05]" />
           ))}
         </div>
       ) : games.length === 0 ? (
-        <div className="text-center py-16">
-          <Coins className="w-16 h-16 text-white/10 mx-auto mb-4" />
-          <p className="text-white/40 mb-4">No active games</p>
+        <div className="text-center py-20 flex flex-col items-center gap-4">
+          <CoinDisplay side="heads" size="lg" />
+          <div>
+            <p className="text-white/40 font-medium">No active games</p>
+            <p className="text-white/20 text-sm">Be the first to create one!</p>
+          </div>
           <Button
             onClick={() => setShowCreate(true)}
-            className="bg-gradient-to-r from-amber-500 to-orange-600 rounded-xl"
+            className="h-9 px-5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 font-bold text-sm"
           >
-            Create First Game
+            Create Game
           </Button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {games.map((game) => (
-            <motion.div
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {games.map(game => (
+            <GameCard
               key={game.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="glass rounded-2xl p-5 border border-white/5 hover:border-amber-400/20 transition-all"
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-sm font-bold text-white">
-                    {game.creator_name?.[0]?.toUpperCase() || '?'}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-white">{game.creator_name}</p>
-                    <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px] uppercase">
-                      {game.creator_side}
-                    </Badge>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-xs text-white/30">Bet Amount</p>
-                  <p className="text-lg font-bold text-amber-400">{game.bet_amount?.toLocaleString()}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-white/40 text-xs">
-                  <Swords className="w-3.5 h-3.5" />
-                  <span>vs Anyone</span>
-                </div>
-                {game.creator_email !== user?.email ? (
-                  <Button
-                    onClick={() => handleJoin(game)}
-                    disabled={game.bet_amount > balance}
-                    size="sm"
-                    className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl"
-                  >
-                    <Swords className="w-3.5 h-3.5 mr-1.5" /> Join
-                  </Button>
-                ) : (
-                  <Badge className="bg-white/5 text-white/30 border-white/10">Your Game</Badge>
-                )}
-              </div>
-            </motion.div>
+              game={game}
+              user={user}
+              balance={balance}
+              onJoin={handleJoin}
+            />
           ))}
         </div>
       )}
 
-      {/* Create Dialog */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="bg-[#16161f] border-white/10 text-white">
-          <DialogHeader>
-            <DialogTitle>Create Coinflip</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 pt-2">
-            <div>
-              <label className="text-sm text-white/50 mb-2 block">Bet Amount</label>
-              <Input
-                type="number"
-                value={betAmount}
-                onChange={(e) => setBetAmount(Number(e.target.value))}
-                className="bg-white/5 border-white/10 text-white rounded-xl"
-                min={1}
-                max={balance}
-              />
-              <p className="text-xs text-white/30 mt-1">Balance: {balance?.toLocaleString()} coins</p>
-            </div>
-            <div>
-              <label className="text-sm text-white/50 mb-2 block">Pick Your Side</label>
-              <div className="flex gap-3">
-                {['heads', 'tails'].map(side => (
-                  <button
-                    key={side}
-                    onClick={() => setSelectedSide(side)}
-                    className={`flex-1 py-4 rounded-xl border transition-all text-center capitalize font-semibold
-                      ${selectedSide === side
-                        ? 'bg-amber-500/20 border-amber-500/40 text-amber-400'
-                        : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10'
-                      }`}
-                  >
-                    <Crown className="w-8 h-8 mx-auto mb-2" />
-                    {side}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <Button
-              onClick={handleCreate}
-              disabled={betAmount <= 0 || betAmount > balance}
-              className="w-full bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500 rounded-xl h-12"
-            >
-              Create Game ({betAmount?.toLocaleString()} coins)
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Flip overlay */}
+      <AnimatePresence>
+        {flipping && flipResult && (
+          <FlipOverlay flipResult={flipResult} user={user} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }
