@@ -76,6 +76,7 @@ export default function LiveChat() {
 
   return (
     <div className="flex flex-col h-full bg-[#0b0b15] border-l border-white/[0.06]">
+      {selectedUser && <UserStatsModal userName={selectedUser.user} userEmail={selectedUser.user} onClose={() => setSelectedUser(null)} currentUser={user} />}
       {/* Tabs */}
       <div className="flex border-b border-white/[0.06]">
         <button
