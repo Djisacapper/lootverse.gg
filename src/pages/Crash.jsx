@@ -175,9 +175,9 @@ export default function Crash() {
         if (phaseRef.current !== 'betting') {
           setPhase('betting');
           phaseRef.current = 'betting';
-          // Estimate remaining countdown from round creation time
-          const created = new Date(r.created_date).getTime();
-          const elapsed = Math.floor((Date.now() - created) / 1000);
+          // Use stored start_time for accurate countdown
+          const startMs = r.start_time || new Date(r.created_date).getTime();
+          const elapsed = Math.floor((Date.now() - startMs) / 1000);
           const remaining = Math.max(0, BETTING_DURATION - elapsed);
           setCountdown(remaining);
           if (animRef.current) cancelAnimationFrame(animRef.current);
