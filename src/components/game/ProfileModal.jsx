@@ -122,7 +122,7 @@ export default function ProfileModal({ user, onClose, onNavigate }) {
         </div>
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
           {activeTab === 'overview' && (
             <div className="space-y-6">
               <div className="grid grid-cols-3 gap-3">
