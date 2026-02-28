@@ -27,13 +27,9 @@ export default function LiveChat() {
   useEffect(() => {
     base44.auth.me().then(u => {
       setUser(u);
-      // Fetch all users for role info
-      base44.asServiceRole.entities.User.list().then(users => {
-        const roles = {};
-        users.forEach(u => {
-          roles[u.full_name] = u.role;
-        });
-        setUserRoles(roles);
+      // Fetch user roles via backend function
+      base44.functions.invoke('getAllUserRoles').then(res => {
+        setUserRoles(res.data || {});
       }).catch(() => {});
     }).catch(() => {});
     
