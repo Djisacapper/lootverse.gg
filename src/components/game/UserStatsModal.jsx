@@ -32,13 +32,10 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
       
       const targetUser = stats;
       if (targetUser) {
-        await base44.asServiceRole.entities.User.update(targetUser.id, { balance: (targetUser.balance || 0) + amount });
-        await base44.asServiceRole.entities.Transaction.create({
-          user_email: targetUser.email,
-          type: 'tip_received',
+        await base44.functions.invoke('processTip', {
+          recipientEmail: targetUser.email,
           amount,
-          description: `Tip from ${currentUser.full_name}`,
-          balance_after: (targetUser.balance || 0) + amount
+          senderName: currentUser.full_name
         });
       }
       
