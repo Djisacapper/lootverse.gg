@@ -152,13 +152,9 @@ export default function ProfileModal({ user, onClose, onNavigate }) {
           )}
 
           {activeTab === 'settings' && (
-            <div className="space-y-4">
-              <button
-                onClick={handleSetLevel200}
-                className="w-full px-4 py-3 bg-violet-500 hover:bg-violet-600 text-white font-medium rounded-lg transition-colors"
-              >
-                Set Level to 200
-              </button>
+            <div className="text-center py-8">
+              <Settings className="w-12 h-12 text-white/20 mx-auto mb-3" />
+              <p className="text-white/40">Settings coming soon</p>
             </div>
           )}
         </div>
