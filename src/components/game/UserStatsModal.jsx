@@ -34,12 +34,16 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
   }, [userName, userEmail]);
 
   const handleTip = async () => {
+    if (!currentUser || (currentUser.level || 0) < 5) {
+      alert('You must reach level 5 to tip other players');
+      return;
+    }
     if (!tipAmount || isNaN(tipAmount) || parseInt(tipAmount) <= 0) {
       alert('Invalid amount');
       return;
     }
     const amount = parseInt(tipAmount);
-    if (!currentUser || (currentUser.balance || 0) < amount) {
+    if ((currentUser.balance || 0) < amount) {
       alert('Insufficient balance');
       return;
     }
@@ -66,6 +70,8 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
       setTipping(false);
     }
   };
+
+  const canTip = currentUser?.email !== stats.email && (currentUser?.level || 0) >= 5;
 
   const copyId = () => {
     if (stats?.id) {
@@ -117,23 +123,29 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
             {/* Tip Button */}
             {currentUser?.email !== stats.email && (
               <div className="space-y-2">
-                <div className="flex gap-2">
-                  <input
-                    type="number"
-                    value={tipAmount}
-                    onChange={(e) => setTipAmount(e.target.value)}
-                    placeholder="Amount"
-                    min="1"
-                    className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-xs placeholder-white/30 focus:outline-none focus:border-blue-500"
-                  />
-                  <button
-                    onClick={handleTip}
-                    disabled={tipping || !tipAmount}
-                    className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white px-4 py-1.5 rounded text-xs font-semibold transition-colors whitespace-nowrap"
-                  >
-                    {tipping ? '...' : 'Tip User'}
-                  </button>
-                </div>
+                {(currentUser?.level || 0) < 5 ? (
+                  <div className="bg-white/[0.03] border border-white/10 rounded-lg p-3">
+                    <p className="text-xs text-white/50">Reach level 5 to tip players</p>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <input
+                      type="number"
+                      value={tipAmount}
+                      onChange={(e) => setTipAmount(e.target.value)}
+                      placeholder="Amount"
+                      min="1"
+                      className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-xs placeholder-white/30 focus:outline-none focus:border-blue-500 focus:bg-white/10 transition-colors"
+                    />
+                    <button
+                      onClick={handleTip}
+                      disabled={tipping || !tipAmount}
+                      className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:from-white/20 disabled:to-white/20 text-white px-5 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 whitespace-nowrap shadow-lg shadow-blue-500/30"
+                    >
+                      {tipping ? 'Sending...' : '✈️ Tip'}
+                    </button>
+                  </div>
+                )}
                 {currentUser && (
                   <p className="text-[10px] text-white/40">Balance: ${(currentUser.balance || 0).toLocaleString()}</p>
                 )}
