@@ -51,9 +51,22 @@ export function useWallet() {
     setLevel(newLevel);
   }, []);
 
+  // Rakeback rates per wager (very small %)
+  // instant: 0.5%, daily: 0.3%, weekly: 0.2%, monthly: 0.1%
+  const addRakeback = useCallback(async (wagerAmount) => {
+    if (!wagerAmount || wagerAmount <= 0) return;
+    const me = await base44.auth.me();
+    await base44.auth.updateMe({
+      rakeback_instant: Math.floor((me.rakeback_instant || 0) + wagerAmount * 0.005),
+      rakeback_daily:   Math.floor((me.rakeback_daily   || 0) + wagerAmount * 0.003),
+      rakeback_weekly:  Math.floor((me.rakeback_weekly  || 0) + wagerAmount * 0.002),
+      rakeback_monthly: Math.floor((me.rakeback_monthly || 0) + wagerAmount * 0.001),
+    });
+  }, []);
+
   const xpProgress = ((xp % 500) / 500) * 100;
 
-  return { user, balance, xp, level, xpProgress, loading, updateBalance, addXp, reload: loadUser };
+  return { user, balance, xp, level, xpProgress, loading, updateBalance, addXp, addRakeback, reload: loadUser };
 }
 
 export function getXpForLevel(level) {
