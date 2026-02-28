@@ -25,7 +25,18 @@ export default function LiveChat() {
   const bottomRef = useRef(null);
 
   useEffect(() => {
-    base44.auth.me().then(setUser).catch(() => {});
+    base44.auth.me().then(u => {
+      setUser(u);
+      // Fetch all users for role info
+      base44.asServiceRole.entities.User.list().then(users => {
+        const roles = {};
+        users.forEach(u => {
+          roles[u.full_name] = u.role;
+        });
+        setUserRoles(roles);
+      }).catch(() => {});
+    }).catch(() => {});
+    
     base44.entities.UserInventory.list('-created_date', 10).then(d => setRecentDrops(d.filter(i => i.status === 'owned' && ['case_opening', 'battle_win'].includes(i.source))));
 
     const unsubInventory = base44.entities.UserInventory.subscribe((event) => {
