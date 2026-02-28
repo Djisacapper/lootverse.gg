@@ -261,7 +261,6 @@ export default function Battles() {
   }
 
   const waitingBattles = battles.filter(b => b.status === 'waiting' || b.status === 'in_progress');
-  const [sortBy, setSortBy] = useState('recent');
 
   // Completed battles: only show those finished within the last 1 minute
   const ONE_MIN_MS = 1 * 60 * 1000;
