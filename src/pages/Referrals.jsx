@@ -25,7 +25,7 @@ function generateCode(name, email) {
 }
 
 export default function Referrals() {
-  const { user, reloadUser } = useWallet();
+  const { user, reload: reloadUser } = useWallet();
   const [referrals, setReferrals] = useState([]);
   const [loading, setLoading] = useState(true);
   const [codeInput, setCodeInput] = useState('');
