@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { X, Copy } from 'lucide-react';
 import { motion } from 'framer-motion';
+import Portal from '../Portal';
 
 export default function UserStatsModal({ userName, userEmail, onClose, currentUser }) {
   const [stats, setStats] = useState(null);
@@ -66,12 +67,15 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
   );
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        className="bg-[#1a1a2e] rounded-2xl border border-white/10 w-full max-w-sm max-h-[85vh] overflow-y-auto"
-      >
+    <Portal>
+      <div className="fixed inset-0 z-[9998] bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 pointer-events-none">
+        <motion.div
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="bg-[#1a1a2e] rounded-2xl border border-white/10 w-full max-w-sm max-h-[85vh] overflow-y-auto pointer-events-auto"
+          onClick={(e) => e.stopPropagation()}
+        >
         {/* Header */}
         <div className="sticky top-0 px-6 py-4 border-b border-white/10 flex items-center justify-between bg-[#1a1a2e]/95 backdrop-blur-sm">
           <h2 className="text-sm font-bold text-white uppercase tracking-wider">User profile</h2>
@@ -167,7 +171,8 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
             </div>
           </div>
         )}
-      </motion.div>
-    </div>
+        </motion.div>
+      </div>
+    </Portal>
   );
 }
