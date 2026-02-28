@@ -8,21 +8,51 @@ import { Button } from '@/components/ui/button';
 const QUICK_AMOUNTS = [100, 500, 1000, 5000, 10000, 50000];
 
 function CoinDisplay({ side, size = 'md', spinning = false }) {
-  const isHeads = side === 'heads';
-  const sizes = { sm: 'w-10 h-10 text-lg', md: 'w-16 h-16 text-2xl', lg: 'w-24 h-24 text-4xl' };
+  const sizeMap = { sm: 40, md: 64, lg: 96 };
+  const px = sizeMap[size];
+  const fontSize = { sm: '1.1rem', md: '1.6rem', lg: '2.5rem' };
+
   return (
-    <motion.div
-      animate={spinning ? { rotateY: [0, 1080] } : {}}
-      transition={spinning ? { duration: 1.8, ease: 'easeInOut' } : {}}
-      className={`${sizes[size]} rounded-full flex items-center justify-center font-black shadow-lg flex-shrink-0
-        ${isHeads
-          ? 'bg-gradient-to-br from-amber-300 via-amber-400 to-amber-600 shadow-amber-400/40'
-          : 'bg-gradient-to-br from-slate-400 via-slate-500 to-slate-700 shadow-slate-400/30'
-        }`}
-      style={{ boxShadow: isHeads ? '0 0 20px rgba(245,158,11,0.5)' : '0 0 20px rgba(148,163,184,0.3)' }}
-    >
-      <span>{isHeads ? '👑' : '🔱'}</span>
-    </motion.div>
+    <div style={{ width: px, height: px, perspective: 600, flexShrink: 0 }}>
+      <motion.div
+        animate={spinning ? { rotateY: [0, 1800] } : { rotateY: side === 'heads' ? 0 : 180 }}
+        transition={spinning ? { duration: 2.2, ease: [0.4, 0, 0.2, 1] } : { duration: 0 }}
+        style={{
+          width: '100%',
+          height: '100%',
+          position: 'relative',
+          transformStyle: 'preserve-3d',
+        }}
+      >
+        {/* Heads face */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #fde68a, #f59e0b, #b45309)',
+          boxShadow: '0 0 24px rgba(245,158,11,0.55), inset 0 2px 4px rgba(255,255,255,0.3)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: fontSize[size],
+        }}>
+          👑
+        </div>
+        {/* Tails face */}
+        <div style={{
+          position: 'absolute', inset: 0,
+          backfaceVisibility: 'hidden',
+          WebkitBackfaceVisibility: 'hidden',
+          transform: 'rotateY(180deg)',
+          borderRadius: '50%',
+          background: 'linear-gradient(135deg, #cbd5e1, #64748b, #334155)',
+          boxShadow: '0 0 24px rgba(148,163,184,0.4), inset 0 2px 4px rgba(255,255,255,0.2)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: fontSize[size],
+        }}>
+          🔱
+        </div>
+      </motion.div>
+    </div>
   );
 }
 
