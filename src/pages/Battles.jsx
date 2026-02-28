@@ -256,6 +256,7 @@ export default function Battles() {
         onJoin={() => arenaBattle && handleJoin(arenaBattle)}
         onAddBot={handleAddBotToArena}
         onFillBots={handleFillBots}
+        onBattleUpdated={handleBattleUpdated}
       />
     );
   }
