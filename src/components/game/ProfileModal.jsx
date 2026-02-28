@@ -50,50 +50,56 @@ export default function ProfileModal({ user, onClose, onNavigate }) {
       {/* Modal */}
       <div className="relative w-full max-w-2xl mx-4 bg-gradient-to-b from-[#1a1a2e] to-[#16161f] rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-white/10" style={{ maxHeight: '90vh' }}>
         {/* Header */}
-        <div className="p-6 border-b border-white/10">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-white">Profile</h2>
+        <div className="p-8 border-b border-white/5">
+          <div className="flex items-start justify-between mb-6">
+            <div>
+              <h2 className="text-3xl font-bold text-white mb-1">Profile</h2>
+              <p className="text-white/40 text-sm">Your account overview</p>
+            </div>
             <button
               onClick={onClose}
-              className="text-white/50 hover:text-white transition-colors"
+              className="text-white/50 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
           </div>
 
           {/* User Info */}
-          <div className="flex items-center gap-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-2xl font-bold text-white flex-shrink-0">
+          <div className="flex items-center gap-5">
+            <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-3xl font-bold text-white flex-shrink-0 shadow-lg shadow-violet-500/30">
               {user?.full_name?.[0]?.toUpperCase() || '?'}
             </div>
             <div className="flex-1">
-              <div className="flex items-baseline gap-2">
-                <h3 className="text-lg font-bold text-white">{user?.full_name || 'Player'}</h3>
-                <span className="text-violet-400 font-semibold">#{level}</span>
+              <div className="flex items-baseline gap-3 mb-1">
+                <h3 className="text-2xl font-bold text-white">{user?.full_name || 'Player'}</h3>
+                <span className="px-3 py-1 rounded-lg bg-violet-500/20 border border-violet-500/30 text-violet-300 font-bold text-sm">Level {level}</span>
               </div>
-              <p className="text-sm text-white/40 mb-2">{user?.email}</p>
-              <div className="flex items-center gap-2">
-                <div className="text-yellow-400 text-sm font-semibold">${(user?.balance || 0).toLocaleString()}</div>
-                <span className="text-white/25">•</span>
-                <div className="text-sm text-white/40">{(user?.xp || 0).toLocaleString()} XP</div>
+              <p className="text-sm text-white/40 mb-3">{user?.email}</p>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                  <span className="text-yellow-400 text-lg">💰</span>
+                  <span className="text-yellow-400 font-bold">${(user?.balance || 0).toLocaleString()}</span>
+                </div>
+                <span className="text-white/20">•</span>
+                <div className="text-sm text-white/50">{(user?.xp || 0).toLocaleString()} XP</div>
               </div>
             </div>
           </div>
 
           {/* XP Progress */}
-          <div className="mt-4">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-xs text-white/40">Wager</span>
-              <span className="text-xs text-white/40">{Math.round(xpProgress)}%</span>
+          <div className="mt-6 p-4 rounded-xl bg-white/5 border border-white/5">
+            <div className="flex justify-between items-center mb-3">
+              <span className="text-xs font-semibold text-white/60 uppercase tracking-wider">Wager Progress</span>
+              <span className="text-sm font-bold text-violet-400">{Math.round(xpProgress)}%</span>
             </div>
-            <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+            <div className="h-3 bg-white/10 rounded-full overflow-hidden">
               <div
-                className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full transition-all duration-700"
+                className="h-full bg-gradient-to-r from-violet-500 via-fuchsia-500 to-pink-500 rounded-full transition-all duration-700 shadow-lg shadow-violet-500/50"
                 style={{ width: `${xpProgress}%` }}
               />
             </div>
-            <p className="text-xs text-white/40 mt-1">
-              {getXpForLevel(level).toLocaleString()} XP to level up
+            <p className="text-xs text-white/40 mt-2">
+              {getXpForLevel(level).toLocaleString()} XP needed for next level
             </p>
           </div>
         </div>
