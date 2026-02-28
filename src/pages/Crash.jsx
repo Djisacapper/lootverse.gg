@@ -39,7 +39,9 @@ export default function Crash() {
   const [phase, setPhase] = useState('loading');      // loading|betting|running|crashed
   const [countdown, setCountdown] = useState(BETTING_DURATION);
   const [multiplier, setMultiplier] = useState(1.0);
-  const [history, setHistory] = useState([]);
+  const [history, setHistory] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('crash_history') || '[]'); } catch { return []; }
+  });
   const [liveBets, setLiveBets] = useState([]);
   const [roundId, setRoundId] = useState(null);       // current round id shown in UI
 
