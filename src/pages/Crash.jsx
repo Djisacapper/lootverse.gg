@@ -20,7 +20,6 @@ function mColor(m, crashed) {
   return '#f97316';
 }
 
-// Multiplier based on elapsed seconds since "running" started
 function calcMultiplier(elapsedSec) {
   return Math.max(1.0, Math.floor(Math.pow(Math.E, elapsedSec * 0.15) * 100) / 100);
 }
@@ -29,32 +28,33 @@ export default function Crash() {
   const { user, balance, updateBalance, addXp } = useWallet();
 
   const [round, setRound] = useState(null);
-  const [phase, setPhase] = useState('loading');   // loading | betting | running | crashed
+  const [phase, setPhase] = useState('loading');
   const [countdown, setCountdown] = useState(BETTING_DURATION);
   const [multiplier, setMultiplier] = useState(1.0);
   const [history, setHistory] = useState([]);
 
-  // Bet state — roundId tracks which round the bet belongs to
-  const [betRoundId, setBetRoundId] = useState(null);
-  const [betAmount, setBetAmount] = useState(100);
-  const [autoCashout, setAutoCashout] = useState('');
+  // Persisted bet state (survives navigation via localStorage)
+  const [betRoundId, setBetRoundId] = useState(() => localStorage.getItem('crash_betRoundId') || null);
+  const [betAmount, setBetAmount] = useState(() => Number(localStorage.getItem('crash_betAmount')) || 100);
+  const [autoCashout, setAutoCashout] = useState(() => localStorage.getItem('crash_autoCashout') || '');
   const [cashedOut, setCashedOut] = useState(false);
   const [cashoutAt, setCashoutAt] = useState(null);
 
   const hasBet = betRoundId !== null && betRoundId === round?.id;
 
-  // Refs for use inside RAF/intervals
+  // Refs
   const animRef = useRef(null);
-  const runStartRef = useRef(null);   // wall-clock ms when THIS client started the running animation
+  const runStartRef = useRef(null);
   const roundRef = useRef(null);
   const phaseRef = useRef('loading');
-  const betRoundIdRef = useRef(null);
+  const betRoundIdRef = useRef(betRoundId);
   const cashedOutRef = useRef(false);
-  const betAmountRef = useRef(100);
-  const autoCashoutRef = useRef('');
+  const betAmountRef = useRef(betAmount);
+  const autoCashoutRef = useRef(autoCashout);
   const multiplierRef = useRef(1.0);
   const creatingRef = useRef(false);
   const historyRef = useRef([]);
+  const processedCashoutRef = useRef(false); // prevent double cashout processing on rejoin
 
   // Sync refs
   phaseRef.current = phase;
@@ -64,6 +64,19 @@ export default function Crash() {
   betAmountRef.current = betAmount;
   autoCashoutRef.current = autoCashout;
   multiplierRef.current = multiplier;
+
+  // Persist bet state to localStorage so it survives navigation
+  useEffect(() => {
+    if (betRoundId) {
+      localStorage.setItem('crash_betRoundId', betRoundId);
+      localStorage.setItem('crash_betAmount', String(betAmount));
+      localStorage.setItem('crash_autoCashout', autoCashout);
+    } else {
+      localStorage.removeItem('crash_betRoundId');
+      localStorage.removeItem('crash_betAmount');
+      localStorage.removeItem('crash_autoCashout');
+    }
+  }, [betRoundId, betAmount, autoCashout]);
 
   const stopAnimation = useCallback(() => {
     if (animRef.current) {
@@ -96,11 +109,14 @@ export default function Crash() {
         }
       } catch {}
     }
+    // Clear persisted bet after cashout
+    localStorage.removeItem('crash_betRoundId');
   }, [updateBalance, addXp, user]);
 
-  const startRunningAnimation = useCallback((crashPoint) => {
+  const startRunningAnimation = useCallback((crashPoint, runStartTime) => {
     stopAnimation();
-    runStartRef.current = Date.now();
+    // Use the server-stored run_start_time if available for accuracy
+    runStartRef.current = runStartTime || Date.now();
 
     const animate = () => {
       const elapsed = (Date.now() - runStartRef.current) / 1000;
@@ -108,7 +124,7 @@ export default function Crash() {
       multiplierRef.current = cur;
       setMultiplier(cur);
 
-      // Auto cashout check
+      // Auto cashout — read from bet record OR local state
       const ac = parseFloat(autoCashoutRef.current);
       const hasBetNow = betRoundIdRef.current === roundRef.current?.id;
       if (!isNaN(ac) && ac >= 1.01 && cur >= ac && hasBetNow && !cashedOutRef.current) {
@@ -116,7 +132,6 @@ export default function Crash() {
       }
 
       if (cur >= crashPoint) {
-        // Hit crash point — update DB and stop
         setMultiplier(crashPoint);
         multiplierRef.current = crashPoint;
         stopAnimation();
@@ -137,7 +152,46 @@ export default function Crash() {
     setCashoutAt(null);
     setMultiplier(1.0);
     multiplierRef.current = 1.0;
+    processedCashoutRef.current = false;
   }, []);
+
+  // When user comes back to the page and the round they bet on is now crashed,
+  // check if their auto-cashout would have triggered — and process it.
+  const checkRejoinCashout = useCallback(async (r) => {
+    if (processedCashoutRef.current) return;
+    if (!user?.email) return;
+    if (betRoundIdRef.current !== r.id) return;
+    if (cashedOutRef.current) return;
+
+    // Check if this bet is already cashed out in DB (another tab/session did it)
+    const myBet = (r.bets || []).find(b => b.user_email === user.email);
+    if (myBet?.cashed_out_at) {
+      processedCashoutRef.current = true;
+      cashedOutRef.current = true;
+      setCashedOut(true);
+      setCashoutAt(myBet.cashed_out_at);
+      localStorage.removeItem('crash_betRoundId');
+      return;
+    }
+
+    // Round crashed — check if auto-cashout target was hit before crash
+    if (r.status === 'crashed' && r.run_start_time) {
+      const ac = parseFloat(autoCashoutRef.current);
+      if (!isNaN(ac) && ac >= 1.01) {
+        // Figure out what multiplier was at auto-cashout target time
+        // If ac <= crash_point, the auto-cashout would have triggered
+        if (ac <= r.crash_point) {
+          processedCashoutRef.current = true;
+          await doCashout(ac);
+          return;
+        }
+      }
+      // No auto-cashout — player lost (round already crashed, they didn't cashout)
+      processedCashoutRef.current = true;
+      // Clear the persisted bet since round is over
+      localStorage.removeItem('crash_betRoundId');
+    }
+  }, [user, doCashout]);
 
   const syncRound = useCallback(async () => {
     try {
@@ -171,7 +225,14 @@ export default function Crash() {
         setRound(r);
         roundRef.current = r;
         resetBetState();
-        // betRoundId intentionally NOT reset here — hasBet becomes false naturally since IDs differ
+        // If the new round isn't the one the player bet on, clear persisted bet
+        const savedBetRoundId = localStorage.getItem('crash_betRoundId');
+        if (savedBetRoundId && savedBetRoundId !== r.id) {
+          // The round they bet on is gone (was cleaned up), clear bet state
+          setBetRoundId(null);
+          betRoundIdRef.current = null;
+          localStorage.removeItem('crash_betRoundId');
+        }
       } else {
         setRound(r);
         roundRef.current = r;
@@ -183,11 +244,10 @@ export default function Crash() {
         const startMs = r.start_time || now;
         const elapsed = (now - startMs) / 1000;
 
-        // Transition to running when betting time is up
         if (elapsed >= BETTING_DURATION) {
           await base44.entities.CrashRound.update(r.id, {
             status: 'running',
-            run_start_time: Date.now(), // store when running actually started
+            run_start_time: Date.now(),
           });
           return;
         }
@@ -203,7 +263,20 @@ export default function Crash() {
         if (phaseRef.current !== 'running') {
           setPhase('running');
           phaseRef.current = 'running';
-          startRunningAnimation(r.crash_point);
+          startRunningAnimation(r.crash_point, r.run_start_time);
+        }
+
+        // Auto-cashout for players currently on the page (RAF handles it normally)
+        // For players who just returned: check via rejoin
+        if (!processedCashoutRef.current && betRoundIdRef.current === r.id && !cashedOutRef.current) {
+          const myBet = (r.bets || []).find(b => b.user_email === user?.email);
+          if (myBet?.cashed_out_at) {
+            processedCashoutRef.current = true;
+            cashedOutRef.current = true;
+            setCashedOut(true);
+            setCashoutAt(myBet.cashed_out_at);
+            localStorage.removeItem('crash_betRoundId');
+          }
         }
 
       } else if (r.status === 'crashed') {
@@ -215,10 +288,12 @@ export default function Crash() {
           stopAnimation();
           historyRef.current = [r.crash_point, ...historyRef.current].slice(0, 20);
           setHistory([...historyRef.current]);
+
+          // Process cashout for players who were away during the round
+          await checkRejoinCashout(r);
         }
 
         // Create next round after 5s
-        // Use a local crash timestamp to avoid relying solely on DB updated_date
         if (!roundRef._crashedAt) {
           roundRef._crashedAt = now;
         }
@@ -242,7 +317,7 @@ export default function Crash() {
       console.error('syncRound error', e);
       creatingRef.current = false;
     }
-  }, [startRunningAnimation, stopAnimation, resetBetState]);
+  }, [startRunningAnimation, stopAnimation, resetBetState, checkRejoinCashout, user]);
 
   useEffect(() => {
     syncRound();
@@ -266,6 +341,8 @@ export default function Crash() {
           user_email: user?.email,
           user_name: user?.full_name || 'Player',
           amount: betAmount,
+          // Store auto-cashout target in the bet so server can reference it
+          auto_cashout: parseFloat(autoCashout) >= 1.01 ? parseFloat(autoCashout) : null,
           cashed_out_at: null,
           profit: null,
         }];
@@ -284,9 +361,7 @@ export default function Crash() {
   const canCashout = phase === 'running' && hasBet && !cashedOut;
   const col = mColor(multiplier, phase === 'crashed');
 
-  // Only show "Lost" if: crashed AND had a bet on THIS round AND did NOT cash out
-  const showLost = phase === 'crashed' && hasBet && !cashedOut;
-  // Only show "Cashed out" if: cashed out on THIS round
+  const showLost = phase === 'crashed' && hasBet && !cashedOut && processedCashoutRef.current;
   const showCashedOut = cashedOut && cashoutAt !== null && betRoundId === round?.id;
 
   return (
