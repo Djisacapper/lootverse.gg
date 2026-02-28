@@ -179,17 +179,11 @@ export default function ProfileModal({ user, onClose, onNavigate }) {
           )}
 
           {activeTab === 'history' && (
-            <div className="text-center py-8">
-              <History className="w-12 h-12 text-white/20 mx-auto mb-3" />
-              <p className="text-white/40">Game history coming soon</p>
-            </div>
+            <GameHistoryView userEmail={user?.email} />
           )}
 
           {activeTab === 'transactions' && (
-            <div className="text-center py-8">
-              <Wallet className="w-12 h-12 text-white/20 mx-auto mb-3" />
-              <p className="text-white/40">Transaction history coming soon</p>
-            </div>
+            <GameHistoryView userEmail={user?.email} />
           )}
 
           {activeTab === 'settings' && (
