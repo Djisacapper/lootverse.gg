@@ -26,7 +26,7 @@ function CoinDisplay({ side, size = 'md', spinning = false }) {
   );
 }
 
-function GameCard({ game, user, balance, onJoin }) {
+function GameCard({ game, user, balance, onJoin, onAddBot }) {
   const isOwn = game.creator_email === user?.email;
   const opponentSide = game.creator_side === 'heads' ? 'tails' : 'heads';
   const pot = game.bet_amount * 2;
