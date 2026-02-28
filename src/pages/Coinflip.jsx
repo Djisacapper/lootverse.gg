@@ -417,6 +417,7 @@ export default function Coinflip() {
               user={user}
               balance={balance}
               onJoin={handleJoin}
+              onAddBot={handleAddBot}
             />
           ))}
         </div>
