@@ -65,7 +65,9 @@ export default function Crash() {
   const animRef = useRef(null);
   const creatingRef = useRef(false);
   const crashedAtRef = useRef(null);          // local timestamp when crashed phase entered
-  const historyRef = useRef([]);
+  const historyRef = useRef(() => {
+    try { return JSON.parse(localStorage.getItem('crash_history') || '[]'); } catch { return []; }
+  });
 
   // Bet refs
   const myBetRoundIdRef = useRef(null);
