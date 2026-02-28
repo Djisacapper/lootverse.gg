@@ -113,6 +113,11 @@ export default function Crash() {
       if (cur >= crashPoint) {
         setMultiplier(crashPoint);
         stopAnimation();
+        // Mark round as crashed in DB
+        const r = roundRef.current;
+        if (r?.id) {
+          base44.entities.CrashRound.update(r.id, { status: 'crashed' }).catch(() => {});
+        }
         return;
       }
       animRef.current = requestAnimationFrame(animate);
