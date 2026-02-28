@@ -129,10 +129,6 @@ export default function Crash() {
         }
       }
 
-      if (!r || (r.status === 'crashed' && !roundRef.current)) {
-        r = null;
-      }
-
       if (!r) {
         // No valid round — create one (only one client should do this)
         if (!creatingRoundRef.current) {
