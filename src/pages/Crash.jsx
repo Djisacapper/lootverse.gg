@@ -216,16 +216,24 @@ export default function Crash() {
         }
 
         // Create next round after 5s
-        const updatedAt = new Date(r.updated_date).getTime();
-        if ((now - updatedAt) >= 5000 && !creatingRef.current) {
+        // Use a local crash timestamp to avoid relying solely on DB updated_date
+        if (!roundRef._crashedAt) {
+          roundRef._crashedAt = now;
+        }
+        const crashedAgo = now - roundRef._crashedAt;
+        if (crashedAgo >= 5000 && !creatingRef.current) {
           creatingRef.current = true;
-          await base44.entities.CrashRound.create({
-            crash_point: generateCrashPoint(),
-            status: 'betting',
-            bets: [],
-            start_time: Date.now(),
-          });
-          creatingRef.current = false;
+          roundRef._crashedAt = null;
+          try {
+            await base44.entities.CrashRound.create({
+              crash_point: generateCrashPoint(),
+              status: 'betting',
+              bets: [],
+              start_time: Date.now(),
+            });
+          } finally {
+            creatingRef.current = false;
+          }
         }
       }
     } catch (e) {
