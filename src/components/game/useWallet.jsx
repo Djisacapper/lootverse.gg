@@ -70,7 +70,34 @@ export function useWallet() {
 }
 
 export function getXpForLevel(level) {
-  return level * 500;
+  // Progressive XP requirement: each level gets harder
+  // Level 1: 500 XP, Level 2: 1100 XP, Level 3: 1800 XP, etc.
+  return Math.floor(500 * level + 100 * (level * (level - 1) / 2));
+}
+
+export function calculateLevelFromXp(totalXp) {
+  let level = 1;
+  let xpSpent = 0;
+  
+  while (level < 200 && xpSpent + getXpForLevel(level) <= totalXp) {
+    xpSpent += getXpForLevel(level);
+    level++;
+  }
+  
+  return level;
+}
+
+export function getXpProgressForLevel(level, totalXp) {
+  if (level >= 200) return 100;
+  
+  let xpSpent = 0;
+  for (let i = 1; i < level; i++) {
+    xpSpent += getXpForLevel(i);
+  }
+  
+  const xpNeededForLevel = getXpForLevel(level);
+  const xpInCurrentLevel = totalXp - xpSpent;
+  return (xpInCurrentLevel / xpNeededForLevel) * 100;
 }
 
 export function getRarityColor(rarity) {
