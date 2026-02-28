@@ -38,6 +38,20 @@ export default function Rewards() {
   const [submitting, setSubmitting] = useState(false);
   const [rakeback, setRakeback] = useState({ instant: 0, daily: 0, weekly: 0, monthly: 0 });
   const [claiming, setClaiming] = useState({});
+  const [now, setNow] = useState(Date.now());
+
+  // Tick every second to update cooldown timers
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  const getCooldownLeft = (key) => {
+    if (key === 'instant') return 0;
+    const claimedAt = user?.[`rakeback_${key}_claimed_at`];
+    if (!claimedAt) return 0;
+    return Math.max(0, COOLDOWNS[key] - (now - new Date(claimedAt).getTime()));
+  };
 
   // Load rakeback from user data
   useEffect(() => {
