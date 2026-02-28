@@ -313,6 +313,7 @@ export default function Crash() {
             crashedAtRef.current = now;
             historyRef.current = [r.crash_point, ...historyRef.current].slice(0, 20);
             setHistory([...historyRef.current]);
+            localStorage.setItem('crash_history', JSON.stringify(historyRef.current));
 
             // Settle bet for returning players
             if (myBetRoundIdRef.current === r.id && !betProcessedRef.current) {
