@@ -250,18 +250,51 @@ export default function Coinflip() {
     setLoading(false);
   };
 
-  const handleCreate = async (amount, side) => {
+  const handleCreate = async (amount, side, vsBot = false) => {
     if (amount <= 0 || amount > balance) return;
     await updateBalance(-amount, 'coinflip_bet', `Created coinflip for ${amount}`);
-    await base44.entities.CoinflipGame.create({
-      creator_email: user.email,
-      creator_name: user.full_name || 'Anonymous',
-      creator_side: side,
-      bet_amount: amount,
-      status: 'waiting',
-    });
-    setShowCreate(false);
-    loadGames();
+
+    if (vsBot) {
+      // Instantly resolve vs a bot
+      const botName = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
+      const botSide = side === 'heads' ? 'tails' : 'heads';
+      const result = Math.random() < 0.5 ? 'heads' : 'tails';
+      const winnerEmail = result === side ? user.email : `bot@system`;
+
+      const game = await base44.entities.CoinflipGame.create({
+        creator_email: user.email,
+        creator_name: user.full_name || 'Anonymous',
+        creator_side: side,
+        bet_amount: amount,
+        opponent_email: 'bot@system',
+        opponent_name: botName,
+        status: 'completed',
+        result,
+        winner_email: winnerEmail,
+      });
+
+      setShowCreate(false);
+      setFlipping(game.id);
+      setFlipResult({ result, winnerEmail, game: { ...game, bet_amount: amount } });
+
+      setTimeout(async () => {
+        if (winnerEmail === user.email) {
+          await updateBalance(amount * 2, 'coinflip_win', `Won coinflip vs bot for ${amount * 2}`);
+          await addXp(50);
+        }
+        setTimeout(() => { setFlipping(null); setFlipResult(null); loadGames(); }, 2500);
+      }, 2000);
+    } else {
+      await base44.entities.CoinflipGame.create({
+        creator_email: user.email,
+        creator_name: user.full_name || 'Anonymous',
+        creator_side: side,
+        bet_amount: amount,
+        status: 'waiting',
+      });
+      setShowCreate(false);
+      loadGames();
+    }
   };
 
   const handleJoin = async (game) => {
