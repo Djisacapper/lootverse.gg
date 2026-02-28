@@ -184,7 +184,7 @@ export default function ProfileModal({ user, onClose, onNavigate }) {
           )}
 
           {activeTab === 'transactions' && (
-            <GameHistoryView userEmail={user?.email} />
+            <TransactionsView userEmail={user?.email} />
           )}
 
           {activeTab === 'settings' && (
