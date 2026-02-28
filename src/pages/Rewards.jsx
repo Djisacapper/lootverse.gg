@@ -1,167 +1,203 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useWallet } from '../components/game/useWallet';
-import { motion } from 'framer-motion';
-import { Gift, Star, Zap, Flame, Calendar, CheckCircle, Lock } from 'lucide-react';
+import { Zap, Clock, Calendar, CalendarDays, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import moment from 'moment';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
 
-const STREAK_REWARDS = [
-  { day: 1, coins: 50, label: 'Day 1' },
-  { day: 2, coins: 100, label: 'Day 2' },
-  { day: 3, coins: 150, label: 'Day 3' },
-  { day: 4, coins: 200, label: 'Day 4' },
-  { day: 5, coins: 300, label: 'Day 5' },
-  { day: 6, coins: 500, label: 'Day 6' },
-  { day: 7, coins: 1000, label: 'Day 7', special: true },
+const COIN_ICON = () => (
+  <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center flex-shrink-0">
+    <span className="text-[9px] font-black text-white">$</span>
+  </div>
+);
+
+const RAKEBACK_TIERS = [
+  { key: 'instant', label: 'Instant Rakeback', icon: '🟣', desc: 'Claimable', color: 'from-fuchsia-600/30 to-purple-900/30', border: 'border-fuchsia-500/20' },
+  { key: 'daily', label: 'Daily Rakeback', icon: '⬡', desc: 'Claimable', color: 'from-slate-600/30 to-slate-900/30', border: 'border-slate-500/20' },
+  { key: 'weekly', label: 'Weekly Rakeback', icon: '🔵', desc: 'Claimable', color: 'from-blue-600/30 to-blue-900/30', border: 'border-blue-500/20' },
+  { key: 'monthly', label: 'Monthly Rakeback', icon: '🟡', desc: 'Claimable', color: 'from-yellow-600/30 to-yellow-900/30', border: 'border-yellow-500/20' },
 ];
 
 export default function Rewards() {
-  const { user, balance, updateBalance, addXp } = useWallet();
-  const [lastReward, setLastReward] = useState(null);
-  const [streak, setStreak] = useState(0);
-  const [canClaim, setCanClaim] = useState(false);
-  const [claiming, setClaiming] = useState(false);
-  const [claimed, setClaimed] = useState(false);
+  const { user, reload: reloadUser, updateBalance } = useWallet();
+  const [refCode, setRefCode] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [rakeback, setRakeback] = useState({ instant: 0, daily: 0, weekly: 0, monthly: 0 });
+  const [claiming, setClaiming] = useState({});
 
+  // Load rakeback from user data
   useEffect(() => {
     if (!user) return;
-    loadRewards();
+    setRakeback({
+      instant: user.rakeback_instant || 0,
+      daily: user.rakeback_daily || 0,
+      weekly: user.rakeback_weekly || 0,
+      monthly: user.rakeback_monthly || 0,
+    });
   }, [user]);
 
-  const loadRewards = async () => {
-    const rewards = await base44.entities.DailyReward.filter(
-      { user_email: user.email },
-      '-created_date',
-      1
-    );
-    if (rewards.length > 0) {
-      const last = rewards[0];
-      setLastReward(last);
-      setStreak(last.streak || 0);
-      const lastDate = moment(last.claimed_date || last.created_date).startOf('day');
-      const today = moment().startOf('day');
-      const diff = today.diff(lastDate, 'days');
-      setCanClaim(diff >= 1);
-      if (diff > 1) setStreak(0); // streak broken
-    } else {
-      setCanClaim(true);
-      setStreak(0);
+  const totalClaimed = user?.total_rakeback_claimed || 0;
+  const totalPending = 0;
+  const totalClaimable = Object.values(rakeback).reduce((a, b) => a + b, 0);
+
+  const handleClaimRefCode = async () => {
+    if (!refCode.trim() || !user) return;
+    const code = refCode.trim().toLowerCase();
+
+    // Can't use your own code
+    if (user.affiliate_code && code === user.affiliate_code.toLowerCase()) {
+      toast.error("You can't use your own referral code!");
+      return;
     }
+
+    setSubmitting(true);
+    try {
+      // Find user with this affiliate code
+      const users = await base44.entities.User.list();
+      const referrer = users.find(u => u.affiliate_code?.toLowerCase() === code);
+      if (!referrer) {
+        toast.error('Referral code not found');
+        setSubmitting(false);
+        return;
+      }
+
+      // Update current user's referred_by
+      await base44.auth.updateMe({ referred_by: code });
+
+      // Create referral record
+      await base44.entities.Referral.create({
+        referrer_email: referrer.email,
+        referred_email: user.email,
+        earnings: 0,
+        status: 'active',
+      });
+
+      await reloadUser?.();
+      setRefCode('');
+      toast.success('Referral code applied successfully!');
+    } catch (e) {
+      toast.error('Failed to apply code');
+    }
+    setSubmitting(false);
   };
 
-  const handleClaim = async () => {
-    if (!canClaim || claiming) return;
-    setClaiming(true);
-
-    const newStreak = canClaim && lastReward && moment().diff(moment(lastReward.claimed_date || lastReward.created_date).startOf('day'), 'days') === 1
-      ? (streak % 7) + 1
-      : 1;
-
-    const reward = STREAK_REWARDS.find(r => r.day === newStreak) || STREAK_REWARDS[0];
-
-    await base44.entities.DailyReward.create({
-      user_email: user.email,
-      reward_type: 'coins',
-      reward_value: reward.coins,
-      streak: newStreak,
-      claimed_date: moment().format('YYYY-MM-DD'),
+  const handleClaimRakeback = async (key) => {
+    const amount = rakeback[key];
+    if (!amount || amount <= 0) return;
+    setClaiming(c => ({ ...c, [key]: true }));
+    const updateKey = `rakeback_${key}`;
+    await base44.auth.updateMe({
+      [updateKey]: 0,
+      total_rakeback_claimed: (user?.total_rakeback_claimed || 0) + amount,
     });
-
-    await updateBalance(reward.coins, 'daily_reward', `Daily reward Day ${newStreak}: ${reward.coins} coins`);
-    await addXp(25);
-
-    setStreak(newStreak);
-    setCanClaim(false);
-    setClaiming(false);
-    setClaimed(true);
+    await updateBalance(amount, 'daily_reward', `${key} rakeback claimed`);
+    await reloadUser?.();
+    setRakeback(r => ({ ...r, [key]: 0 }));
+    setClaiming(c => ({ ...c, [key]: false }));
+    toast.success(`Claimed ${amount.toLocaleString()} coins!`);
   };
 
-  const currentDay = canClaim ? (streak % 7) + 1 : streak;
+  const alreadyHasCode = !!user?.referred_by;
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto">
       <div>
-        <h1 className="text-3xl font-bold text-white mb-1">Daily Rewards</h1>
-        <p className="text-white/40 text-sm">Come back every day to earn coins and maintain your streak</p>
+        <h1 className="text-3xl font-bold text-white mb-1">Rewards</h1>
+        <p className="text-white/40 text-sm">Claim rakeback and apply your referral code</p>
       </div>
 
-      {/* Streak Header */}
-      <div className="glass rounded-3xl p-6 border border-white/5 text-center">
-        <div className="flex items-center justify-center gap-2 mb-3">
-          <Flame className="w-6 h-6 text-orange-400" />
-          <span className="text-xl font-bold text-white">{streak} Day Streak</span>
+      {/* Hero Banner */}
+      <div className="rounded-2xl p-6 border border-white/10"
+        style={{ background: 'linear-gradient(135deg, #1a1030 0%, #0f0a20 100%)' }}>
+        <h2 className="text-2xl font-black text-white mb-1">
+          Receive up to <span className="text-fuchsia-400">5%</span> on<br />
+          deposits from your friends
+        </h2>
+        <p className="text-white/40 text-sm mb-5">Reward system which gives everyone a free chance to play and win BIG!</p>
+        {alreadyHasCode ? (
+          <div className="flex items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+            <span className="text-white/50 text-sm">Referral code applied:</span>
+            <span className="text-green-400 font-bold">{user.referred_by}</span>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <Input
+                value={refCode}
+                onChange={e => setRefCode(e.target.value)}
+                placeholder="Enter referral code"
+                className="bg-white/[0.07] border-white/10 text-white rounded-xl pr-10"
+              />
+              <Info className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/20" />
+            </div>
+            <Button
+              onClick={handleClaimRefCode}
+              disabled={!refCode.trim() || submitting}
+              className="bg-green-400 hover:bg-green-300 text-black font-bold rounded-xl px-5 disabled:opacity-40"
+            >
+              {submitting ? '...' : 'Claim Coins'}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Stats Row */}
+      <div className="grid grid-cols-3 gap-3">
+        <div className="glass rounded-xl p-4 border border-white/5">
+          <p className="text-xs text-white/40 mb-2">Total Claimed</p>
+          <div className="flex items-center gap-1.5">
+            <COIN_ICON />
+            <span className="text-xl font-black text-white">{totalClaimed.toLocaleString()}</span>
+          </div>
         </div>
-        <p className="text-white/30 text-sm mb-6">
-          {canClaim ? 'Your daily reward is ready!' : 'Come back tomorrow for your next reward'}
-        </p>
+        <div className="glass rounded-xl p-4 border border-white/5">
+          <p className="text-xs text-white/40 mb-2">Total Pending</p>
+          <div className="flex items-center gap-1.5">
+            <COIN_ICON />
+            <span className="text-xl font-black text-white">{totalPending.toLocaleString()}</span>
+          </div>
+        </div>
+        <div className="glass rounded-xl p-4 border border-green-500/20 bg-green-500/5">
+          <p className="text-xs text-green-400/70 mb-2">Total Claimable</p>
+          <div className="flex items-center gap-1.5">
+            <COIN_ICON />
+            <span className="text-xl font-black text-white">{totalClaimable.toLocaleString()}</span>
+          </div>
+        </div>
+      </div>
 
-        {/* Streak Grid */}
-        <div className="grid grid-cols-7 gap-2 mb-6">
-          {STREAK_REWARDS.map((reward) => {
-            const isClaimed = reward.day <= streak && !canClaim;
-            const isNext = reward.day === currentDay && canClaim;
-            const isLocked = reward.day > currentDay || (reward.day === currentDay && !canClaim && reward.day > streak);
-
+      {/* Rakeback Section */}
+      <div>
+        <h3 className="text-lg font-bold text-white mb-1">Rakeback</h3>
+        <p className="text-white/40 text-sm mb-4">For every bet you will receive a portion back.</p>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {RAKEBACK_TIERS.map((tier) => {
+            const amount = rakeback[tier.key] || 0;
             return (
-              <motion.div
-                key={reward.day}
-                whileHover={{ scale: 1.05 }}
-                className={`rounded-xl p-3 border transition-all relative
-                  ${isNext ? 'border-amber-400/40 bg-amber-500/10 glow-gold' : ''}
-                  ${isClaimed ? 'border-green-500/20 bg-green-500/5' : ''}
-                  ${!isNext && !isClaimed ? 'border-white/5 bg-white/[0.02]' : ''}
-                `}
-              >
-                {reward.special && (
-                  <Star className="w-3 h-3 text-amber-400 absolute top-1 right-1" />
-                )}
-                <div className="flex flex-col items-center gap-1">
-                  {isClaimed ? (
-                    <CheckCircle className="w-5 h-5 text-green-400" />
-                  ) : isLocked && !isNext ? (
-                    <Lock className="w-5 h-5 text-white/10" />
-                  ) : (
-                    <Gift className={`w-5 h-5 ${isNext ? 'text-amber-400' : 'text-white/20'}`} />
-                  )}
-                  <span className="text-[10px] text-white/40">{reward.label}</span>
-                  <span className={`text-xs font-bold ${isNext ? 'text-amber-400' : isClaimed ? 'text-green-400' : 'text-white/20'}`}>
-                    {reward.coins}
-                  </span>
+              <div key={tier.key}
+                className={`rounded-2xl p-4 border bg-gradient-to-b ${tier.color} ${tier.border} flex flex-col items-center gap-3 text-center`}>
+                <div className="text-3xl mt-1">{tier.icon}</div>
+                <div>
+                  <p className="text-sm font-bold text-white">{tier.label}</p>
+                  <div className="flex items-center justify-center gap-1 mt-1">
+                    <p className="text-xs text-white/40">{tier.desc}:</p>
+                    <COIN_ICON />
+                    <p className="text-xs font-bold text-white">{amount.toLocaleString()}</p>
+                  </div>
                 </div>
-              </motion.div>
+                <button
+                  onClick={() => handleClaimRakeback(tier.key)}
+                  disabled={amount <= 0 || claiming[tier.key]}
+                  className="w-full py-2 rounded-xl font-bold text-sm text-white disabled:opacity-40 transition-all"
+                  style={{ background: 'linear-gradient(90deg, #e040fb, #f06292)' }}
+                >
+                  {claiming[tier.key] ? '...' : 'Claim now'}
+                </button>
+              </div>
             );
           })}
         </div>
-
-        {/* Claim Button */}
-        {claimed ? (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="inline-flex items-center gap-2 bg-green-500/10 text-green-400 px-6 py-3 rounded-xl border border-green-500/20"
-          >
-            <CheckCircle className="w-5 h-5" />
-            <span className="font-semibold">Claimed! +{STREAK_REWARDS.find(r => r.day === streak)?.coins || 50} coins</span>
-          </motion.div>
-        ) : (
-          <Button
-            onClick={handleClaim}
-            disabled={!canClaim || claiming}
-            className={`h-12 px-8 rounded-xl text-base ${
-              canClaim
-                ? 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-400 hover:to-orange-500'
-                : 'bg-white/5 text-white/30 cursor-not-allowed'
-            }`}
-          >
-            {claiming ? (
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-            ) : (
-              <Gift className="w-5 h-5 mr-2" />
-            )}
-            {canClaim ? `Claim Day ${currentDay} Reward` : 'Come Back Tomorrow'}
-          </Button>
-        )}
       </div>
     </div>
   );

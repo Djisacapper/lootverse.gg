@@ -24,7 +24,7 @@ const NAV_SECTIONS = [
     label: 'REWARDS',
     items: [
       { name: 'Referrals', icon: Users, page: 'Referrals' },
-      { name: 'Daily Rewards', icon: Gift, page: 'Rewards' },
+      { name: 'Rewards', icon: Gift, page: 'Rewards' },
       { name: 'Leaderboard', icon: Award, page: 'Leaderboard' },
     ]
   },
