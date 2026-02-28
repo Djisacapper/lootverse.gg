@@ -52,12 +52,11 @@ export default function Battles() {
 
     await updateBalance(-totalCost, 'battle_entry', `Created battle: ${caseName}`);
 
-    // Store only filled players, but max_players = full lobby size
     const filledPlayers = players.map(p => ({ email: p.email, name: p.name, isBot: p.isBot, total_value: 0, items_won: [] }));
-    const maxPlayers = totalPlayers; // full lobby size (including empty slots)
+    const maxPlayers = totalPlayers;
 
-    // If all slots filled (e.g. user filled with bots), start immediately
-    const allFilled = filledPlayers.length >= maxPlayers;
+    // Only start immediately if every slot has a bot or player filled in CreateBattle
+    const allFilled = filledPlayers.length >= maxPlayers && filledPlayers.every(p => p.email);
     const status = allFilled ? 'in_progress' : 'waiting';
 
     const battle = await base44.entities.CaseBattle.create({
