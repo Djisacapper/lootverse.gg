@@ -213,8 +213,8 @@ export default function Crash() {
     const now = Date.now();
 
     if (r.status === 'betting') {
-      const created = new Date(r.created_date).getTime();
-      const elapsed = (now - created) / 1000;
+      const startMs = r.start_time || new Date(r.created_date).getTime();
+      const elapsed = (now - startMs) / 1000;
       if (elapsed >= BETTING_DURATION) {
         await base44.entities.CrashRound.update(r.id, { status: 'running' });
       }
