@@ -20,6 +20,11 @@ export default function ProfileModal({ user, onClose, onNavigate }) {
     base44.auth.logout();
   };
 
+  const handleSetLevel200 = async () => {
+    await base44.functions.invoke('setLevel', { level: 200 });
+    window.location.reload();
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/50 lg:bg-transparent lg:fixed lg:inset-auto lg:top-14 lg:right-0 lg:bottom-auto lg:w-96 lg:h-auto lg:rounded-b-lg lg:rounded-r-lg">
       {/* Mobile overlay */}
