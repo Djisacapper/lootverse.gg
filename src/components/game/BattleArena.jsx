@@ -136,7 +136,7 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
 
   return (
     <div
-      className={`relative flex-1 min-w-0 flex flex-col rounded-2xl border transition-all duration-500
+      className={`relative flex-1 flex flex-col rounded-2xl border transition-all duration-500
         ${isWinner ? 'border-amber-400/60 shadow-lg shadow-amber-400/10' : ''}
         ${isMagic && spinPhase !== 'idle' ? 'shadow-lg shadow-cyan-400/20' : ''}`}
       style={{
