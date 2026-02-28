@@ -19,17 +19,22 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
   }, [userName]);
 
   const handleTip = async () => {
-    if (!tipAmount || isNaN(tipAmount) || parseInt(tipAmount) <= 0) return;
-    if (!currentUser || currentUser.balance < parseInt(tipAmount)) {
+    if (!tipAmount || isNaN(tipAmount) || parseInt(tipAmount) <= 0) {
+      alert('Invalid amount');
+      return;
+    }
+    const amount = parseInt(tipAmount);
+    if (!currentUser || (currentUser.balance || 0) < amount) {
       alert('Insufficient balance');
       return;
     }
 
     setTipping(true);
     try {
-      const amount = parseInt(tipAmount);
-      await base44.auth.updateMe({ balance: currentUser.balance - amount });
+      // Deduct from sender
+      await base44.auth.updateMe({ balance: (currentUser.balance || 0) - amount });
       
+      // Send to recipient
       await base44.functions.invoke('processTip', {
         recipientEmail: stats.email,
         amount,
@@ -38,11 +43,13 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
       
       alert(`Tipped $${amount}!`);
       setTipAmount('');
+      setTipping(false);
       onClose();
     } catch (err) {
+      console.error(err);
       alert('Failed to send tip');
+      setTipping(false);
     }
-    setTipping(false);
   };
 
   const copyId = () => {
@@ -59,11 +66,11 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
   );
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[999] bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 pointer-events-auto">
       <motion.div
         initial={{ scale: 0.95, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
-        className="bg-[#1a1a2e] rounded-2xl border border-white/10 max-w-sm w-full overflow-hidden"
+        className="bg-[#1a1a2e] rounded-2xl border border-white/10 max-w-sm w-full overflow-hidden max-h-[80vh] overflow-y-auto"
       >
         {/* Header */}
         <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between">
@@ -98,22 +105,28 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
             </div>
 
             {/* Tip Input */}
-            {tipping && currentUser?.email !== stats.email && (
+            {currentUser?.email !== stats.email && (
               <div className="bg-white/[0.03] border border-white/10 rounded-lg p-3 space-y-2">
-                <input
-                  type="number"
-                  value={tipAmount}
-                  onChange={(e) => setTipAmount(e.target.value)}
-                  placeholder="Amount"
-                  className="w-full bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-xs placeholder-white/30 focus:outline-none focus:border-blue-500"
-                />
-                <button
-                  onClick={handleTip}
-                  disabled={tipping || !tipAmount}
-                  className="w-full bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white px-3 py-1.5 rounded text-xs font-semibold transition-colors"
-                >
-                  Send Tip
-                </button>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    value={tipAmount}
+                    onChange={(e) => setTipAmount(e.target.value)}
+                    placeholder="Tip amount"
+                    min="1"
+                    className="flex-1 bg-white/5 border border-white/10 rounded px-2 py-1.5 text-white text-xs placeholder-white/30 focus:outline-none focus:border-blue-500"
+                  />
+                  <button
+                    onClick={handleTip}
+                    disabled={tipping || !tipAmount}
+                    className="bg-blue-500 hover:bg-blue-600 disabled:opacity-50 text-white px-4 py-1.5 rounded text-xs font-semibold transition-colors whitespace-nowrap"
+                  >
+                    {tipping ? 'Sending...' : 'Tip'}
+                  </button>
+                </div>
+                {currentUser && (
+                  <p className="text-[10px] text-white/40">Your balance: ${(currentUser.balance || 0).toLocaleString()}</p>
+                )}
               </div>
             )}
 
