@@ -91,10 +91,29 @@ export default function CreateBattle({ cases, balance, user, onBack, onCreate })
     return teams;
   };
 
+  const addBot = (slotIdx) => {
+    const usedNames = new Set(slots.filter(Boolean).map(s => s.name));
+    let name;
+    do { name = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)]; } while (usedNames.has(name));
+    setSlots(prev => {
+      const n = [...prev];
+      n[slotIdx] = { name, email: `bot_${slotIdx}_${Date.now()}@system`, isBot: true };
+      return n;
+    });
+  };
+
   const handleCreate = () => {
     if (selectedCases.length === 0 || totalCost > balance) return;
-    // Filter out null slots, send only filled players
-    const players = slots.filter(s => s !== null);
+    // Auto-fill any empty slots with bots
+    const filledSlots = slots.map((slot, i) => {
+      if (slot) return slot;
+      const usedNames = new Set(slots.filter(Boolean).map(s => s.name));
+      let name;
+      do { name = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)]; } while (usedNames.has(name));
+      usedNames.add(name);
+      return { name, email: `bot_${i}_${Date.now()}@system`, isBot: true };
+    });
+    const players = filledSlots.filter(s => s !== null);
     onCreate({ selectedCases, modeLabel, teams: buildTeams(), players, battleModes, totalPlayers });
   };
 
