@@ -221,10 +221,33 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
 }
 
 /* ─── Battle Arena ──────────────────────────────────────────────────────────── */
-export default function BattleArena({ battle, selectedCases, players, teams, modeLabel, battleModes = {}, userEmail, onClose, onReward, onJoin, onAddBot, onFillBots, balance = 0 }) {
+export default function BattleArena({ battle, selectedCases, players, teams, modeLabel, battleModes = {}, userEmail, onClose, onReward, onJoin, onAddBot, onFillBots, onBattleUpdated, balance = 0 }) {
   const totalRounds = selectedCases.length;
   const teamList = teams || [players.map((_, i) => i)];
   const isWaiting = battle?.status === 'waiting';
+
+  // Poll DB while waiting so both players see each other join and battle auto-starts
+  useEffect(() => {
+    if (!isWaiting || !battle?.id) return;
+    const poll = async () => {
+      try {
+        const { base44 } = await import('@/api/base44Client');
+        const fresh = await base44.entities.CaseBattle.filter({ id: battle.id });
+        const updated = fresh?.[0];
+        if (!updated) return;
+        const filledCount = (updated.players || []).filter(p => p && p.email).length;
+        const maxPlayers = updated.max_players || 2;
+        // Always notify parent with fresh data so lobby UI updates
+        if (onBattleUpdated) onBattleUpdated(updated);
+        // If now full, mark in_progress and start
+        if (filledCount >= maxPlayers && updated.status === 'waiting') {
+          await base44.entities.CaseBattle.update(updated.id, { status: 'in_progress' });
+        }
+      } catch {}
+    };
+    const interval = setInterval(poll, 2000);
+    return () => clearInterval(interval);
+  }, [isWaiting, battle?.id]);
 
   const modes       = battleModes && typeof battleModes === 'object' ? battleModes : {};
   const isCrazy     = modes.crazy     === true;
