@@ -81,8 +81,16 @@ function GameCard({ game, user, balance, onJoin, onAddBot }) {
 
         {/* Action */}
         {isOwn ? (
-          <div className="flex items-center justify-center h-9 rounded-xl border border-white/[0.07] bg-white/[0.03]">
-            <span className="text-xs text-white/25 font-medium">Your game — waiting for opponent</span>
+          <div className="flex gap-2">
+            <div className="flex-1 flex items-center justify-center h-9 rounded-xl border border-white/[0.07] bg-white/[0.03]">
+              <span className="text-xs text-white/25 font-medium">Waiting for opponent...</span>
+            </div>
+            <button
+              onClick={() => onAddBot(game)}
+              className="flex items-center gap-1.5 h-9 px-3 rounded-xl border border-violet-400/30 bg-violet-500/10 text-violet-300 hover:bg-violet-500/20 text-xs font-bold transition-all"
+            >
+              🤖 Add Bot
+            </button>
           </div>
         ) : (
           <Button
