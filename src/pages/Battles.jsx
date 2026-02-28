@@ -344,13 +344,17 @@ export default function Battles() {
 
                   {/* Middle: Case Items */}
                   <div className="flex items-center gap-2 min-w-fit flex-shrink-0">
-                    {items.slice(0, Math.min(5, b.rounds || 1)).map((item, i) => (
-                      <div
-                        key={i}
-                        className="w-12 h-12 rounded-lg bg-white/5 border border-white/10 flex-shrink-0 overflow-hidden"
-                        style={{ backgroundImage: `url('${item.image_url}')`, backgroundSize: 'cover', backgroundPosition: 'center' }}
-                      />
-                    ))}
+                    {caseTemplate && items.length > 0 ? (
+                      items.slice(0, Math.min(5, b.rounds || 1)).map((item, i) => (
+                        <div
+                          key={i}
+                          className="w-12 h-12 rounded-lg bg-white/5 border border-white/10 flex-shrink-0 overflow-hidden"
+                          style={{ backgroundImage: `url('${item.image_url}')`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                        />
+                      ))
+                    ) : (
+                      <span className="text-xs text-white/40">{b.case_name || 'Case'}</span>
+                    )}
                   </div>
 
                   {/* Right: Stats & Action */}
