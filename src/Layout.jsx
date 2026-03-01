@@ -7,10 +7,10 @@ import ProfileModal from './components/game/ProfileModal';
 import {
   Box, Swords, Coins, TrendingUp, Gift, Award, Users,
   Menu, X, Home, LogOut, Zap, ChevronLeft,
-  ChevronRight, Wallet, Plus
+  ChevronRight, Wallet, Plus, Shield
 } from 'lucide-react';
 
-const NAV_SECTIONS = [
+const getNavSections = (userRole) => [
   {
     label: 'GAMES',
     items: [
@@ -18,7 +18,6 @@ const NAV_SECTIONS = [
       { name: 'Cases', icon: Box, page: 'Cases' },
       { name: 'Coinflip', icon: Coins, page: 'Coinflip' },
       { name: 'Crash', icon: TrendingUp, page: 'Crash' },
-
     ]
   },
   {
@@ -29,7 +28,12 @@ const NAV_SECTIONS = [
       { name: 'Leaderboard', icon: Award, page: 'Leaderboard' },
     ]
   },
-
+  ...(userRole === 'admin' ? [{
+    label: 'ADMIN',
+    items: [
+      { name: 'Admin Panel', icon: Shield, page: 'Admin' },
+    ]
+  }] : []),
 ];
 
 export default function Layout({ children, currentPageName }) {
