@@ -231,12 +231,12 @@ export default function Home() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {featuredCases.map((c) => (
               <Link key={c.id} to={createPageUrl('CaseOpen') + `?id=${c.id}`}>
-                <div className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] hover:border-white/10 rounded-xl p-4 text-center group cursor-pointer transition-all hover:scale-[1.02]">
-                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-violet-500/15 to-fuchsia-500/15 border border-white/[0.06] flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform">
-                    <Box className="w-8 h-8 text-violet-400" />
+                <div className="bg-[#1a1815] hover:bg-[#242220] border border-[#d4af37]/15 hover:border-[#d4af37]/30 rounded-xl p-4 text-center group cursor-pointer smooth-transition hover:scale-[1.02]">
+                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[#d4af37]/10 to-[#b8860b]/10 border border-[#d4af37]/15 flex items-center justify-center mx-auto mb-3 group-hover:scale-110 smooth-transition">
+                    <Box className="w-8 h-8 text-[#d4af37]" />
                   </div>
-                  <h3 className="text-xs font-semibold text-white mb-1 truncate">{c.name}</h3>
-                  <p className="text-[11px] font-bold text-amber-400">{c.price?.toLocaleString()} coins</p>
+                  <h3 className="text-xs font-semibold text-[#fafaf8] mb-1 truncate">{c.name}</h3>
+                  <p className="text-[11px] font-bold text-[#f4c430]">{c.price?.toLocaleString()} coins</p>
                 </div>
               </Link>
             ))}
