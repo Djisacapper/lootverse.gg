@@ -51,7 +51,7 @@ export default function Battles() {
 
     await updateBalance(-totalCost, 'battle_entry', `Created battle: ${caseName}`);
 
-    const filledPlayers = players.map(p => ({ email: p.email, name: p.username || p.name, avatar_url: p.avatar_url || null, isBot: p.isBot, total_value: 0, items_won: [] }));
+    const filledPlayers = players.map(p => ({ email: p.email, name: p.name, avatar_url: p.avatar_url || null, isBot: p.isBot, total_value: 0, items_won: [] }));
     const maxPlayers = totalPlayers;
 
     // Only start immediately if every slot has a bot or player filled in CreateBattle
