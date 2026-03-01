@@ -78,10 +78,14 @@ export default function LiveChat() {
   const handleSend = async (e) => {
     e.preventDefault();
     if (!input.trim() || !user) return;
+    const displayName = user.is_anonymous
+      ? `Anonymous #${user.id?.slice(-4) || '????'}`
+      : (user.username || user.full_name || 'Player');
     try {
       await base44.entities.ChatMessage.create({
-        user_name: user.full_name || 'Player',
+        user_name: displayName,
         user_email: user.email,
+        avatar_url: user.is_anonymous ? null : (user.avatar_url || null),
         level: user.level || 1,
         text: input.trim()
       });
