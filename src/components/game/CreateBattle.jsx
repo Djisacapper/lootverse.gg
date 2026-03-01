@@ -57,7 +57,7 @@ export default function CreateBattle({ cases, balance, user, onBack, onCreate })
     const sizes = label.split('v').map(Number);
     const total = sizes.reduce((a, b) => a + b, 0);
     const s = Array(total).fill(null);
-    if (user) s[0] = { name: user.full_name || 'You', email: user.email, isBot: false };
+    if (user) s[0] = { name: user.username || user.full_name || 'You', email: user.email, avatar_url: user.avatar_url || null, isBot: false };
     setSlots(s);
     setShowModeDropdown(false);
   };
