@@ -275,7 +275,7 @@ export default function Layout({ children, currentPageName }) {
         {!chatOpen && (
           <button
             onClick={() => setChatOpen(true)}
-            className="hidden lg:flex absolute -right-4 top-20 z-50 w-10 h-10 rounded-lg bg-gradient-to-br from-[#00d9ff] to-[#ff006e] border border-[#00d9ff]/30 items-center justify-center text-[#0a0a15] hover:shadow-lg glow-cyan hover:glow-cyan-lg smooth-transition animate-pulse-slow"
+            className="hidden lg:flex fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-gradient-to-br from-[#00d9ff] to-[#ff006e] items-center justify-center text-[#0a0a15] hover:shadow-lg glow-cyan hover:glow-cyan-lg smooth-transition"
             title="Open chat"
           >
             <MessageCircle className="w-5 h-5" />
