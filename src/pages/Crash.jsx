@@ -391,13 +391,16 @@ export default function Crash() {
     addRakeback(amt);
 
     try {
+      // Always fetch fresh user so avatar_url is current
+      const freshUser = await base44.auth.me().catch(() => user);
       const fresh = await base44.entities.CrashRound.list('-created_date', 1);
       const latest = fresh?.find(x => x.id === rid);
       if (latest) {
+        const avatarUrl = freshUser?.avatar_url && freshUser.avatar_url !== 'null' ? freshUser.avatar_url : null;
         const bets = [...(latest.bets || []), {
-          user_email: user.email,
-          user_name: user.username || user.full_name || 'Player',
-          avatar_url: user.avatar_url || null,
+          user_email: freshUser?.email || user.email,
+          user_name: freshUser?.username || freshUser?.full_name || 'Player',
+          avatar_url: avatarUrl,
           amount: amt,
           auto_cashout: parseFloat(ac) >= 1.01 ? parseFloat(ac) : null,
           cashed_out_at: null,
