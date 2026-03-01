@@ -129,10 +129,10 @@ export default function Home() {
 
       {/* Magic Games */}
       <div>
-        <div className="flex items-center gap-2 mb-4">
-          <Zap className="w-4 h-4 text-[#f4c430]" />
-          <h2 className="text-base font-bold text-[#d4af37]">Magic Games</h2>
-        </div>
+       <div className="flex items-center gap-2 mb-4">
+         <Zap className="w-4 h-4 text-[#ff006e]" />
+         <h2 className="text-base font-bold text-[#00d9ff]">Magic Games</h2>
+       </div>
 
         {/* Large 2-col top row */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
