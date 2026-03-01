@@ -104,12 +104,12 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 p-8 md:p-10 max-w-lg">
-          <p className="text-violet-400 text-xs font-semibold uppercase tracking-widest mb-3">Welcome to Lootverse</p>
-          <h1 className="text-4xl md:text-5xl font-black text-white leading-tight mb-2">
+          <p className="text-[#f4c430] text-xs font-semibold uppercase tracking-widest mb-3">Welcome to Lootverse</p>
+          <h1 className="text-4xl md:text-5xl font-black text-[#fafaf8] leading-tight mb-2">
             Open Cases.<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-fuchsia-400 to-violet-400">Win Big!</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d4af37] to-[#f4c430]">Win Big!</span>
           </h1>
-          <p className="text-white/40 text-sm mb-6 max-w-sm">
+          <p className="text-[#b0a89f] text-sm mb-6 max-w-sm">
             Step into a world of luck and excitement where every spin and bet brings you closer to amazing rewards.
           </p>
           <div className="flex gap-3">
