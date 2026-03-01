@@ -23,7 +23,11 @@ export default function Battles() {
     return () => clearInterval(iv);
   }, []);
 
-  const user = freshUser || walletUser;
+  // Merge so avatar_url from auth.me() is always preferred
+  const user = React.useMemo(() => {
+    if (!walletUser && !freshUser) return null;
+    return { ...(walletUser || {}), ...(freshUser || {}) };
+  }, [walletUser, freshUser]);
   const [battles, setBattles] = useState([]);
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
