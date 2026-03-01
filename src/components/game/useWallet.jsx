@@ -20,6 +20,12 @@ export function useWallet() {
 
   useEffect(() => {
     loadUser();
+    // Poll every 5s so avatar/username changes propagate
+    const interval = setInterval(loadUser, 5000);
+    const unsub = base44.entities.User.subscribe((event) => {
+      if (event.type === 'update') loadUser();
+    });
+    return () => { clearInterval(interval); unsub(); };
   }, [loadUser]);
 
   // Always fetch fresh balance from server to avoid stale closure issues
