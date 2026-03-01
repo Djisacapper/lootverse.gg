@@ -13,7 +13,17 @@ const BOT_NAMES = ['Alpha', 'Blitz', 'Cipher', 'Delta', 'Echo', 'Forge', 'Ghost'
 
 
 export default function Battles() {
-  const { user, balance, updateBalance, addXp } = useWallet();
+  const { user: walletUser, balance, updateBalance, addXp } = useWallet();
+  const [freshUser, setFreshUser] = React.useState(null);
+
+  // Keep a fresh copy of user with latest avatar/username
+  React.useEffect(() => {
+    base44.auth.me().then(setFreshUser).catch(() => {});
+    const iv = setInterval(() => base44.auth.me().then(setFreshUser).catch(() => {}), 3000);
+    return () => clearInterval(iv);
+  }, []);
+
+  const user = freshUser || walletUser;
   const [battles, setBattles] = useState([]);
   const [cases, setCases] = useState([]);
   const [loading, setLoading] = useState(true);
