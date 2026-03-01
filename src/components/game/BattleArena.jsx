@@ -226,7 +226,9 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
 }
 
 /* ─── Battle Arena ──────────────────────────────────────────────────────────── */
-export default function BattleArena({ battle, selectedCases, players, teams, modeLabel, battleModes = {}, userEmail, onClose, onReward, onJoin, onAddBot, onFillBots, onBattleUpdated, balance = 0 }) {
+export default function BattleArena({ battle, selectedCases, players: rawPlayers, teams, modeLabel, battleModes = {}, userEmail, onClose, onReward, onJoin, onAddBot, onFillBots, onBattleUpdated, balance = 0 }) {
+  // Always fetch fresh avatars from DB for all real players
+  const players = usePlayerAvatars(rawPlayers);
   const totalRounds = selectedCases.length;
   const teamList = teams || [players.map((_, i) => i)];
   const isWaiting = battle?.status === 'waiting';
