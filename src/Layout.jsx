@@ -234,21 +234,21 @@ export default function Layout({ children, currentPageName }) {
       {mobileOpen && (
         <div className="lg:hidden fixed inset-0 z-40">
           <div className="absolute inset-0 bg-black/70" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-[#0b0b15] border-r border-white/[0.06] pt-14 flex flex-col overflow-y-auto">
+          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-gradient-to-b from-[#1a1815] to-[#0f0e0a] border-r border-[#d4af37]/10 pt-14 flex flex-col overflow-y-auto">
             <nav className="flex-1 py-3">
               {getNavSections(user?.role).map((section) => (
                 <div key={section.label} className="mb-4">
-                  <p className="text-[10px] font-semibold text-white/25 tracking-[0.15em] uppercase px-4 mb-1.5">{section.label}</p>
+                  <p className="text-[10px] font-semibold text-[#d4af37]/40 tracking-[0.15em] uppercase px-4 mb-1.5">{section.label}</p>
                   {section.items.map((item) => {
                     const active = currentPageName === item.page;
                     return (
                       <Link
                         key={item.page}
                         to={createPageUrl(item.page)}
-                        className={`flex items-center gap-3 mx-2 mb-0.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all
-                          ${active ? 'bg-violet-500/20 text-white' : 'text-white/45 hover:text-white hover:bg-white/5'}`}
+                        className={`flex items-center gap-3 mx-2 mb-0.5 px-3 py-2.5 rounded-lg text-[13px] font-medium smooth-transition
+                          ${active ? 'bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/30' : 'text-[#b0a89f] hover:text-[#d4af37] hover:bg-[#d4af37]/5 border border-transparent'}`}
                       >
-                        <item.icon className={`w-[18px] h-[18px] ${active ? 'text-violet-400' : ''}`} />
+                        <item.icon className={`w-[18px] h-[18px] ${active ? 'text-[#f4c430]' : ''}`} />
                         {item.name}
                       </Link>
                     );
