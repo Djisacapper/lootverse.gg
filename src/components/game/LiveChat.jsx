@@ -196,10 +196,10 @@ export default function LiveChat({ onClose }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className="text-[10px] font-bold bg-violet-500/20 text-violet-300 rounded px-1">{msg.level}</span>
+                      <span className="text-[10px] font-bold bg-[#d4af37]/20 text-[#f4c430] rounded px-1">{msg.level}</span>
                       <button
                         onClick={() => setSelectedUser(msg)}
-                        className={`text-[11px] font-semibold hover:text-violet-300 transition-colors ${msg.isMe ? 'text-violet-300' : 'text-white/70'}`}
+                        className={`text-[11px] font-semibold hover:text-[#f4c430] smooth-transition ${msg.isMe ? 'text-[#d4af37]' : 'text-[#b0a89f]'}`}
                       >
                         {msg.user}
                       </button>
