@@ -51,7 +51,7 @@ export default function Battles() {
 
     await updateBalance(-totalCost, 'battle_entry', `Created battle: ${caseName}`);
 
-    const filledPlayers = players.map(p => ({ email: p.email, name: p.name, isBot: p.isBot, total_value: 0, items_won: [] }));
+    const filledPlayers = players.map(p => ({ email: p.email, name: p.username || p.name, avatar_url: p.avatar_url || null, isBot: p.isBot, total_value: 0, items_won: [] }));
     const maxPlayers = totalPlayers;
 
     // Only start immediately if every slot has a bot or player filled in CreateBattle
@@ -91,7 +91,7 @@ export default function Battles() {
     // Add player to first empty slot
     const updatedPlayers = [...(battle.players || [])];
     const emptySlotIdx = updatedPlayers.findIndex(p => !p.email || p.email === '');
-    const joinerSlot = { email: user.email, name: user.full_name || 'Player', isBot: false, total_value: 0, items_won: [] };
+    const joinerSlot = { email: user.email, name: user.username || user.full_name || 'Player', avatar_url: user.avatar_url || null, isBot: false, total_value: 0, items_won: [] };
     if (emptySlotIdx >= 0) {
       updatedPlayers[emptySlotIdx] = joinerSlot;
     } else {
@@ -334,8 +334,10 @@ export default function Battles() {
                       </div>
                       <div className="flex items-center gap-2">
                         {(b.players || []).slice(0, 4).map((p, i) => (
-                          <div key={i} className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-[10px] font-bold text-white">
-                            {p.name?.[0] || '?'}
+                          <div key={i} className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 overflow-hidden flex items-center justify-center text-[10px] font-bold text-white">
+                            {p.avatar_url
+                              ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
+                              : (p.name?.[0] || '?')}
                           </div>
                         ))}
                       </div>
