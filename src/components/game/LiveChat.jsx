@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Zap, Send, Crown, Shield, Badge, Smile } from 'lucide-react';
+import { MessageCircle, Zap, Send, Crown, Shield, Badge, Smile, X } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
 import UserStatsModal from './UserStatsModal';
