@@ -5,6 +5,7 @@ import { getRarityColor, getRarityBorder, rollItem } from './useWallet';
 import { motion, AnimatePresence } from 'framer-motion';
 import JackpotWheel from './JackpotWheel';
 import { usePlayerAvatars, safeAvatarUrl } from './usePlayerAvatars';
+import Portal from '@/components/Portal';
 
 const TEAM_COLORS = ['#8b5cf6', '#3b82f6', '#ef4444', '#10b981'];
 const PLAYER_COLORS = ['#8b5cf6','#3b82f6','#ef4444','#10b981','#f59e0b','#ec4899','#06b6d4','#84cc16'];
