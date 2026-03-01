@@ -271,6 +271,17 @@ export default function Layout({ children, currentPageName }) {
         className={`flex flex-1 min-h-screen pt-14 smooth-transition
           ${sidebarCollapsed ? 'lg:ml-[60px]' : 'lg:ml-[220px]'}`}
       >
+        {/* Chat Toggle Button - when chat is closed */}
+        {!chatOpen && (
+          <button
+            onClick={() => setChatOpen(true)}
+            className="hidden lg:flex fixed right-0 top-20 z-40 bg-gradient-to-r from-[#00d9ff] to-[#ff006e] text-[#0a0a15] font-bold px-3 py-2 rounded-l-lg glow-cyan hover:glow-cyan-lg smooth-transition items-center gap-2"
+            title="Open chat"
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span className="text-xs">Chat</span>
+          </button>
+        )}
         {/* Page content */}
         <main className="flex-1 min-w-0 overflow-y-auto">
           <div className="max-w-5xl mx-auto p-4 md:p-5 lg:p-6">
