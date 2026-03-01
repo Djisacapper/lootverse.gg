@@ -146,24 +146,35 @@ export default function LiveChat({ onClose }) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#0b0b15] border-l border-white/[0.06]">
+    <div className="flex flex-col h-full bg-gradient-to-b from-[#1a1815] to-[#0f0e0a] border-l border-[#d4af37]/10">
       {selectedUser && <UserStatsModal userName={selectedUser.user} userEmail={selectedUser.user} onClose={() => setSelectedUser(null)} currentUser={user} />}
-      {/* Tabs */}
-      <div className="flex border-b border-white/[0.06]">
-        <button
-          onClick={() => setTab('chat')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-semibold transition-colors
-            ${tab === 'chat' ? 'text-white border-b-2 border-violet-500' : 'text-white/30 hover:text-white/60'}`}
-        >
-          <MessageCircle className="w-3.5 h-3.5" /> Chat
-        </button>
-        <button
-          onClick={() => setTab('drops')}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-semibold transition-colors
-            ${tab === 'drops' ? 'text-white border-b-2 border-amber-500' : 'text-white/30 hover:text-white/60'}`}
-        >
-          <Zap className="w-3.5 h-3.5" /> Live Drops
-        </button>
+      {/* Tabs Header */}
+      <div className="flex border-b border-[#d4af37]/10 items-center justify-between">
+        <div className="flex flex-1">
+          <button
+            onClick={() => setTab('chat')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-semibold smooth-transition
+              ${tab === 'chat' ? 'text-[#d4af37] border-b-2 border-[#d4af37]' : 'text-[#b0a89f] hover:text-[#d4af37]'}`}
+          >
+            <MessageCircle className="w-3.5 h-3.5" /> Chat
+          </button>
+          <button
+            onClick={() => setTab('drops')}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-semibold smooth-transition
+              ${tab === 'drops' ? 'text-[#f4c430] border-b-2 border-[#f4c430]' : 'text-[#b0a89f] hover:text-[#d4af37]'}`}
+          >
+            <Zap className="w-3.5 h-3.5" /> Live Drops
+          </button>
+        </div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            className="lg:hidden p-2 text-[#b0a89f] hover:text-[#d4af37] smooth-transition mr-1"
+            title="Close chat"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {tab === 'chat' ? (
