@@ -14,16 +14,16 @@ const EmojiPicker = ({ onEmojiClick, className }) => {
     <button
     type="button"
     onClick={() => setOpen(!open)}
-    className={`text-[#b0a89f]/50 hover:text-[#d4af37] smooth-transition ${className}`}
+    className={`text-[#a0a0b0]/50 hover:text-[#00d9ff] smooth-transition ${className}`}
     >
     <Smile className="w-3.5 h-3.5" />
     </button>
     {open && (
     <motion.div
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.9 }}
-      className="absolute bottom-full right-0 mb-2 bg-[#1a1815] border border-[#d4af37]/20 rounded-lg p-2 grid grid-cols-5 gap-1 w-40 shadow-lg"
+    initial={{ opacity: 0, scale: 0.9 }}
+    animate={{ opacity: 1, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.9 }}
+    className="absolute bottom-full right-0 mb-2 bg-[#1a1a2e] border border-[#00d9ff]/20 rounded-lg p-2 grid grid-cols-5 gap-1 w-40 shadow-lg"
     >
           {EMOJIS.map(emoji => (
             <button
