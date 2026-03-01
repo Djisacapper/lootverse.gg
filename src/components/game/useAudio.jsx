@@ -48,8 +48,8 @@ export function useAudio() {
       oscillator.type = 'square';
       oscillator.frequency.setValueAtTime(150, audioContext.currentTime);
       
-      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-      gainNode.gain.linearRampToValueAtTime(0.15, audioContext.currentTime + 0.2);
+      gainNode.gain.setValueAtTime(0.03, audioContext.currentTime);
+      gainNode.gain.linearRampToValueAtTime(0.04, audioContext.currentTime + 0.2);
       
       lfo.start();
       oscillator.start();
