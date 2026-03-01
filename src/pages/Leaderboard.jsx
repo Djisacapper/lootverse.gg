@@ -43,11 +43,14 @@ export default function Leaderboard() {
     }
   };
 
-  const podiumColors = [
-    'from-amber-400 to-amber-600',
-    'from-zinc-300 to-zinc-500',
-    'from-orange-400 to-orange-600',
-  ];
+  const getPodiumStyle = (rank) => {
+    const styles = {
+      0: { color: 'from-yellow-400 via-yellow-500 to-amber-600', height: 'h-40', width: 'w-28', iconSize: 'w-10 h-10' },
+      1: { color: 'from-slate-300 via-slate-400 to-slate-600', height: 'h-32', width: 'w-24', iconSize: 'w-8 h-8' },
+      2: { color: 'from-orange-300 via-orange-400 to-orange-600', height: 'h-28', width: 'w-20', iconSize: 'w-7 h-7' },
+    };
+    return styles[rank] || styles[2];
+  };
 
   if (loading) {
     return (
@@ -58,19 +61,19 @@ export default function Leaderboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold text-white mb-1">Leaderboard</h1>
-        <p className="text-white/40 text-sm">Top players and biggest wins</p>
+        <h1 className="text-4xl font-black text-white mb-2">🏆 LEADERBOARD</h1>
+        <p className="text-white/40 text-sm">Compete, climb, and earn exclusive rewards</p>
       </div>
 
-      <Tabs defaultValue="levels" className="space-y-4">
+      <Tabs defaultValue="all-time" className="space-y-4">
         <TabsList className="bg-white/5 border border-white/10 rounded-xl">
-          <TabsTrigger value="levels" className="data-[state=active]:bg-violet-500/20 data-[state=active]:text-violet-300 rounded-lg">
-            <Zap className="w-3.5 h-3.5 mr-1.5" /> Top Levels
+          <TabsTrigger value="all-time" className="data-[state=active]:bg-violet-500/20 data-[state=active]:text-violet-300 rounded-lg">
+            <Crown className="w-3.5 h-3.5 mr-1.5" /> All-Time
           </TabsTrigger>
-          <TabsTrigger value="wins" className="data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-400 rounded-lg">
-            <Trophy className="w-3.5 h-3.5 mr-1.5" /> Biggest Wins
+          <TabsTrigger value="weekly" className="data-[state=active]:bg-amber-500/20 data-[state=active]:text-amber-400 rounded-lg">
+            <Flame className="w-3.5 h-3.5 mr-1.5" /> Weekly
           </TabsTrigger>
         </TabsList>
 
