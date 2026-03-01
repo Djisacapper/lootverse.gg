@@ -144,18 +144,18 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Level + XP bar */}
         {user && (
-          <div className="flex items-center gap-2.5 bg-white/[0.04] border border-white/[0.07] rounded-lg px-3 py-1.5">
-            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-[10px] font-bold text-white flex-shrink-0">
+          <div className="flex items-center gap-2.5 bg-[#1a1815] border border-[#d4af37]/15 rounded-lg px-3 py-1.5 smooth-transition hover:border-[#d4af37]/30">
+            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center text-[10px] font-bold text-[#0a0805] flex-shrink-0">
               {level}
             </div>
             <div className="flex flex-col gap-0.5 w-24">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] text-white/40">Level {level}</span>
-                <span className="text-[10px] text-white/25">{Math.round(xpProgress)}%</span>
+                <span className="text-[10px] text-[#d4af37]/60">Level {level}</span>
+                <span className="text-[10px] text-[#d4af37]/40">{Math.round(xpProgress)}%</span>
               </div>
-              <div className="h-1 bg-white/10 rounded-full overflow-hidden w-full">
+              <div className="h-1 bg-[#d4af37]/10 rounded-full overflow-hidden w-full">
                 <div
-                  className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full transition-all duration-700"
+                  className="h-full bg-gradient-to-r from-[#d4af37] to-[#f4c430] rounded-full smooth-transition"
                   style={{ width: `${xpProgress}%` }}
                 />
               </div>
