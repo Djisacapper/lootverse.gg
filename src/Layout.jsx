@@ -184,7 +184,7 @@ export default function Layout({ children, currentPageName }) {
         {user && (
           <button
             onClick={() => setProfileOpen(true)}
-            className="w-8 h-8 rounded-full bg-gradient-to-br from-[#d4af37] to-[#b8860b] overflow-hidden flex items-center justify-center text-xs font-bold text-[#0a0805] glow-gold hover:glow-gold-lg smooth-transition"
+            className="w-8 h-8 rounded-full bg-gradient-to-br from-[#00d9ff] to-[#9d4edd] overflow-hidden flex items-center justify-center text-xs font-bold text-[#0a0a15] glow-cyan hover:glow-cyan-lg smooth-transition"
             title="Open profile"
           >
             {user.avatar_url
