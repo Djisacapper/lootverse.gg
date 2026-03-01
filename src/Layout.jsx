@@ -267,7 +267,7 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Main Content + Chat Panel */}
       <div
-        className={`flex flex-1 min-h-screen pt-14 transition-all duration-300
+        className={`flex flex-1 min-h-screen pt-14 smooth-transition
           ${sidebarCollapsed ? 'lg:ml-[60px]' : 'lg:ml-[220px]'}`}
       >
         {/* Page content */}
@@ -278,7 +278,7 @@ export default function Layout({ children, currentPageName }) {
         </main>
 
         {/* Right Chat Panel - desktop only */}
-        <aside className="hidden lg:flex flex-col w-[260px] flex-shrink-0 h-[calc(100vh-56px)] sticky top-14">
+        <aside className="hidden lg:flex flex-col w-[260px] flex-shrink-0 h-[calc(100vh-56px)] sticky top-14 bg-gradient-to-b from-[#1a1815]/50 to-[#0f0e0a]/50 border-l border-[#d4af37]/10">
           <LiveChat />
         </aside>
       </div>
