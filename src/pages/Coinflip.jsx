@@ -337,17 +337,20 @@ export default function Coinflip() {
     await updateBalance(-amount, 'coinflip_bet', `Created coinflip for ${amount}`);
     addRakeback(amount);
 
+    // Always fetch fresh user so avatar_url is current
+    const freshUser = await base44.auth.me().catch(() => user);
+    const creatorName = freshUser?.username || freshUser?.full_name || 'Anonymous';
+    const creatorAvatar = safeAvatarUrl(freshUser?.avatar_url);
+
     if (vsBot) {
-      // Instantly resolve vs a bot
       const botName = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
-      const botSide = side === 'heads' ? 'tails' : 'heads';
       const result = Math.random() < 0.5 ? 'heads' : 'tails';
-      const winnerEmail = result === side ? user.email : `bot@system`;
+      const winnerEmail = result === side ? freshUser.email : `bot@system`;
 
       const game = await base44.entities.CoinflipGame.create({
-        creator_email: user.email,
-        creator_name: user.username || user.full_name || 'Anonymous',
-        creator_avatar_url: user.avatar_url || null,
+        creator_email: freshUser.email,
+        creator_name: creatorName,
+        creator_avatar_url: creatorAvatar,
         creator_side: side,
         bet_amount: amount,
         opponent_email: 'bot@system',
@@ -362,7 +365,7 @@ export default function Coinflip() {
       setFlipResult({ result, winnerEmail, game: { ...game, bet_amount: amount } });
 
       setTimeout(async () => {
-        if (winnerEmail === user.email) {
+        if (winnerEmail === freshUser.email) {
           await updateBalance(amount * 2, 'coinflip_win', `Won coinflip vs bot for ${amount * 2}`);
           await addXp(50);
         }
@@ -370,9 +373,9 @@ export default function Coinflip() {
       }, 2000);
     } else {
       await base44.entities.CoinflipGame.create({
-        creator_email: user.email,
-        creator_name: user.username || user.full_name || 'Anonymous',
-        creator_avatar_url: user.avatar_url || null,
+        creator_email: freshUser.email,
+        creator_name: creatorName,
+        creator_avatar_url: creatorAvatar,
         creator_side: side,
         bet_amount: amount,
         status: 'waiting',
