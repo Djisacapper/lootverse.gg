@@ -145,18 +145,18 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Level + XP bar */}
         {user && (
-          <div className="flex items-center gap-2.5 bg-[#1a1815] border border-[#d4af37]/15 rounded-lg px-3 py-1.5 smooth-transition hover:border-[#d4af37]/30">
-            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center text-[10px] font-bold text-[#0a0805] flex-shrink-0">
+          <div className="flex items-center gap-2.5 bg-[#1a1a2e] border border-[#00d9ff]/15 rounded-lg px-3 py-1.5 smooth-transition hover:border-[#00d9ff]/30">
+            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#00d9ff] to-[#9d4edd] flex items-center justify-center text-[10px] font-bold text-[#0a0a15] flex-shrink-0">
               {level}
             </div>
             <div className="flex flex-col gap-0.5 w-24">
               <div className="flex justify-between items-center">
-                <span className="text-[10px] text-[#d4af37]/60">Level {level}</span>
-                <span className="text-[10px] text-[#d4af37]/40">{Math.round(xpProgress)}%</span>
+                <span className="text-[10px] text-[#00d9ff]/60">Level {level}</span>
+                <span className="text-[10px] text-[#00d9ff]/40">{Math.round(xpProgress)}%</span>
               </div>
-              <div className="h-1 bg-[#d4af37]/10 rounded-full overflow-hidden w-full">
+              <div className="h-1 bg-[#00d9ff]/10 rounded-full overflow-hidden w-full">
                 <div
-                  className="h-full bg-gradient-to-r from-[#d4af37] to-[#f4c430] rounded-full smooth-transition"
+                  className="h-full bg-gradient-to-r from-[#00d9ff] to-[#9d4edd] rounded-full smooth-transition"
                   style={{ width: `${xpProgress}%` }}
                 />
               </div>
