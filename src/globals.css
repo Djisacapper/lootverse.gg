@@ -20,7 +20,7 @@
     @apply border-white/5;
   }
   body {
-    background: linear-gradient(135deg, #0a0805 0%, #1a1815 50%, #0d0c0a 100%);
+    background: linear-gradient(135deg, #0a0a15 0%, #1a1a2e 50%, #0d0d1a 100%);
     color: var(--text-primary);
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
