@@ -71,7 +71,7 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
     }
   };
 
-  const canTip = currentUser?.email !== stats.email && (currentUser?.level || 0) >= 5;
+  const canTip = stats && currentUser?.email !== stats.email && (currentUser?.level || 0) >= 5;
 
   const copyId = () => {
     if (stats?.id) {
@@ -121,7 +121,7 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
             </div>
 
             {/* Tip Button */}
-            {currentUser?.email !== stats.email && (
+            {stats && currentUser?.email !== stats.email && (
               <div className="space-y-2">
                 {(currentUser?.level || 0) < 5 ? (
                   <div className="bg-white/[0.03] border border-white/10 rounded-lg p-3">
