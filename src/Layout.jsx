@@ -68,14 +68,14 @@ export default function Layout({ children, currentPageName }) {
   const SidebarContent = ({ collapsed }) => (
     <>
       {/* Logo */}
-      <div className={`flex items-center border-b border-[#d4af37]/10 ${collapsed ? 'px-3 py-4 justify-center' : 'px-5 py-4'}`}>
+      <div className={`flex items-center border-b border-[#00d9ff]/10 ${collapsed ? 'px-3 py-4 justify-center' : 'px-5 py-4'}`}>
         <Link to={createPageUrl('Home')} className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center flex-shrink-0 glow-gold group-hover:glow-gold-lg smooth-transition">
-            <Box className="w-5 h-5 text-[#0a0805]" />
+          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#00d9ff] to-[#9d4edd] flex items-center justify-center flex-shrink-0 glow-cyan group-hover:glow-cyan-lg smooth-transition">
+            <Box className="w-5 h-5 text-[#0a0a15]" />
           </div>
           {!collapsed && (
             <div>
-              <span className="text-base font-bold text-[#d4af37] tracking-widest">LOOTVERSE</span>
+              <span className="text-base font-bold text-[#00d9ff] tracking-widest">LOOTVERSE</span>
             </div>
           )}
         </Link>
