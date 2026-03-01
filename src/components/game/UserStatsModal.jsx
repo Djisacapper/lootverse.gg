@@ -3,6 +3,7 @@ import { base44 } from '@/api/base44Client';
 import { X, Copy } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Portal from '../Portal';
+import { safeAvatarUrl } from './usePlayerAvatars';
 
 export default function UserStatsModal({ userName, userEmail, onClose, currentUser }) {
   const [stats, setStats] = useState(null);
