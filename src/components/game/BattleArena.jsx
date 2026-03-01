@@ -546,7 +546,7 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
                               style={{ background: color + '33', border: `2px solid ${color}88` }}>
                               {slot.player.isBot
                                 ? <Bot className="w-5 h-5" style={{ color }} />
-                                : slot.player.avatar_url
+                                : (slot.player.avatar_url && slot.player.avatar_url !== 'null' && slot.player.avatar_url !== 'undefined')
                                   ? <img src={slot.player.avatar_url} alt="" className="w-full h-full object-cover" />
                                   : <User className="w-5 h-5" style={{ color }} />}
                             </div>
