@@ -571,10 +571,45 @@ export default function Admin() {
                     <Input
                       type="file"
                       accept="image/*"
-                      onChange={(e) => setItemImage(e.target.files?.[0] || null)}
+                      multiple
+                      onChange={(e) => {
+                        if (e.target.files) {
+                          Array.from(e.target.files).forEach(file => handleAddItemImage(file));
+                        }
+                      }}
                       className="bg-white/5 border-white/10 text-white/60 text-xs"
                     />
                   </div>
+
+                  {/* Item Images Preview */}
+                  {itemImages.length > 0 && (
+                    <div>
+                      <p className="text-xs text-white/60 mb-2">{itemImages.length} image(s) added</p>
+                      <div className="flex gap-2 flex-wrap">
+                        {itemImages.map((img, idx) => (
+                          <motion.div
+                            key={idx}
+                            initial={{ opacity: 0, scale: 0.8 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="relative"
+                          >
+                            <img
+                              src={URL.createObjectURL(img)}
+                              alt={`preview-${idx}`}
+                              className="w-16 h-16 rounded-lg object-cover border border-white/10"
+                            />
+                            <button
+                              onClick={() => handleRemoveItemImage(idx)}
+                              className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 hover:bg-red-600"
+                            >
+                              <X className="w-3 h-3 text-white" />
+                            </button>
+                          </motion.div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
                   <Button
                     onClick={handleAddItem}
                     disabled={!itemName || !itemValue || !itemDropRate}
