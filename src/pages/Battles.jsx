@@ -65,7 +65,17 @@ export default function Battles() {
 
     await updateBalance(-totalCost, 'battle_entry', `Created battle: ${caseName}`);
 
-    const filledPlayers = players.map(p => ({ email: p.email, name: p.name, avatar_url: p.avatar_url || null, isBot: p.isBot, total_value: 0, items_won: [] }));
+    // Fetch the freshest user data to ensure avatar_url is saved to the battle
+    let latestUser = user;
+    try { latestUser = await base44.auth.me() || user; } catch {}
+    const filledPlayers = players.map(p => ({
+      email: p.email,
+      name: p.isBot ? p.name : (latestUser.username || latestUser.full_name || p.name),
+      avatar_url: p.isBot ? null : (latestUser.avatar_url || p.avatar_url || null),
+      isBot: p.isBot,
+      total_value: 0,
+      items_won: []
+    }));
     const maxPlayers = totalPlayers;
 
     // Only start immediately if every slot has a bot or player filled in CreateBattle
