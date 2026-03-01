@@ -146,7 +146,7 @@ export default function LiveChat({ onClose }) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-b from-[#1a1815] to-[#0f0e0a] border-l border-[#d4af37]/10">
+    <div className="flex flex-col h-full bg-gradient-to-b from-[#1a1a2e] to-[#0d0d1a] border-l border-[#00d9ff]/10">
       {selectedUser && <UserStatsModal userName={selectedUser.user} userEmail={selectedUser.user} onClose={() => setSelectedUser(null)} currentUser={user} />}
       {/* Tabs Header */}
       <div className="flex border-b border-[#d4af37]/10 items-center justify-between">
