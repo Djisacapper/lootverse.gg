@@ -396,7 +396,8 @@ export default function Crash() {
       if (latest) {
         const bets = [...(latest.bets || []), {
           user_email: user.email,
-          user_name: user.full_name || 'Player',
+          user_name: user.username || user.full_name || 'Player',
+          avatar_url: user.avatar_url || null,
           amount: amt,
           auto_cashout: parseFloat(ac) >= 1.01 ? parseFloat(ac) : null,
           cashed_out_at: null,
@@ -568,8 +569,10 @@ export default function Crash() {
           <div className="divide-y divide-white/[0.03] max-h-48 overflow-y-auto">
             {liveBets.map((b, i) => (
               <div key={i} className="flex items-center gap-3 px-4 py-2.5">
-                <div className="w-7 h-7 rounded-full bg-violet-500/20 flex items-center justify-center text-xs font-bold text-violet-300 flex-shrink-0">
-                  {b.user_name?.[0]?.toUpperCase() || '?'}
+                <div className="w-7 h-7 rounded-full bg-violet-500/20 overflow-hidden flex items-center justify-center text-xs font-bold text-violet-300 flex-shrink-0">
+                  {b.avatar_url
+                    ? <img src={b.avatar_url} alt="" className="w-full h-full object-cover" />
+                    : (b.user_name?.[0]?.toUpperCase() || '?')}
                 </div>
                 <p className="text-sm text-white/70 flex-1 truncate">{b.user_name}</p>
                 <p className="text-xs text-amber-400 font-bold">{b.amount?.toLocaleString()}</p>
