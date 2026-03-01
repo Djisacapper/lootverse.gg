@@ -208,23 +208,23 @@ export default function Layout({ children, currentPageName }) {
         {user && (
           <div className="flex items-center gap-2">
             {/* Mobile level badge */}
-            <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-1">
-              <div className="w-5 h-5 rounded-md bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-[9px] font-bold text-white">
+            <div className="flex items-center gap-1.5 bg-[#1a1815] border border-[#d4af37]/15 rounded-lg px-2 py-1 smooth-transition">
+              <div className="w-5 h-5 rounded-md bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center text-[9px] font-bold text-[#0a0805]">
                 {level}
               </div>
-              <div className="w-16 h-1.5 bg-white/10 rounded-full overflow-hidden">
+              <div className="w-16 h-1.5 bg-[#d4af37]/10 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full"
+                  className="h-full bg-gradient-to-r from-[#d4af37] to-[#f4c430] rounded-full smooth-transition"
                   style={{ width: `${xpProgress}%` }}
                 />
               </div>
             </div>
             {/* Mobile balance */}
-            <div className="flex items-center gap-1 bg-white/[0.04] border border-white/[0.07] rounded-lg px-2 py-1.5">
-              <div className="w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center">
-                <span className="text-[8px] font-bold text-white">$</span>
+            <div className="flex items-center gap-1 bg-[#1a1815] border border-[#d4af37]/15 rounded-lg px-2 py-1.5 smooth-transition">
+              <div className="w-4 h-4 rounded-full bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center">
+                <span className="text-[8px] font-bold text-[#0a0805]">$</span>
               </div>
-              <span className="text-xs font-bold text-white">{(user.balance || 0).toLocaleString()}</span>
+              <span className="text-xs font-bold text-[#d4af37]">{(user.balance || 0).toLocaleString()}</span>
             </div>
           </div>
         )}
