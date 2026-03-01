@@ -137,7 +137,7 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Top Header Bar */}
       <div
-        className={`fixed top-0 right-0 z-30 h-14 bg-[#0b0b15] border-b border-white/[0.06] flex items-center px-4 gap-3 transition-all duration-300
+        className={`fixed top-0 right-0 z-30 h-14 bg-gradient-to-r from-[#1a1815] to-[#242220] border-b border-[#d4af37]/10 flex items-center px-4 gap-3 smooth-transition
           ${sidebarCollapsed ? 'left-[60px]' : 'left-[220px]'} hidden lg:flex`}
       >
         <div className="flex-1" />
