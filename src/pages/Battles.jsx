@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useWallet, rollItem, getRarityColor } from '../components/game/useWallet';
 import { safeAvatarUrl } from '../components/game/usePlayerAvatars';
+import { normalizeItemImage } from '../components/game/normalizeItem';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Swords, Plus, Trophy, Users, CheckCircle, Eye, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
