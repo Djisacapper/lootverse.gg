@@ -29,6 +29,9 @@ Deno.serve(async (req) => {
     let stats = {
       id: userRecord?.id || null,
       email: userEmail,
+      avatar_url: userRecord?.avatar_url || null,
+      level: userRecord?.level || 1,
+      balance: userRecord?.balance || 0,
       cases: 0,
       battles: 0,
       coinflip: 0,
