@@ -33,7 +33,7 @@ const EmojiPicker = ({ onEmojiClick, className }) => {
                 onEmojiClick(emoji);
                 setOpen(false);
               }}
-              className="text-lg hover:bg-[#d4af37]/10 rounded p-1 smooth-transition"
+              className="text-lg hover:bg-[#00d9ff]/10 rounded p-1 smooth-transition"
             >
               {emoji}
             </button>
