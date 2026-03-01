@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
-import { Swords, Box, Coins, TrendingUp, Loader, CheckCircle2, XCircle } from 'lucide-react';
+import { Swords, Box, Coins, TrendingUp, Loader, CheckCircle2, XCircle, Zap } from 'lucide-react';
 
-const GAME_MODE_ICONS = {
-  'case_purchase': { icon: Box, label: 'Case Opening' },
-  'battle_entry': { icon: Swords, label: 'Battle' },
-  'coinflip_bet': { icon: Coins, label: 'Coinflip' },
-  'crash_bet': { icon: TrendingUp, label: 'Crash' },
+const GAME_TYPES = {
+  'case_purchase': { icon: Box, label: 'Case Opening', isEntry: true },
+  'case_win':      { icon: Box, label: 'Case Opening', isEntry: false },
+  'battle_entry':  { icon: Swords, label: 'Battle', isEntry: true },
+  'battle_win':    { icon: Swords, label: 'Battle', isEntry: false },
+  'coinflip_bet':  { icon: Coins, label: 'Coinflip', isEntry: true },
+  'coinflip_win':  { icon: Coins, label: 'Coinflip', isEntry: false },
+  'crash_bet':     { icon: TrendingUp, label: 'Crash', isEntry: true },
+  'crash_win':     { icon: TrendingUp, label: 'Crash', isEntry: false },
+  'upgrade_loss':  { icon: Zap, label: 'Upgrade', isEntry: true },
+  'upgrade_win':   { icon: Zap, label: 'Upgrade', isEntry: false },
 };
 
 export default function GameHistoryView({ userEmail }) {
@@ -17,39 +23,22 @@ export default function GameHistoryView({ userEmail }) {
     const fetchGameHistory = async () => {
       setLoading(true);
       try {
-        // Fetch battles
-        const battles = await base44.asServiceRole.entities.CaseBattle.filter({ creator_email: userEmail });
-        const battleHistory = battles.map(b => ({
-          id: b.id,
-          type: 'battle_entry',
-          gameMode: 'Battle',
-          amount: b.entry_cost,
-          winner: b.winner_email,
-          result: b.winner_email === userEmail ? 'Win' : b.status === 'completed' ? 'Loss' : 'Pending',
-          timestamp: b.created_date,
-          icon: Swords,
-        }));
-
-        // Fetch transactions to get other game history
-        const transactions = await base44.entities.Transaction.filter({ 
-          user_email: userEmail 
-        });
-        
-        const otherGameHistory = transactions
-          .filter(t => Object.keys(GAME_MODE_ICONS).includes(t.type))
+        const transactions = await base44.entities.Transaction.filter({ user_email: userEmail }, '-created_date', 200);
+        const gameTypes = Object.keys(GAME_TYPES);
+        const gameTxs = transactions
+          .filter(t => gameTypes.includes(t.type))
           .map(t => ({
             id: t.id,
             type: t.type,
-            gameMode: GAME_MODE_ICONS[t.type]?.label || 'Game',
+            gameMode: GAME_TYPES[t.type]?.label || 'Game',
             amount: Math.abs(t.amount || 0),
             result: t.amount > 0 ? 'Win' : 'Loss',
             timestamp: t.created_date,
             description: t.description,
-            icon: GAME_MODE_ICONS[t.type]?.icon || Box,
-          }))
-          .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+            icon: GAME_TYPES[t.type]?.icon || Box,
+          }));
 
-        setGameHistory(otherGameHistory.slice(0, 50));
+        setGameHistory(gameTxs.slice(0, 50));
       } catch (error) {
         console.error('Failed to fetch game history:', error);
       }
@@ -61,22 +50,18 @@ export default function GameHistoryView({ userEmail }) {
     return () => clearInterval(interval);
   }, [userEmail]);
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <Loader className="w-5 h-5 text-violet-400 animate-spin" />
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex items-center justify-center py-8">
+      <Loader className="w-5 h-5 text-violet-400 animate-spin" />
+    </div>
+  );
 
-  if (gameHistory.length === 0) {
-    return (
-      <div className="text-center py-8">
-        <Box className="w-12 h-12 text-white/20 mx-auto mb-3" />
-        <p className="text-white/40">No game history yet</p>
-      </div>
-    );
-  }
+  if (gameHistory.length === 0) return (
+    <div className="text-center py-8">
+      <Box className="w-12 h-12 text-white/20 mx-auto mb-3" />
+      <p className="text-white/40">No game history yet</p>
+    </div>
+  );
 
   return (
     <div className="space-y-2">
@@ -84,10 +69,7 @@ export default function GameHistoryView({ userEmail }) {
         const Icon = game.icon;
         const isWin = game.result === 'Win';
         return (
-          <div
-            key={game.id}
-            className="bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition-colors"
-          >
+          <div key={game.id} className="bg-white/5 border border-white/10 rounded-lg p-4 hover:bg-white/10 transition-colors">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <div className="w-10 h-10 rounded-lg bg-white/10 flex items-center justify-center flex-shrink-0">
@@ -97,16 +79,14 @@ export default function GameHistoryView({ userEmail }) {
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold text-white truncate">{game.gameMode}</p>
                     <span className={`text-xs px-2 py-0.5 rounded-full flex items-center gap-1 ${
-                      isWin 
-                        ? 'bg-green-500/20 text-green-400' 
-                        : 'bg-red-500/20 text-red-400'
+                      isWin ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
                     }`}>
                       {isWin ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
                       {game.result}
                     </span>
                   </div>
                   <p className="text-xs text-white/40 mt-1">
-                    ID: {game.id.slice(0, 8)}... • {new Date(game.timestamp).toLocaleDateString()}
+                    {new Date(game.timestamp).toLocaleDateString()} • {new Date(game.timestamp).toLocaleTimeString()}
                   </p>
                 </div>
               </div>
