@@ -151,8 +151,8 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
           style={{ background: playerColor + '33', border: `2px solid ${playerColor}66` }}>
           {player.isBot
             ? <Bot className="w-4 h-4" style={{ color: playerColor }} />
-            : player.avatar_url
-              ? <img src={player.avatar_url} alt="" className="w-full h-full object-cover" />
+            : safeAvatarUrl(player.avatar_url)
+              ? <img src={safeAvatarUrl(player.avatar_url)} alt="" className="w-full h-full object-cover" />
               : <User className="w-4 h-4" style={{ color: playerColor }} />}
         </div>
         <div className="flex-1 min-w-0">
