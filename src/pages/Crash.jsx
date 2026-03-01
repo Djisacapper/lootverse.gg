@@ -574,8 +574,8 @@ export default function Crash() {
             {liveBets.map((b, i) => (
               <div key={i} className="flex items-center gap-3 px-4 py-2.5">
                 <div className="w-7 h-7 rounded-full bg-violet-500/20 overflow-hidden flex items-center justify-center text-xs font-bold text-violet-300 flex-shrink-0">
-                  {b.avatar_url
-                    ? <img src={b.avatar_url} alt="" className="w-full h-full object-cover" />
+                  {safeAvatarUrl(b.avatar_url)
+                    ? <img src={safeAvatarUrl(b.avatar_url)} alt="" className="w-full h-full object-cover" />
                     : (b.user_name?.[0]?.toUpperCase() || '?')}
                 </div>
                 <p className="text-sm text-white/70 flex-1 truncate">{b.user_name || 'Player'}</p>
