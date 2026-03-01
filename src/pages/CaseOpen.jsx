@@ -188,8 +188,8 @@ export default function CaseOpen() {
             className="glass rounded-2xl p-8 text-center border border-white/10"
           >
             <div className={`w-24 h-24 rounded-2xl bg-gradient-to-br ${getRarityColor(result.rarity)} flex items-center justify-center mx-auto mb-4 ${getRarityGlow(result.rarity)} shadow-2xl`}>
-              {result.image_urls?.[0] || result.image_url ? (
-                <img src={result.image_urls?.[0] || result.image_url} alt="" className="w-20 h-20 object-contain" />
+              {result.image ? (
+                <img src={result.image} alt="" className="w-20 h-20 object-contain" />
               ) : (
                 <Sparkles className="w-10 h-10 text-white" />
               )}
