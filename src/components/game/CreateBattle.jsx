@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, X, ChevronDown, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import CasePickerModal from './CasePickerModal';
