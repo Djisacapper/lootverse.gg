@@ -307,15 +307,15 @@ export default function Battles() {
   return (
     <div className="space-y-6 min-h-screen bg-gradient-to-br from-[#0a0805] via-[#1a1815] to-[#0d0c0a] -mx-4 md:-mx-5 lg:-mx-6 px-4 md:px-5 lg:px-6 py-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <h1 className="text-3xl font-bold text-white flex items-center gap-2">
-          <Swords className="w-7 h-7" /> Battles
-        </h1>
+         <h1 className="text-3xl font-bold text-[#00d9ff] flex items-center gap-2">
+           <Swords className="w-7 h-7 text-[#ff006e]" /> Battles
+         </h1>
         <div className="flex items-center gap-3">
           <div className="relative">
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="appearance-none bg-[#1a1a2e] border border-white/10 text-white text-sm px-3 py-2 rounded-lg pl-3 pr-8 hover:border-white/20 transition-all [&_option]:bg-[#1a1a2e] [&_option]:text-white"
+              className="appearance-none bg-[#1a1a2e] border border-[#00d9ff]/20 text-[#00d9ff] text-sm px-3 py-2 rounded-lg pl-3 pr-8 hover:border-[#00d9ff]/40 transition-all [&_option]:bg-[#1a1a2e] [&_option]:text-[#00d9ff]"
             >
               <option value="recent">Sort By: Recent</option>
               <option value="price_desc">Sort By: Price Descending</option>
@@ -325,7 +325,7 @@ export default function Battles() {
           </div>
           <Button
             onClick={() => setView('create')}
-            className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 rounded-lg text-white font-semibold"
+            className="bg-gradient-to-r from-[#00d9ff] to-[#9d4edd] hover:from-[#00d9ff]/90 hover:to-[#9d4edd]/90 rounded-lg text-[#0a0a15] font-semibold"
           >
             <Plus className="w-4 h-4 mr-2" /> Create Battle
           </Button>
@@ -333,12 +333,12 @@ export default function Battles() {
       </div>
 
       {/* Open Battles List */}
-      {waitingBattles.length === 0 ? (
-        <div className="text-center py-16 glass rounded-2xl">
-          <Swords className="w-12 h-12 text-white/10 mx-auto mb-3" />
-          <p className="text-white/30">No open battles right now</p>
-          <p className="text-white/20 text-xs mt-1">Create one to get started</p>
-        </div>
+       {waitingBattles.length === 0 ? (
+         <div className="text-center py-16 glass rounded-2xl">
+           <Swords className="w-12 h-12 text-[#00d9ff]/20 mx-auto mb-3" />
+           <p className="text-[#00d9ff]/50">No open battles right now</p>
+           <p className="text-[#00d9ff]/30 text-xs mt-1">Create one to get started</p>
+         </div>
       ) : (
         <div className="space-y-3">
           {sortedWaitingBattles.map((b) => {
@@ -348,7 +348,7 @@ export default function Battles() {
             const isLive = b.status === 'in_progress';
             
             return (
-              <div key={b.id} className="glass border border-white/5 hover:border-white/10 rounded-2xl p-4 transition-all">
+              <div key={b.id} className="glass border border-[#00d9ff]/10 hover:border-[#00d9ff]/30 rounded-2xl p-4 transition-all">
                 <div className="flex items-center justify-between gap-4">
                   {/* Left: Rounds & Mode */}
                   <div className="flex items-center gap-3 min-w-fit">
@@ -401,7 +401,7 @@ export default function Battles() {
                       <Button
                         onClick={() => handleWatch(b)}
                         size="sm"
-                        className="bg-white/10 hover:bg-white/20 text-white rounded-lg min-w-max"
+                        className="bg-[#00d9ff]/10 hover:bg-[#00d9ff]/20 text-[#00d9ff] rounded-lg min-w-max"
                       >
                         <Eye className="w-3.5 h-3.5 mr-1.5" /> Watch
                       </Button>
@@ -410,7 +410,7 @@ export default function Battles() {
                         onClick={() => handleJoin(b)}
                         disabled={b.entry_cost > balance}
                         size="sm"
-                        className="bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white rounded-lg min-w-max"
+                        className="bg-gradient-to-r from-[#00d9ff] to-[#9d4edd] hover:from-[#00d9ff]/90 hover:to-[#9d4edd]/90 text-[#0a0a15] rounded-lg min-w-max"
                       >
                         Join Battle
                       </Button>

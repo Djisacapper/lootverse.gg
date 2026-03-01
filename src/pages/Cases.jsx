@@ -35,24 +35,24 @@ export default function Cases() {
     <div className="space-y-5 min-h-screen bg-gradient-to-br from-[#0a0805] via-[#1a1815] to-[#0d0c0a] -mx-4 md:-mx-5 lg:-mx-6 px-4 md:px-5 lg:px-6 py-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Box className="w-6 h-6 text-violet-400" />
-          <h1 className="text-2xl font-bold text-white">Unboxing</h1>
+          <Box className="w-6 h-6 text-[#ff006e]" />
+          <h1 className="text-2xl font-bold text-[#00d9ff]">Unboxing</h1>
         </div>
       </div>
 
       {/* Search and Sort */}
       <div className="flex gap-3">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-          <Input
-            placeholder="Search for cases"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10 bg-white/[0.03] border-white/[0.08] text-white placeholder:text-white/30 rounded-lg h-10"
-          />
+           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#00d9ff]/40" />
+           <Input
+             placeholder="Search for cases"
+             value={search}
+             onChange={(e) => setSearch(e.target.value)}
+             className="pl-10 bg-[#1a1a2e]/40 border-[#00d9ff]/20 text-[#00d9ff] placeholder:text-[#00d9ff]/30 rounded-lg h-10"
+           />
         </div>
         <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-[180px] bg-white/[0.03] border-white/[0.08] text-white rounded-lg h-10">
+          <SelectTrigger className="w-[180px] bg-[#1a1a2e]/40 border-[#00d9ff]/20 text-[#00d9ff] rounded-lg h-10">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -84,7 +84,7 @@ export default function Cases() {
               transition={{ delay: i * 0.02 }}
             >
               <Link to={createPageUrl('CaseOpen') + `?id=${c.id}`}>
-                <div className="relative bg-[#1a1b2e] border border-white/[0.06] rounded-xl p-4 group cursor-pointer transition-all hover:border-violet-500/30 hover:bg-[#1f2138]">
+                <div className="relative bg-[#1a1b2e] border border-[#00d9ff]/10 rounded-xl p-4 group cursor-pointer transition-all hover:border-[#ff006e]/50 hover:bg-[#1a1b2e]/80">
                   {/* Eye icon top-left */}
                   <div className="absolute top-3 left-3 w-5 h-5 rounded-full bg-white/5 flex items-center justify-center opacity-60">
                     <div className="w-2 h-2 rounded-full bg-white/40" />
@@ -95,19 +95,19 @@ export default function Cases() {
                     {c.image_url ? (
                       <img src={c.image_url} alt={c.name} className="w-full h-full object-contain drop-shadow-2xl" />
                     ) : (
-                      <Box className="w-16 h-16 text-violet-400" />
+                      <Box className="w-16 h-16 text-[#ff006e]" />
                     )}
                   </div>
-                  
+
                   {/* Case Name */}
-                  <h3 className="text-sm font-medium text-white text-center mb-2">{c.name}</h3>
+                  <h3 className="text-sm font-medium text-[#00d9ff] text-center mb-2">{c.name}</h3>
                   
                   {/* Price */}
                   <div className="flex items-center justify-center gap-1.5 mb-2">
-                    <div className="w-4 h-4 rounded-full bg-amber-500 flex items-center justify-center">
+                    <div className="w-4 h-4 rounded-full bg-[#ff006e] flex items-center justify-center">
                       <span className="text-[8px] font-bold text-white">$</span>
                     </div>
-                    <span className="text-sm font-bold text-white">{c.price?.toLocaleString()}</span>
+                    <span className="text-sm font-bold text-[#ff006e]">{c.price?.toLocaleString()}</span>
                   </div>
                   
                   {/* Progress bar */}
@@ -126,8 +126,8 @@ export default function Cases() {
 
       {!loading && filtered.length === 0 && (
         <div className="text-center py-16">
-          <Box className="w-16 h-16 text-white/10 mx-auto mb-4" />
-          <p className="text-white/40">No cases found</p>
+          <Box className="w-16 h-16 text-[#00d9ff]/20 mx-auto mb-4" />
+          <p className="text-[#00d9ff]/40">No cases found</p>
         </div>
       )}
     </div>

@@ -420,13 +420,13 @@ export default function Coinflip() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black text-white tracking-tight">Coinflip</h1>
-          <p className="text-white/35 text-sm mt-0.5">Pick a side · Winner takes all</p>
-        </div>
-        <Button
-          onClick={() => setShowCreate(v => !v)}
-          className="h-9 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 font-bold text-sm"
-        >
+            <h1 className="text-2xl font-black text-[#00d9ff] tracking-tight">Coinflip</h1>
+            <p className="text-[#00d9ff]/50 text-sm mt-0.5">Pick a side · Winner takes all</p>
+          </div>
+          <Button
+            onClick={() => setShowCreate(v => !v)}
+            className="h-9 px-4 rounded-xl bg-gradient-to-r from-[#00d9ff] to-[#ff006e] hover:from-[#00d9ff]/90 hover:to-[#ff006e]/90 font-bold text-sm text-[#0a0a15]"
+          >
           <Plus className="w-4 h-4 mr-1.5" /> Create
         </Button>
       </div>
