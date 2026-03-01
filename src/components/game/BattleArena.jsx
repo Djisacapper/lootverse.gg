@@ -1,8 +1,7 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Bot, User, ArrowLeft, Crown, Zap, Gem, CheckCircle2, Loader2, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { getRarityColor, getRarityBorder, rollItem } from './useWallet';
-import { useAudio } from './useAudio';
 import { motion, AnimatePresence } from 'framer-motion';
 import JackpotWheel from './JackpotWheel';
 import { usePlayerAvatars, safeAvatarUrl } from './usePlayerAvatars';
@@ -68,7 +67,7 @@ function VerticalSpinner({ items, winnerItem, onDone, fast }) {
     const spinMs = fast ? 1500 : 3100;
     const t = setTimeout(onDone, spinMs);
     return () => clearTimeout(t);
-  }, [fast, onDone]);
+  }, []);
 
   return (
     <div className="relative overflow-hidden rounded-xl border border-white/10 bg-[#08080f]" style={{ height: VISIBLE_H }}>
@@ -316,7 +315,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
   };
 
   // Called when a player's NORMAL spin animation ends
-  const handleNormalSpinDone = useCallback((pi) => {
+  const handleNormalSpinDone = (pi) => {
     const round = currentRoundRef.current;
     const rolled = allRolled.current[round];
 
@@ -331,13 +330,13 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
       // Normal finish for this player
       markPlayerRoundDone(pi, round);
     }
-  }, []);
+  };
 
   // Called when the magic spin animation ends
-  const handleMagicSpinDone = useCallback((pi) => {
+  const handleMagicSpinDone = (pi) => {
     const round = currentRoundRef.current;
     markPlayerRoundDone(pi, round);
-  }, []);
+  };
 
   // Marks one player as fully done for this round
   const markPlayerRoundDone = (pi, round) => {

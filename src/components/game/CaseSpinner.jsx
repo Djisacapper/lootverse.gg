@@ -31,6 +31,7 @@ export default function CaseSpinner({ items, result, spinning, onComplete }) {
     if (spinning && spinItems.length > 0 && containerRef.current) {
       const containerWidth = containerRef.current.offsetWidth;
       const targetOffset = (WINNER_INDEX * ITEM_WIDTH) - (containerWidth / 2) + (ITEM_WIDTH / 2);
+      // Add small random offset for realism
       const jitter = (Math.random() - 0.5) * 40;
       setOffset(targetOffset + jitter);
 
@@ -41,7 +42,7 @@ export default function CaseSpinner({ items, result, spinning, onComplete }) {
     } else {
       setOffset(0);
     }
-  }, [spinning, spinItems, onComplete]);
+  }, [spinning, spinItems]);
 
   if (spinItems.length === 0) {
     return <div className="h-32 glass rounded-2xl animate-pulse" />;
