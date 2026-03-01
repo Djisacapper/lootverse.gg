@@ -189,7 +189,7 @@ export default function LiveChat({ onClose }) {
                   animate={{ opacity: 1, y: 0 }}
                   className="flex items-start gap-2"
                 >
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 overflow-hidden flex items-center justify-center text-[9px] font-bold text-white flex-shrink-0 mt-0.5">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#d4af37] to-[#b8860b] overflow-hidden flex items-center justify-center text-[9px] font-bold text-[#0a0805] flex-shrink-0 mt-0.5">
                     {msg.avatar_url
                       ? <img src={msg.avatar_url} alt="" className="w-full h-full object-cover" />
                       : msg.user[0]?.toUpperCase()}
