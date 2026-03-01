@@ -44,6 +44,7 @@ export default function Crash() {
     try { return JSON.parse(localStorage.getItem('crash_history') || '[]'); } catch { return []; }
   });
   const [liveBets, setLiveBets] = useState([]);
+  const [enrichedBets, setEnrichedBets] = useState([]);
   const [roundId, setRoundId] = useState(null);       // current round id shown in UI
 
   // Bet UI state
