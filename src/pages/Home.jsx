@@ -207,7 +207,7 @@ export default function Home() {
                     >
                       {card.name}
                     </div>
-                    <p className="text-white/40 text-[10px] leading-tight">{card.desc}</p>
+                    <p className="text-[#b0a89f] text-[10px] leading-tight">{card.desc}</p>
                   </div>
                 </div>
               </Link>
