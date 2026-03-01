@@ -279,8 +279,8 @@ export default function Layout({ children, currentPageName }) {
         </main>
 
         {/* Right Chat Panel - desktop only */}
-        <aside className="hidden lg:flex flex-col w-[260px] flex-shrink-0 h-[calc(100vh-56px)] sticky top-14 bg-gradient-to-b from-[#1a1815]/50 to-[#0f0e0a]/50 border-l border-[#d4af37]/10">
-          <LiveChat onClose={null} />
+        <aside className={`hidden lg:flex flex-col w-[260px] flex-shrink-0 h-[calc(100vh-56px)] sticky top-14 bg-gradient-to-b from-[#1a1a2e]/50 to-[#0d0d1a]/50 border-l border-[#00d9ff]/10 smooth-transition ${!chatOpen ? 'hidden' : ''}`}>
+          <LiveChat onClose={() => setChatOpen(false)} />
         </aside>
       </div>
     </div>
