@@ -82,7 +82,7 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto scrollbar-hide py-3">
-        {NAV_SECTIONS.map((section) => (
+        {getNavSections(user?.role).map((section) => (
           <div key={section.label} className="mb-4">
             {!collapsed && (
               <p className="text-[10px] font-semibold text-white/25 tracking-[0.15em] uppercase px-4 mb-1.5">{section.label}</p>
