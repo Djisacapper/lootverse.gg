@@ -54,7 +54,7 @@ const MOCK_MESSAGES = [
   { id: 7, user: 'StarForge', level: 5, text: 'just lost everything on upgrade rip', time: '8m' },
 ];
 
-export default function LiveChat() {
+export default function LiveChat({ onClose }) {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const [user, setUser] = useState(null);
