@@ -574,7 +574,7 @@ export default function Crash() {
                     ? <img src={b.avatar_url} alt="" className="w-full h-full object-cover" />
                     : (b.user_name?.[0]?.toUpperCase() || '?')}
                 </div>
-                <p className="text-sm text-white/70 flex-1 truncate">{b.user_name}</p>
+                <p className="text-sm text-white/70 flex-1 truncate">{b.user_name || 'Player'}</p>
                 <p className="text-xs text-amber-400 font-bold">{b.amount?.toLocaleString()}</p>
                 {b.cashed_out_at ? (
                   <span className="text-xs font-bold text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full">
