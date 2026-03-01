@@ -118,7 +118,7 @@ export default function Layout({ children, currentPageName }) {
   );
 
   return (
-    <div className="min-h-screen bg-[#0e0e18] flex text-white">
+    <div className="min-h-screen bg-gradient-to-br from-[#0a0805] via-[#1a1815] to-[#0d0c0a] flex text-[#fafaf8]">
       {/* Sidebar - Desktop */}
       <aside
         className={`hidden lg:flex flex-col bg-gradient-to-b from-[#1a1815] to-[#0f0e0a] border-r border-[#d4af37]/10 fixed h-full z-40 transition-all duration-300
