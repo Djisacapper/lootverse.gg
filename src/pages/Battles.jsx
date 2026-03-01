@@ -105,7 +105,10 @@ export default function Battles() {
     // Add player to first empty slot
     const updatedPlayers = [...(battle.players || [])];
     const emptySlotIdx = updatedPlayers.findIndex(p => !p.email || p.email === '');
-    const joinerSlot = { email: user.email, name: user.username || user.full_name || 'Player', avatar_url: user.avatar_url || '', isBot: false, total_value: 0, items_won: [] };
+    // Fetch the freshest user data to ensure avatar_url is current
+    let latestUser = user;
+    try { latestUser = await base44.auth.me() || user; } catch {}
+    const joinerSlot = { email: latestUser.email, name: latestUser.username || latestUser.full_name || 'Player', avatar_url: latestUser.avatar_url || null, isBot: false, total_value: 0, items_won: [] };
     if (emptySlotIdx >= 0) {
       updatedPlayers[emptySlotIdx] = joinerSlot;
     } else {
