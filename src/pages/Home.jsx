@@ -190,8 +190,8 @@ export default function Home() {
             >
               <Link to={createPageUrl(card.page)}>
                 <div
-                  className="relative overflow-hidden rounded-xl border border-white/[0.07] h-32 flex items-end p-4 group cursor-pointer transition-all hover:border-white/15 hover:scale-[1.02]"
-                  style={{ background: `linear-gradient(135deg, ${card.accent}22 0%, #0d0d20 70%)` }}
+                  className="relative overflow-hidden rounded-xl border border-[#d4af37]/15 h-32 flex items-end p-4 group cursor-pointer smooth-transition hover:border-[#d4af37]/30 hover:scale-[1.02]"
+                  style={{ background: `linear-gradient(135deg, ${card.accent}15 0%, #0a0805 70%)` }}
                 >
                   <div
                     className="absolute top-0 right-0 w-28 h-28 rounded-full blur-3xl opacity-25"
