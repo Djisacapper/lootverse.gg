@@ -1,15 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { getRarityColor, getRarityBorder, getRarityGlow } from './useWallet';
-import { useAudio } from './useAudio';
 import { Sparkles } from 'lucide-react';
 
 export default function CaseSpinner({ items, result, spinning, onComplete }) {
   const [spinItems, setSpinItems] = useState([]);
   const [offset, setOffset] = useState(0);
   const containerRef = useRef(null);
-  const { playRollingSound, stopRollingSound, playDingSound } = useAudio();
-  const rollingStopRef = useRef(null);
   const ITEM_WIDTH = 120;
   const VISIBLE_ITEMS = 40;
   const WINNER_INDEX = 33;
@@ -34,33 +31,17 @@ export default function CaseSpinner({ items, result, spinning, onComplete }) {
     if (spinning && spinItems.length > 0 && containerRef.current) {
       const containerWidth = containerRef.current.offsetWidth;
       const targetOffset = (WINNER_INDEX * ITEM_WIDTH) - (containerWidth / 2) + (ITEM_WIDTH / 2);
-      // Add small random offset for realism
       const jitter = (Math.random() - 0.5) * 40;
       setOffset(targetOffset + jitter);
 
-      // Start rolling sound
-      rollingStopRef.current = playRollingSound();
-
       const timer = setTimeout(() => {
-        // Stop rolling sound and play ding
-        if (rollingStopRef.current) {
-          rollingStopRef.current();
-          rollingStopRef.current = null;
-        }
-        playDingSound();
         if (onComplete) onComplete();
       }, 4200);
-      return () => {
-        clearTimeout(timer);
-        if (rollingStopRef.current) {
-          rollingStopRef.current();
-          rollingStopRef.current = null;
-        }
-      };
+      return () => clearTimeout(timer);
     } else {
       setOffset(0);
     }
-  }, [spinning, spinItems, playRollingSound, playDingSound, onComplete]);
+  }, [spinning, spinItems, onComplete]);
 
   if (spinItems.length === 0) {
     return <div className="h-32 glass rounded-2xl animate-pulse" />;
