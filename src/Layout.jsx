@@ -41,6 +41,7 @@ export default function Layout({ children, currentPageName }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(true);
 
   const reloadUser = () => {
     base44.auth.me().then(setUser).catch(() => {});
