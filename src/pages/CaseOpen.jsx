@@ -244,12 +244,12 @@ export default function CaseOpen() {
           {(caseData.items || []).map((item, i) => (
             <div key={i} className={`glass rounded-xl p-4 text-center border ${item.name === result?.name && showResult ? 'border-amber-400/40' : 'border-white/5'}`}>
               <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${getRarityColor(item.rarity)} flex items-center justify-center mx-auto mb-2`}>
-                {item.image_urls?.[0] || item.image_url ? (
-                  <img src={item.image_urls?.[0] || item.image_url} alt="" className="w-10 h-10 object-contain" />
-                ) : (
-                  <Sparkles className="w-5 h-5 text-white" />
-                )}
-              </div>
+                 {item.image ? (
+                   <img src={item.image} alt="" className="w-10 h-10 object-contain" />
+                 ) : (
+                   <Sparkles className="w-5 h-5 text-white" />
+                 )}
+               </div>
               <p className="text-xs font-medium text-white/80 mb-1">{item.name}</p>
               <p className="text-[10px] text-amber-400 font-semibold">{item.value?.toLocaleString()} coins</p>
               <p className="text-[10px] text-white/20 mt-1">{item.drop_rate}% chance</p>
