@@ -194,15 +194,15 @@ export default function Layout({ children, currentPageName }) {
       </div>
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-[#0b0b15] border-b border-white/[0.06] flex items-center px-4 gap-3">
-        <button onClick={() => setMobileOpen(!mobileOpen)} className="text-white/50 hover:text-white">
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-gradient-to-r from-[#1a1815] to-[#242220] border-b border-[#d4af37]/10 flex items-center px-4 gap-3">
+        <button onClick={() => setMobileOpen(!mobileOpen)} className="text-[#b0a89f] hover:text-[#d4af37] smooth-transition">
           {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
         </button>
-        <Link to={createPageUrl('Home')} className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center">
-            <Box className="w-3.5 h-3.5 text-white" />
+        <Link to={createPageUrl('Home')} className="flex items-center gap-2 group">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center glow-gold group-hover:glow-gold-lg smooth-transition">
+            <Box className="w-3.5 h-3.5 text-[#0a0805]" />
           </div>
-          <span className="font-bold text-white text-sm">LOOTVERSE</span>
+          <span className="font-bold text-[#d4af37] text-sm">LOOTVERSE</span>
         </Link>
         <div className="flex-1" />
         {user && (
