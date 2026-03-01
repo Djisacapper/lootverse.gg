@@ -189,26 +189,26 @@ export default function LiveChat({ onClose }) {
                   animate={{ opacity: 1, y: 0 }}
                   className="flex items-start gap-2"
                 >
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#d4af37] to-[#b8860b] overflow-hidden flex items-center justify-center text-[9px] font-bold text-[#0a0805] flex-shrink-0 mt-0.5">
+                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#00d9ff] to-[#9d4edd] overflow-hidden flex items-center justify-center text-[9px] font-bold text-[#0a0a15] flex-shrink-0 mt-0.5">
                     {msg.avatar_url
                       ? <img src={msg.avatar_url} alt="" className="w-full h-full object-cover" />
                       : msg.user[0]?.toUpperCase()}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className="text-[10px] font-bold bg-[#d4af37]/20 text-[#f4c430] rounded px-1">{msg.level}</span>
+                      <span className="text-[10px] font-bold bg-[#00d9ff]/20 text-[#00d9ff] rounded px-1">{msg.level}</span>
                       <button
                         onClick={() => setSelectedUser(msg)}
-                        className={`text-[11px] font-semibold hover:text-[#f4c430] smooth-transition ${msg.isMe ? 'text-[#d4af37]' : 'text-[#b0a89f]'}`}
+                        className={`text-[11px] font-semibold hover:text-[#ff006e] smooth-transition ${msg.isMe ? 'text-[#00d9ff]' : 'text-[#a0a0b0]'}`}
                       >
                         {msg.user}
                       </button>
-                      {userRoles[msg.user] === 'admin' && <Crown className="w-3 h-3 text-[#f4c430]" title="Admin" />}
-                      {userRoles[msg.user] === 'owner' && <Crown className="w-3.5 h-3.5 text-[#d4af37]" title="Owner" />}
-                      {userRoles[msg.user] === 'mod' && <Shield className="w-3 h-3 text-[#b8860b]" title="Moderator" />}
-                      <span className="text-[9px] text-[#b0a89f]/40 ml-auto">{msg.time}</span>
+                      {userRoles[msg.user] === 'admin' && <Crown className="w-3 h-3 text-[#ff006e]" title="Admin" />}
+                      {userRoles[msg.user] === 'owner' && <Crown className="w-3.5 h-3.5 text-[#00d9ff]" title="Owner" />}
+                      {userRoles[msg.user] === 'mod' && <Shield className="w-3 h-3 text-[#9d4edd]" title="Moderator" />}
+                      <span className="text-[9px] text-[#a0a0b0]/40 ml-auto">{msg.time}</span>
                     </div>
-                    <p className="text-[12px] text-[#b0a89f] leading-relaxed break-words">{msg.text}</p>
+                    <p className="text-[12px] text-[#a0a0b0] leading-relaxed break-words">{msg.text}</p>
                   </div>
                 </motion.div>
               ))}
