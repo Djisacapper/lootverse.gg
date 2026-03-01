@@ -36,6 +36,9 @@ export default function CaseOpen() {
       setLoading(true);
       base44.entities.CaseTemplate.list().then((all) => {
         const found = all.find(c => c.id === caseId);
+        if (found) {
+          found.items = normalizeItems(found.items);
+        }
         setCaseData(found || null);
         setLoading(false);
       }).catch(() => {
