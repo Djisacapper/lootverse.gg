@@ -165,15 +165,15 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Balance */}
         {user && (
-          <div className="flex items-center gap-1.5 bg-white/[0.04] border border-white/[0.07] rounded-lg pl-2 pr-1 py-1">
-            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center">
-              <span className="text-[9px] font-bold text-white">$</span>
+          <div className="flex items-center gap-1.5 bg-[#1a1815] border border-[#d4af37]/15 rounded-lg pl-2 pr-1 py-1 smooth-transition hover:border-[#d4af37]/30">
+            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center">
+              <span className="text-[9px] font-bold text-[#0a0805]">$</span>
             </div>
-            <span className="text-sm font-bold text-white">{(user.balance || 0).toLocaleString()}</span>
+            <span className="text-sm font-bold text-[#d4af37]">{(user.balance || 0).toLocaleString()}</span>
             <Link to={createPageUrl('Deposit')}>
-              <div className="ml-1 bg-green-500 hover:bg-green-400 transition-colors rounded-md px-2 py-1 flex items-center gap-1">
-                <Wallet className="w-3 h-3 text-white" />
-                <span className="text-[11px] font-semibold text-white">Wallet</span>
+              <div className="ml-1 bg-[#d4af37]/20 hover:bg-[#d4af37]/30 smooth-transition rounded-md px-2 py-1 flex items-center gap-1 border border-[#d4af37]/30">
+                <Wallet className="w-3 h-3 text-[#d4af37]" />
+                <span className="text-[11px] font-semibold text-[#d4af37]">Wallet</span>
               </div>
             </Link>
           </div>
