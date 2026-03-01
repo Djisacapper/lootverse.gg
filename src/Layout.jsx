@@ -236,7 +236,7 @@ export default function Layout({ children, currentPageName }) {
           <div className="absolute inset-0 bg-black/70" onClick={() => setMobileOpen(false)} />
           <aside className="absolute left-0 top-0 bottom-0 w-64 bg-[#0b0b15] border-r border-white/[0.06] pt-14 flex flex-col overflow-y-auto">
             <nav className="flex-1 py-3">
-              {NAV_SECTIONS.map((section) => (
+              {getNavSections(user?.role).map((section) => (
                 <div key={section.label} className="mb-4">
                   <p className="text-[10px] font-semibold text-white/25 tracking-[0.15em] uppercase px-4 mb-1.5">{section.label}</p>
                   {section.items.map((item) => {
