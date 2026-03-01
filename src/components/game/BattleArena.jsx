@@ -146,9 +146,13 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
     >
       {/* Header */}
       <div className="flex items-center gap-2 px-3 pt-3 pb-1 flex-shrink-0">
-        <div className="w-8 h-8 rounded-full flex-shrink-0 flex items-center justify-center text-xs font-bold"
-          style={{ background: playerColor + '33', color: playerColor, border: `2px solid ${playerColor}66` }}>
-          {player.isBot ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
+        <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold"
+          style={{ background: playerColor + '33', border: `2px solid ${playerColor}66` }}>
+          {player.isBot
+            ? <Bot className="w-4 h-4" style={{ color: playerColor }} />
+            : player.avatar_url
+              ? <img src={player.avatar_url} alt="" className="w-full h-full object-cover" />
+              : <User className="w-4 h-4" style={{ color: playerColor }} />}
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-white truncate">{player.name}</p>
@@ -538,9 +542,13 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
                         {slot.filled ? (
                           /* ── Filled slot ── */
                           <div className="flex flex-col items-center justify-center flex-1 gap-2 px-2 py-4">
-                            <div className="w-11 h-11 rounded-full flex items-center justify-center text-base font-bold flex-shrink-0"
+                            <div className="w-11 h-11 rounded-full overflow-hidden flex items-center justify-center text-base font-bold flex-shrink-0"
                               style={{ background: color + '33', border: `2px solid ${color}88` }}>
-                              {slot.player.isBot ? <Bot className="w-5 h-5" style={{ color }} /> : <User className="w-5 h-5" style={{ color }} />}
+                              {slot.player.isBot
+                                ? <Bot className="w-5 h-5" style={{ color }} />
+                                : slot.player.avatar_url
+                                  ? <img src={slot.player.avatar_url} alt="" className="w-full h-full object-cover" />
+                                  : <User className="w-5 h-5" style={{ color }} />}
                             </div>
                             <div className="text-center w-full px-1">
                               <p className="text-sm font-bold text-white truncate">{slot.player.name}</p>
@@ -694,9 +702,13 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
                     {mi.map(pi => (
                       <div key={pi} className="flex flex-col items-center gap-1">
                         {isW && <span className="text-2xl">{isGroup ? '🎁' : '👑'}</span>}
-                        <div className="w-14 h-14 rounded-full flex items-center justify-center text-xl font-bold"
+                        <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center text-xl font-bold"
                           style={{ background: TEAM_COLORS[ti] + '33', border: `2px solid ${TEAM_COLORS[ti]}88` }}>
-                          {players[pi]?.isBot ? '🤖' : players[pi]?.name?.[0]?.toUpperCase() || '?'}
+                          {players[pi]?.isBot
+                            ? <span>🤖</span>
+                            : players[pi]?.avatar_url
+                              ? <img src={players[pi].avatar_url} alt="" className="w-full h-full object-cover" />
+                              : <span>{players[pi]?.name?.[0]?.toUpperCase() || '?'}</span>}
                         </div>
                         <p className="text-xs text-white/60">{players[pi]?.name}</p>
                         <p className="text-sm font-bold text-amber-400">{playerTotals[pi]?.toLocaleString()}</p>
@@ -732,9 +744,13 @@ export default function BattleArena({ battle, selectedCases, players, teams, mod
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.1 }}
                     className="flex flex-col items-center gap-2">
-                    <div className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-black"
+                    <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center text-lg font-black"
                       style={{ background: color + '33', border: `3px solid ${color}`, color }}>
-                      {players[pi]?.isBot ? '🤖' : players[pi]?.name?.[0]?.toUpperCase() || '?'}
+                      {players[pi]?.isBot
+                        ? <span>🤖</span>
+                        : players[pi]?.avatar_url
+                          ? <img src={players[pi].avatar_url} alt="" className="w-full h-full object-cover" />
+                          : <span>{players[pi]?.name?.[0]?.toUpperCase() || '?'}</span>}
                     </div>
                     <span className="text-xs font-bold text-white/80">{players[pi]?.name}</span>
                     <div className="w-10 h-2 rounded-full" style={{ background: color }} />
