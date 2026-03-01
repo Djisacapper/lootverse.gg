@@ -203,12 +203,12 @@ export default function LiveChat({ onClose }) {
                       >
                         {msg.user}
                       </button>
-                      {userRoles[msg.user] === 'admin' && <Crown className="w-3 h-3 text-amber-400" title="Admin" />}
-                      {userRoles[msg.user] === 'owner' && <Crown className="w-3.5 h-3.5 text-yellow-500" title="Owner" />}
-                      {userRoles[msg.user] === 'mod' && <Shield className="w-3 h-3 text-blue-400" title="Moderator" />}
-                      <span className="text-[9px] text-white/20 ml-auto">{msg.time}</span>
+                      {userRoles[msg.user] === 'admin' && <Crown className="w-3 h-3 text-[#f4c430]" title="Admin" />}
+                      {userRoles[msg.user] === 'owner' && <Crown className="w-3.5 h-3.5 text-[#d4af37]" title="Owner" />}
+                      {userRoles[msg.user] === 'mod' && <Shield className="w-3 h-3 text-[#b8860b]" title="Moderator" />}
+                      <span className="text-[9px] text-[#b0a89f]/40 ml-auto">{msg.time}</span>
                     </div>
-                    <p className="text-[12px] text-white/60 leading-relaxed break-words">{msg.text}</p>
+                    <p className="text-[12px] text-[#b0a89f] leading-relaxed break-words">{msg.text}</p>
                   </div>
                 </motion.div>
               ))}
