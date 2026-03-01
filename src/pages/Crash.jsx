@@ -591,15 +591,15 @@ export default function Crash() {
       </div>
 
       {/* Live Bets */}
-      {liveBets.length > 0 && (
+      {enrichedBets.length > 0 && (
         <div className="glass rounded-2xl border border-white/5 overflow-hidden">
           <div className="flex items-center gap-2 px-4 py-3 border-b border-white/5">
             <Users className="w-4 h-4 text-white/40" />
             <p className="text-sm font-semibold text-white/60">Live Bets</p>
-            <span className="ml-auto text-xs text-white/30">{liveBets.length} player{liveBets.length !== 1 ? 's' : ''}</span>
+            <span className="ml-auto text-xs text-white/30">{enrichedBets.length} player{enrichedBets.length !== 1 ? 's' : ''}</span>
           </div>
           <div className="divide-y divide-white/[0.03] max-h-48 overflow-y-auto">
-            {liveBets.map((b, i) => (
+            {enrichedBets.map((b, i) => (
               <div key={i} className="flex items-center gap-3 px-4 py-2.5">
                 <div className="w-7 h-7 rounded-full bg-violet-500/20 overflow-hidden flex items-center justify-center text-xs font-bold text-violet-300 flex-shrink-0">
                   {safeAvatarUrl(b.avatar_url)
