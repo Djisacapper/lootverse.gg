@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { rollItem, getRarityColor, getRarityGlow } from '../components/game/useWallet';
 import CaseSpinner from '../components/game/CaseSpinner';
+import { normalizeItems } from '../components/game/normalizeItem';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Box, ArrowLeft, RefreshCw, Sparkles, Percent } from 'lucide-react';
 import { Button } from '@/components/ui/button';
