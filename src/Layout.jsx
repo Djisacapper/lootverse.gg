@@ -268,14 +268,14 @@ export default function Layout({ children, currentPageName }) {
 
       {/* Main Content + Chat Panel */}
       <div
-        className={`flex flex-1 min-h-screen pt-14 smooth-transition
+        className={`flex flex-1 min-h-screen pt-14 smooth-transition relative
           ${sidebarCollapsed ? 'lg:ml-[60px]' : 'lg:ml-[220px]'}`}
       >
         {/* Chat Toggle Button - when chat is closed */}
         {!chatOpen && (
           <button
             onClick={() => setChatOpen(true)}
-            className="hidden lg:flex absolute -right-3 top-[72px] z-50 w-6 h-6 rounded-full bg-[#242456] border border-[#00d9ff]/20 flex items-center justify-center text-[#00d9ff]/40 hover:text-[#00d9ff] smooth-transition"
+            className="hidden lg:flex absolute -right-3 top-14 z-50 w-6 h-6 rounded-full bg-[#242456] border border-[#00d9ff]/20 items-center justify-center text-[#00d9ff]/40 hover:text-[#00d9ff] smooth-transition"
             title="Open chat"
           >
             <ChevronLeft className="w-3 h-3" />
