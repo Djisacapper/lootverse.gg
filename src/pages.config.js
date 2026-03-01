@@ -47,6 +47,7 @@
  *
  * The mainPage value must match a key in the PAGES object exactly.
  */
+import Admin from './pages/Admin';
 import Battles from './pages/Battles';
 import CaseOpen from './pages/CaseOpen';
 import Cases from './pages/Cases';
@@ -59,11 +60,11 @@ import Leaderboard from './pages/Leaderboard';
 import Referrals from './pages/Referrals';
 import Rewards from './pages/Rewards';
 import Upgrade from './pages/Upgrade';
-import Admin from './pages/Admin';
 import __Layout from './Layout.jsx';
 
 
 export const PAGES = {
+    "Admin": Admin,
     "Battles": Battles,
     "CaseOpen": CaseOpen,
     "Cases": Cases,
@@ -76,7 +77,6 @@ export const PAGES = {
     "Referrals": Referrals,
     "Rewards": Rewards,
     "Upgrade": Upgrade,
-    "Admin": Admin,
 }
 
 export const pagesConfig = {
