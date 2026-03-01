@@ -217,16 +217,16 @@ export default function LiveChat({ onClose }) {
           </div>
 
           {/* Input */}
-          <form onSubmit={handleSend} className="p-3 border-t border-[#d4af37]/10">
-            <div className="flex items-center gap-2 bg-[#1a1815] rounded-lg border border-[#d4af37]/15 px-3 py-2 smooth-transition hover:border-[#d4af37]/30">
+          <form onSubmit={handleSend} className="p-3 border-t border-[#00d9ff]/10">
+            <div className="flex items-center gap-2 bg-[#1a1a2e] rounded-lg border border-[#00d9ff]/15 px-3 py-2 smooth-transition hover:border-[#00d9ff]/30">
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 placeholder="Enter message..."
-                className="flex-1 bg-transparent text-xs text-[#fafaf8] placeholder:text-[#b0a89f]/40 outline-none"
+                className="flex-1 bg-transparent text-xs text-[#fafafa] placeholder:text-[#a0a0b0]/40 outline-none"
               />
               <EmojiPicker onEmojiClick={(emoji) => setInput(input + emoji)} />
-              <button type="submit" className="text-[#b0a89f] hover:text-[#d4af37] smooth-transition">
+              <button type="submit" className="text-[#a0a0b0] hover:text-[#00d9ff] smooth-transition">
                 <Send className="w-3.5 h-3.5" />
               </button>
             </div>
