@@ -21,8 +21,14 @@ Deno.serve(async (req) => {
     const coinflips = await base44.asServiceRole.entities.CoinflipGame.filter({}, '', 1000);
     const userCoinflips = coinflips.filter(c => c.creator_email === userEmail || c.opponent_email === userEmail);
 
+    // Fetch the actual user record to get their real ID
+    const users = await base44.asServiceRole.entities.User.filter({ email: userEmail }, '', 1);
+    const userRecord = users[0] || null;
+
     // Calculate stats
     let stats = {
+      id: userRecord?.id || null,
+      email: userEmail,
       cases: 0,
       battles: 0,
       coinflip: 0,
