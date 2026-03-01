@@ -25,7 +25,7 @@ export default function Admin() {
   const [itemRarity, setItemRarity] = useState('common');
   const [itemValue, setItemValue] = useState('');
   const [itemDropRate, setItemDropRate] = useState('');
-  const [itemImage, setItemImage] = useState(null);
+  const [itemImages, setItemImages] = useState([]);
 
   useEffect(() => {
     checkAdminAccess();
@@ -123,6 +123,15 @@ export default function Admin() {
     ]);
   };
 
+  const handleAddItemImage = (file) => {
+    if (!file) return;
+    setItemImages([...itemImages, file]);
+  };
+
+  const handleRemoveItemImage = (index) => {
+    setItemImages(itemImages.filter((_, i) => i !== index));
+  };
+
   const handleAddItem = () => {
     if (!itemName || !itemValue || !itemDropRate) return;
     setItems([...items, {
@@ -130,12 +139,12 @@ export default function Admin() {
       rarity: itemRarity,
       value: parseInt(itemValue),
       drop_rate: parseInt(itemDropRate),
-      image_file: itemImage
+      image_files: itemImages
     }]);
     setItemName('');
     setItemValue('');
     setItemDropRate('');
-    setItemImage(null);
+    setItemImages([]);
   };
 
   const handleRemoveItem = (index) => {
@@ -158,17 +167,21 @@ export default function Admin() {
 
       // Upload item images and build final items array
       const itemsWithImages = await Promise.all(items.map(async (item) => {
-        let itemImageUrl = null;
-        if (item.image_file) {
-          const uploadRes = await base44.integrations.Core.UploadFile({ file: item.image_file });
-          itemImageUrl = uploadRes.file_url;
+        let imageUrls = [];
+        if (item.image_files && item.image_files.length > 0) {
+          imageUrls = await Promise.all(
+            item.image_files.map(async (file) => {
+              const uploadRes = await base44.integrations.Core.UploadFile({ file });
+              return uploadRes.file_url;
+            })
+          );
         }
         return {
           name: item.name,
           rarity: item.rarity,
           value: item.value,
           drop_rate: item.drop_rate,
-          image_url: itemImageUrl
+          image_urls: imageUrls
         };
       }));
 
@@ -579,30 +592,33 @@ export default function Admin() {
                         key={idx}
                         initial={{ opacity: 0, x: -10 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center justify-between bg-white/5 rounded-lg p-3 border border-white/10"
+                        className="bg-white/5 rounded-lg p-3 border border-white/10"
                       >
-                        <div className="flex items-center gap-3 flex-1">
-                          {item.image_file && (
-                            <div className="w-12 h-12 rounded bg-white/10 flex items-center justify-center flex-shrink-0">
-                              <img
-                                src={URL.createObjectURL(item.image_file)}
-                                alt={item.name}
-                                className="w-full h-full object-cover rounded"
-                              />
-                            </div>
-                          )}
+                        <div className="flex items-center justify-between mb-2">
                           <div>
                             <p className="text-sm font-semibold text-white">{item.name}</p>
                             <p className="text-xs text-white/50">{item.rarity} • ${item.value} • {item.drop_rate}%</p>
                           </div>
+                          <Button
+                            onClick={() => handleRemoveItem(idx)}
+                            size="sm"
+                            className="bg-red-500/20 hover:bg-red-500/30 text-red-400"
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
                         </div>
-                        <Button
-                          onClick={() => handleRemoveItem(idx)}
-                          size="sm"
-                          className="bg-red-500/20 hover:bg-red-500/30 text-red-400"
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
+                        {item.image_files && item.image_files.length > 0 && (
+                          <div className="flex gap-2">
+                            {item.image_files.map((img, imgIdx) => (
+                              <img
+                                key={imgIdx}
+                                src={URL.createObjectURL(img)}
+                                alt={`${item.name}-${imgIdx}`}
+                                className="w-10 h-10 rounded object-cover border border-white/10"
+                              />
+                            ))}
+                          </div>
+                        )}
                       </motion.div>
                     ))}
                   </div>
