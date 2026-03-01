@@ -149,19 +149,19 @@ export default function LiveChat({ onClose }) {
     <div className="flex flex-col h-full bg-gradient-to-b from-[#1a1a2e] to-[#0d0d1a] border-l border-[#00d9ff]/10">
       {selectedUser && <UserStatsModal userName={selectedUser.user} userEmail={selectedUser.user} onClose={() => setSelectedUser(null)} currentUser={user} />}
       {/* Tabs Header */}
-      <div className="flex border-b border-[#d4af37]/10 items-center justify-between">
+      <div className="flex border-b border-[#00d9ff]/10 items-center justify-between">
         <div className="flex flex-1">
           <button
             onClick={() => setTab('chat')}
             className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-semibold smooth-transition
-              ${tab === 'chat' ? 'text-[#d4af37] border-b-2 border-[#d4af37]' : 'text-[#b0a89f] hover:text-[#d4af37]'}`}
+              ${tab === 'chat' ? 'text-[#00d9ff] border-b-2 border-[#00d9ff]' : 'text-[#a0a0b0] hover:text-[#00d9ff]'}`}
           >
             <MessageCircle className="w-3.5 h-3.5" /> Chat
           </button>
           <button
             onClick={() => setTab('drops')}
             className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-semibold smooth-transition
-              ${tab === 'drops' ? 'text-[#f4c430] border-b-2 border-[#f4c430]' : 'text-[#b0a89f] hover:text-[#d4af37]'}`}
+              ${tab === 'drops' ? 'text-[#ff006e] border-b-2 border-[#ff006e]' : 'text-[#a0a0b0] hover:text-[#00d9ff]'}`}
           >
             <Zap className="w-3.5 h-3.5" /> Live Drops
           </button>
@@ -169,7 +169,7 @@ export default function LiveChat({ onClose }) {
         {onClose && (
           <button
             onClick={onClose}
-            className="lg:hidden p-2 text-[#b0a89f] hover:text-[#d4af37] smooth-transition mr-1"
+            className="p-2 text-[#a0a0b0] hover:text-[#ff006e] smooth-transition mr-1"
             title="Close chat"
           >
             <X className="w-4 h-4" />
