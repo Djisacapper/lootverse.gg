@@ -1,12 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { getRarityColor, getRarityBorder, getRarityGlow } from './useWallet';
+import { useAudio } from './useAudio';
 import { Sparkles } from 'lucide-react';
 
 export default function CaseSpinner({ items, result, spinning, onComplete }) {
   const [spinItems, setSpinItems] = useState([]);
   const [offset, setOffset] = useState(0);
   const containerRef = useRef(null);
+  const { playRollingSound, stopRollingSound, playDingSound } = useAudio();
+  const rollingStopRef = useRef(null);
   const ITEM_WIDTH = 120;
   const VISIBLE_ITEMS = 40;
   const WINNER_INDEX = 33;
