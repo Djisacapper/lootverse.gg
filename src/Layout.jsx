@@ -166,15 +166,15 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Balance */}
         {user && (
-          <div className="flex items-center gap-1.5 bg-[#1a1815] border border-[#d4af37]/15 rounded-lg pl-2 pr-1 py-1 smooth-transition hover:border-[#d4af37]/30">
-            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#d4af37] to-[#b8860b] flex items-center justify-center">
-              <span className="text-[9px] font-bold text-[#0a0805]">$</span>
+          <div className="flex items-center gap-1.5 bg-[#1a1a2e] border border-[#00d9ff]/15 rounded-lg pl-2 pr-1 py-1 smooth-transition hover:border-[#00d9ff]/30">
+            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#00d9ff] to-[#9d4edd] flex items-center justify-center">
+              <span className="text-[9px] font-bold text-[#0a0a15]">$</span>
             </div>
-            <span className="text-sm font-bold text-[#d4af37]">{(user.balance || 0).toLocaleString()}</span>
+            <span className="text-sm font-bold text-[#00d9ff]">{(user.balance || 0).toLocaleString()}</span>
             <Link to={createPageUrl('Deposit')}>
-              <div className="ml-1 bg-[#d4af37]/20 hover:bg-[#d4af37]/30 smooth-transition rounded-md px-2 py-1 flex items-center gap-1 border border-[#d4af37]/30">
-                <Wallet className="w-3 h-3 text-[#d4af37]" />
-                <span className="text-[11px] font-semibold text-[#d4af37]">Wallet</span>
+              <div className="ml-1 bg-[#00d9ff]/20 hover:bg-[#00d9ff]/30 smooth-transition rounded-md px-2 py-1 flex items-center gap-1 border border-[#00d9ff]/30">
+                <Wallet className="w-3 h-3 text-[#00d9ff]" />
+                <span className="text-[11px] font-semibold text-[#00d9ff]">Wallet</span>
               </div>
             </Link>
           </div>
