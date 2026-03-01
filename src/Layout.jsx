@@ -122,7 +122,7 @@ export default function Layout({ children, currentPageName }) {
     <div className="min-h-screen bg-gradient-to-br from-[#0a0805] via-[#1a1815] to-[#0d0c0a] flex text-[#fafaf8]">
       {/* Sidebar - Desktop */}
       <aside
-        className={`hidden lg:flex flex-col bg-gradient-to-b from-[#1a1815] to-[#0f0e0a] border-r border-[#d4af37]/10 fixed h-full z-40 transition-all duration-300
+        className={`hidden lg:flex flex-col bg-gradient-to-b from-[#1a1a2e] to-[#0d0d1a] border-r border-[#00d9ff]/10 fixed h-full z-40 transition-all duration-300
           ${sidebarCollapsed ? 'w-[60px]' : 'w-[220px]'}`}
       >
         <SidebarContent collapsed={sidebarCollapsed} />
