@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { X, LogOut, Settings, History, Wallet, TrendingUp, ArrowDown, ArrowUp } from 'lucide-react';
+import ProfileSettings from './ProfileSettings';
 import { getXpForLevel, getXpProgressForLevel } from './useWallet';
 import GameHistoryView from './GameHistoryView';
 import TransactionsView from './TransactionsView';
@@ -188,10 +189,7 @@ export default function ProfileModal({ user, onClose, onNavigate }) {
           )}
 
           {activeTab === 'settings' && (
-            <div className="text-center py-8">
-              <Settings className="w-12 h-12 text-white/20 mx-auto mb-3" />
-              <p className="text-white/40">Settings coming soon</p>
-            </div>
+            <ProfileSettings user={user} onSaved={() => {}} />
           )}
         </div>
 
