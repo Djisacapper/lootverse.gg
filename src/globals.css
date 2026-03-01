@@ -4,15 +4,15 @@
 @tailwind utilities;
 
 :root {
-  --bg-primary: #0a0a0f;
-  --bg-secondary: #12121a;
-  --bg-card: #16161f;
-  --bg-elevated: #1e1e2a;
-  --accent-primary: #8b5cf6;
-  --accent-secondary: #6366f1;
-  --accent-gold: #f59e0b;
-  --text-primary: #f1f1f6;
-  --text-secondary: #9ca3af;
+  --bg-primary: #0a0805;
+  --bg-secondary: #141410;
+  --bg-card: #1a1815;
+  --bg-elevated: #242220;
+  --accent-primary: #d4af37;
+  --accent-secondary: #b8860b;
+  --accent-gold: #f4c430;
+  --text-primary: #fafaf8;
+  --text-secondary: #b0a89f;
 }
 
 @layer base {
@@ -20,7 +20,7 @@
     @apply border-white/5;
   }
   body {
-    background: var(--bg-primary);
+    background: linear-gradient(135deg, #0a0805 0%, #1a1815 50%, #0d0c0a 100%);
     color: var(--text-primary);
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
