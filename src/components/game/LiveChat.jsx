@@ -35,9 +35,10 @@ export default function LiveChat() {
     
     // Fetch initial messages
     base44.entities.ChatMessage.list('-created_date', 50).then(msgs => {
-      setMessages(msgs.map(m => ({
+      setMessages(msgs.reverse().map(m => ({
         id: m.id,
         user: m.user_name,
+        avatar_url: m.avatar_url,
         level: m.level,
         text: m.text,
         time: 'recent'
@@ -50,6 +51,7 @@ export default function LiveChat() {
         setMessages(prev => [...prev, {
           id: event.data.id,
           user: event.data.user_name,
+          avatar_url: event.data.avatar_url,
           level: event.data.level,
           text: event.data.text,
           time: 'now'
