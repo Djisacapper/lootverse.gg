@@ -110,8 +110,8 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
             {/* User Info */}
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-lg bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-2xl font-bold text-white flex-shrink-0 overflow-hidden">
-                {stats.avatar_url
-                  ? <img src={stats.avatar_url} alt="" className="w-full h-full object-cover" />
+                {safeAvatarUrl(stats.avatar_url)
+                  ? <img src={safeAvatarUrl(stats.avatar_url)} alt="" className="w-full h-full object-cover" />
                   : (userName?.[0]?.toUpperCase() || '?')}
               </div>
               <div className="flex-1 min-w-0">
