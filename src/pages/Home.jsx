@@ -114,12 +114,12 @@ export default function Home() {
           </p>
           <div className="flex gap-3">
             <Link to={createPageUrl('Leaderboard')}>
-              <Button className="bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 rounded-lg h-10 px-5 text-sm font-semibold shadow-lg shadow-violet-500/30">
+              <Button className="bg-gradient-to-r from-[#d4af37] to-[#f4c430] hover:from-[#f4c430] hover:to-[#d4af37] rounded-lg h-10 px-5 text-sm font-semibold text-[#0a0805] shadow-lg shadow-[#d4af37]/30">
                 <Award className="w-4 h-4 mr-2" /> View Leaderboard
               </Button>
             </Link>
             <Link to={createPageUrl('Rewards')}>
-              <Button variant="outline" className="border-white/10 bg-white/5 hover:bg-white/10 text-white rounded-lg h-10 px-5 text-sm">
+              <Button className="border border-[#d4af37]/30 bg-[#d4af37]/10 hover:bg-[#d4af37]/20 text-[#d4af37] rounded-lg h-10 px-5 text-sm smooth-transition">
                 <Gift className="w-4 h-4 mr-2" /> Rewards
               </Button>
             </Link>
