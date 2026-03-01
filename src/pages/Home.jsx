@@ -221,10 +221,10 @@ export default function Home() {
         <div>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Box className="w-4 h-4 text-violet-400" />
-              <h2 className="text-base font-bold text-white">Featured Cases</h2>
+              <Box className="w-4 h-4 text-[#d4af37]" />
+              <h2 className="text-base font-bold text-[#d4af37]">Featured Cases</h2>
             </div>
-            <Link to={createPageUrl('Cases')} className="text-xs text-violet-400 hover:text-violet-300 flex items-center gap-1">
+            <Link to={createPageUrl('Cases')} className="text-xs text-[#d4af37] hover:text-[#f4c430] flex items-center gap-1 smooth-transition">
               View all <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </div>
