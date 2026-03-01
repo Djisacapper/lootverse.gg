@@ -696,32 +696,39 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
           className="rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-500/15 to-transparent p-5 text-center">
           <p className="text-2xl font-black text-white mb-1">🏆 The battle is over!</p>
           {payoutLabel && <p className="text-sm text-green-400 font-semibold mb-4">{payoutLabel}</p>}
-          <div className="flex justify-center gap-8 flex-wrap">
+          <div className="flex items-center justify-center gap-3 mt-2">
             {teamList.map((mi, ti) => {
               const isW = isGroup || ti === winnerTeamIdx;
               return (
-                <div key={ti} className={`flex flex-col items-center gap-2 ${isW ? '' : 'opacity-35'}`}>
-                  <div className="flex gap-4">
-                    {mi.map(pi => (
-                      <div key={pi} className="flex flex-col items-center gap-1">
-                        {isW && <span className="text-2xl">{isGroup ? '🎁' : '👑'}</span>}
-                        <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center text-xl font-bold"
-                          style={{ background: TEAM_COLORS[ti] + '33', border: `2px solid ${TEAM_COLORS[ti]}88` }}>
-                          {players[pi]?.isBot
-                            ? <span>🤖</span>
-                            : safeAvatarUrl(players[pi]?.avatar_url)
-                              ? <img src={safeAvatarUrl(players[pi].avatar_url)} alt="" className="w-full h-full object-cover" />
-                              : <span>{players[pi]?.name?.[0]?.toUpperCase() || '?'}</span>}
+                <React.Fragment key={ti}>
+                  <div className={`flex-1 flex flex-col items-center gap-2 ${isW ? '' : 'opacity-35'}`}>
+                    <div className="flex gap-3 justify-center flex-wrap">
+                      {mi.map(pi => (
+                        <div key={pi} className="flex flex-col items-center gap-1">
+                          {isW && <span className="text-xl">{isGroup ? '🎁' : '👑'}</span>}
+                          <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center text-xl font-bold"
+                            style={{ background: TEAM_COLORS[ti] + '33', border: `2px solid ${TEAM_COLORS[ti]}88` }}>
+                            {players[pi]?.isBot
+                              ? <span>🤖</span>
+                              : safeAvatarUrl(players[pi]?.avatar_url)
+                                ? <img src={safeAvatarUrl(players[pi].avatar_url)} alt="" className="w-full h-full object-cover" />
+                                : <span>{players[pi]?.name?.[0]?.toUpperCase() || '?'}</span>}
+                          </div>
+                          <p className="text-xs text-white/60 text-center">{players[pi]?.name}</p>
+                          <p className="text-sm font-bold text-amber-400">{playerTotals[pi]?.toLocaleString()}</p>
                         </div>
-                        <p className="text-xs text-white/60">{players[pi]?.name}</p>
-                        <p className="text-sm font-bold text-amber-400">{playerTotals[pi]?.toLocaleString()}</p>
-                      </div>
-                    ))}
+                      ))}
+                    </div>
+                    {teamList.length > 1 && (
+                      <p className="text-sm font-bold" style={{ color: TEAM_COLORS[ti] }}>
+                        Team {ti + 1}: {teamTotals[ti]?.toLocaleString()}
+                      </p>
+                    )}
                   </div>
-                  <p className="text-sm font-bold" style={{ color: TEAM_COLORS[ti] }}>
-                    {teamList.length > 1 ? `Team ${ti+1}: ` : ''}{teamTotals[ti]?.toLocaleString()}
-                  </p>
-                </div>
+                  {ti < teamList.length - 1 && (
+                    <div className="flex-shrink-0 text-white/20 font-black text-lg px-1">VS</div>
+                  )}
+                </React.Fragment>
               );
             })}
           </div>
