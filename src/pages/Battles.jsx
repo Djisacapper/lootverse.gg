@@ -305,7 +305,7 @@ export default function Battles() {
   });
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 min-h-screen bg-gradient-to-br from-[#0a0805] via-[#1a1815] to-[#0d0c0a] -mx-4 md:-mx-5 lg:-mx-6 px-4 md:px-5 lg:px-6 py-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <h1 className="text-3xl font-bold text-white flex items-center gap-2">
           <Swords className="w-7 h-7" /> Battles

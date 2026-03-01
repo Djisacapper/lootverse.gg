@@ -32,7 +32,7 @@ export default function Cases() {
     });
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-5 min-h-screen bg-gradient-to-br from-[#0a0805] via-[#1a1815] to-[#0d0c0a] -mx-4 md:-mx-5 lg:-mx-6 px-4 md:px-5 lg:px-6 py-5">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Box className="w-6 h-6 text-violet-400" />

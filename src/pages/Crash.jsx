@@ -460,7 +460,7 @@ export default function Crash() {
   const displayBetAmount = hasBet ? myBetAmount : betAmount;
 
   return (
-    <div className="space-y-4 max-w-3xl mx-auto">
+    <div className="space-y-4 max-w-3xl mx-auto min-h-screen bg-gradient-to-br from-[#0a0805] via-[#1a1815] to-[#0d0c0a] -mx-4 md:-mx-5 lg:-mx-6 px-4 md:px-5 lg:px-6 py-4">
       <div>
         <h1 className="text-3xl font-bold text-white mb-1">Crash</h1>
         <p className="text-white/40 text-sm">Place bets before launch — cash out before it crashes!</p>
