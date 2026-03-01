@@ -121,7 +121,7 @@ export default function Layout({ children, currentPageName }) {
     <div className="min-h-screen bg-[#0e0e18] flex text-white">
       {/* Sidebar - Desktop */}
       <aside
-        className={`hidden lg:flex flex-col bg-[#0b0b15] border-r border-white/[0.06] fixed h-full z-40 transition-all duration-300
+        className={`hidden lg:flex flex-col bg-gradient-to-b from-[#1a1815] to-[#0f0e0a] border-r border-[#d4af37]/10 fixed h-full z-40 transition-all duration-300
           ${sidebarCollapsed ? 'w-[60px]' : 'w-[220px]'}`}
       >
         <SidebarContent collapsed={sidebarCollapsed} />
