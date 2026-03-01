@@ -86,7 +86,7 @@ export default function Layout({ children, currentPageName }) {
         {getNavSections(user?.role).map((section) => (
           <div key={section.label} className="mb-4">
             {!collapsed && (
-              <p className="text-[10px] font-semibold text-[#d4af37]/40 tracking-[0.15em] uppercase px-4 mb-1.5">{section.label}</p>
+              <p className="text-[10px] font-semibold text-[#00d9ff]/40 tracking-[0.15em] uppercase px-4 mb-1.5">{section.label}</p>
             )}
             {section.items.map((item) => {
               const active = currentPageName === item.page;
@@ -98,14 +98,14 @@ export default function Layout({ children, currentPageName }) {
                   className={`flex items-center gap-3 mx-2 mb-0.5 rounded-lg smooth-transition
                     ${collapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5'}
                     ${active
-                      ? 'bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/30'
-                      : 'text-[#b0a89f] hover:text-[#d4af37] hover:bg-[#d4af37]/5 border border-transparent'
+                      ? 'bg-[#00d9ff]/15 text-[#00d9ff] border border-[#00d9ff]/30'
+                      : 'text-[#a0a0b0] hover:text-[#00d9ff] hover:bg-[#00d9ff]/5 border border-transparent'
                     }`}
                 >
-                  <item.icon className={`w-[18px] h-[18px] flex-shrink-0 ${active ? 'text-[#f4c430]' : ''}`} />
+                  <item.icon className={`w-[18px] h-[18px] flex-shrink-0 ${active ? 'text-[#ff006e]' : ''}`} />
                   {!collapsed && <span className="text-[13px] font-medium">{item.name}</span>}
                   {active && !collapsed && (
-                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#f4c430]" />
+                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#ff006e]" />
                   )}
                 </Link>
               );
