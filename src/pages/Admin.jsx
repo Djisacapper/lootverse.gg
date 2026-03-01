@@ -25,6 +25,7 @@ export default function Admin() {
   const [itemRarity, setItemRarity] = useState('common');
   const [itemValue, setItemValue] = useState('');
   const [itemDropRate, setItemDropRate] = useState('');
+  const [itemImage, setItemImage] = useState(null);
 
   useEffect(() => {
     checkAdminAccess();
@@ -128,11 +129,13 @@ export default function Admin() {
       name: itemName,
       rarity: itemRarity,
       value: parseInt(itemValue),
-      drop_rate: parseInt(itemDropRate)
+      drop_rate: parseInt(itemDropRate),
+      image_file: itemImage
     }]);
     setItemName('');
     setItemValue('');
     setItemDropRate('');
+    setItemImage(null);
   };
 
   const handleRemoveItem = (index) => {
@@ -153,13 +156,29 @@ export default function Admin() {
         imageUrl = uploadRes.file_url;
       }
 
+      // Upload item images and build final items array
+      const itemsWithImages = await Promise.all(items.map(async (item) => {
+        let itemImageUrl = null;
+        if (item.image_file) {
+          const uploadRes = await base44.integrations.Core.UploadFile({ file: item.image_file });
+          itemImageUrl = uploadRes.file_url;
+        }
+        return {
+          name: item.name,
+          rarity: item.rarity,
+          value: item.value,
+          drop_rate: item.drop_rate,
+          image_url: itemImageUrl
+        };
+      }));
+
       await base44.entities.CaseTemplate.create({
         name: caseName,
         description: caseDescription,
         price: parseInt(casePrice),
         category: caseCategory,
         image_url: imageUrl,
-        items: items,
+        items: itemsWithImages,
         is_active: true
       });
 
@@ -504,7 +523,7 @@ export default function Admin() {
 
                 {/* Add Item Form */}
                 <div className="bg-white/[0.02] rounded-lg p-4 space-y-3">
-                  <div className="grid grid-cols-4 gap-2">
+                  <div className="grid grid-cols-5 gap-2">
                     <Input
                       placeholder="Item name"
                       value={itemName}
@@ -531,10 +550,16 @@ export default function Admin() {
                     />
                     <Input
                       type="number"
-                      placeholder="Drop % (0-100)"
+                      placeholder="Drop %"
                       value={itemDropRate}
                       onChange={(e) => setItemDropRate(e.target.value)}
                       className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
+                    />
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setItemImage(e.target.files?.[0] || null)}
+                      className="bg-white/5 border-white/10 text-white/60 text-xs"
                     />
                   </div>
                   <Button
@@ -556,9 +581,20 @@ export default function Admin() {
                         animate={{ opacity: 1, x: 0 }}
                         className="flex items-center justify-between bg-white/5 rounded-lg p-3 border border-white/10"
                       >
-                        <div>
-                          <p className="text-sm font-semibold text-white">{item.name}</p>
-                          <p className="text-xs text-white/50">{item.rarity} • ${item.value} • {item.drop_rate}%</p>
+                        <div className="flex items-center gap-3 flex-1">
+                          {item.image_file && (
+                            <div className="w-12 h-12 rounded bg-white/10 flex items-center justify-center flex-shrink-0">
+                              <img
+                                src={URL.createObjectURL(item.image_file)}
+                                alt={item.name}
+                                className="w-full h-full object-cover rounded"
+                              />
+                            </div>
+                          )}
+                          <div>
+                            <p className="text-sm font-semibold text-white">{item.name}</p>
+                            <p className="text-xs text-white/50">{item.rarity} • ${item.value} • {item.drop_rate}%</p>
+                          </div>
                         </div>
                         <Button
                           onClick={() => handleRemoveItem(idx)}
