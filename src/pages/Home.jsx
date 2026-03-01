@@ -145,8 +145,8 @@ export default function Home() {
             >
               <Link to={createPageUrl(card.page)}>
                 <div
-                  className="relative overflow-hidden rounded-xl border border-white/[0.07] h-44 flex items-end p-5 group cursor-pointer transition-all hover:border-white/15 hover:scale-[1.01]"
-                  style={{ background: `linear-gradient(135deg, ${card.accent}22 0%, #0d0d20 70%)` }}
+                  className="relative overflow-hidden rounded-xl border border-[#d4af37]/15 h-44 flex items-end p-5 group cursor-pointer smooth-transition hover:border-[#d4af37]/30 hover:scale-[1.01]"
+                  style={{ background: `linear-gradient(135deg, ${card.accent}15 0%, #0a0805 70%)` }}
                 >
                   {/* BG image */}
                   {card.img && (
