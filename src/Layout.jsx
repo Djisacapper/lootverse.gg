@@ -44,9 +44,13 @@ export default function Layout({ children, currentPageName }) {
 
   useEffect(() => {
     reloadUser();
-    // Poll every 5 seconds for balance/xp updates
-    const interval = setInterval(reloadUser, 5000);
-    return () => clearInterval(interval);
+    // Poll every 3 seconds for balance/xp/avatar updates
+    const interval = setInterval(reloadUser, 3000);
+    // Also subscribe to User entity changes for instant updates
+    const unsub = base44.entities.User.subscribe((event) => {
+      if (event.type === 'update') reloadUser();
+    });
+    return () => { clearInterval(interval); unsub(); };
   }, []);
 
   useEffect(() => {

@@ -68,10 +68,12 @@ export default function Leaderboard() {
                   transition={{ delay: rank * 0.1 }}
                   className="flex flex-col items-center"
                 >
-                  <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${podiumColors[rank]} flex items-center justify-center mb-2 shadow-lg`}>
-                    <span className="text-lg font-bold text-white">{u.full_name?.[0]?.toUpperCase() || '?'}</span>
+                  <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${podiumColors[rank]} overflow-hidden flex items-center justify-center mb-2 shadow-lg`}>
+                    {u.avatar_url
+                      ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                      : <span className="text-lg font-bold text-white">{u.full_name?.[0]?.toUpperCase() || '?'}</span>}
                   </div>
-                  <p className="text-sm font-semibold text-white mb-1 max-w-[100px] truncate text-center">{u.full_name || 'Player'}</p>
+                  <p className="text-sm font-semibold text-white mb-1 max-w-[100px] truncate text-center">{u.is_anonymous ? `Anon #${u.id?.slice(-4)}` : (u.username || u.full_name || 'Player')}</p>
                   <p className="text-xs text-violet-400 font-semibold mb-2">Level {u.level || 1}</p>
                   <div className={`w-24 ${heights[rank]} rounded-t-xl bg-gradient-to-b ${podiumColors[rank]} flex items-center justify-center`}>
                     {rank === 0 && <Crown className="w-8 h-8 text-white/80" />}
