@@ -44,17 +44,23 @@ export default function CreateBattle({ cases, balance, user, onBack, onCreate })
 
   // Slot state: array of length totalPlayers. slot 0 is always the user.
   // Each slot: null (empty) or { name, email, isBot }
-  const [slots, setSlots] = useState(() => Array(totalPlayers).fill(null));
+  const makeUserSlot = (u) => u ? { name: u.username || u.full_name || 'You', email: u.email, avatar_url: u.avatar_url || null, isBot: false } : null;
 
-  // Seed slot 0 with the current user whenever user loads or mode changes
+  const [slots, setSlots] = useState(() => {
+    const s = Array(totalPlayers).fill(null);
+    if (user) s[0] = makeUserSlot(user);
+    return s;
+  });
+
+  // Seed slot 0 with the current user whenever user loads
   useEffect(() => {
     if (!user) return;
     setSlots(prev => {
       const n = [...prev];
-      n[0] = { name: user.username || user.full_name || 'You', email: user.email, avatar_url: user.avatar_url || null, isBot: false };
+      n[0] = makeUserSlot(user);
       return n;
     });
-  }, [user]);
+  }, [user?.email, user?.avatar_url, user?.username, user?.full_name]);
 
   // When mode changes rebuild slots
   const handleModeChange = (label) => {
