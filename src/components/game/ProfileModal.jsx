@@ -69,12 +69,16 @@ export default function ProfileModal({ user, onClose, onNavigate }) {
 
           {/* User Info */}
           <div className="flex items-center gap-5">
-            <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600 flex items-center justify-center text-3xl font-bold text-white flex-shrink-0 shadow-lg shadow-violet-500/30">
-              {user?.full_name?.[0]?.toUpperCase() || '?'}
+            <div className="w-20 h-20 rounded-xl bg-gradient-to-br from-violet-500 to-fuchsia-600 overflow-hidden flex items-center justify-center text-3xl font-bold text-white flex-shrink-0 shadow-lg shadow-violet-500/30">
+              {user?.avatar_url
+                ? <img src={user.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                : (user?.full_name?.[0]?.toUpperCase() || '?')}
             </div>
             <div className="flex-1">
               <div className="flex items-baseline gap-3 mb-1">
-                <h3 className="text-2xl font-bold text-white">{user?.full_name || 'Player'}</h3>
+                <h3 className="text-2xl font-bold text-white">
+                  {user?.is_anonymous ? `Anonymous #${user?.id?.slice(-4) || '????'}` : (user?.username || user?.full_name || 'Player')}
+                </h3>
                 <span className="px-3 py-1 rounded-lg bg-violet-500/20 border border-violet-500/30 text-violet-300 font-bold text-sm">Level {level}</span>
               </div>
               <p className="text-sm text-white/40 mb-3">{user?.email}</p>
