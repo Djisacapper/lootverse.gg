@@ -292,10 +292,10 @@ export default function Layout({ children, currentPageName }) {
         <aside className={`hidden lg:flex flex-col flex-shrink-0 h-[calc(100vh-56px)] sticky top-14 bg-gradient-to-b from-[#1a1a2e]/50 to-[#0d0d1a]/50 border-l border-[#00d9ff]/10 transition-all duration-300 overflow-hidden relative ${chatOpen ? 'w-[260px]' : 'w-0'}`}>
           <button
             onClick={() => setChatOpen(false)}
-            className="absolute -right-4 top-20 z-50 w-10 h-10 rounded-lg bg-gradient-to-br from-[#00d9ff] to-[#ff006e] border border-[#00d9ff]/30 flex items-center justify-center text-[#0a0a15] hover:shadow-lg glow-cyan hover:glow-cyan-lg smooth-transition"
+            className="absolute top-4 right-4 z-50 w-7 h-7 flex items-center justify-center text-[#00d9ff]/60 hover:text-[#ff006e] smooth-transition"
             title="Close chat"
           >
-            <ChevronRight className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
           <LiveChat onClose={() => setChatOpen(false)} />
         </aside>
