@@ -104,22 +104,22 @@ export default function Home() {
         </div>
 
         <div className="relative z-10 p-8 md:p-10 max-w-lg">
-          <p className="text-[#f4c430] text-xs font-semibold uppercase tracking-widest mb-3">Welcome to Lootverse</p>
-          <h1 className="text-4xl md:text-5xl font-black text-[#fafaf8] leading-tight mb-2">
+          <p className="text-[#00d9ff] text-xs font-semibold uppercase tracking-widest mb-3">Welcome to Lootverse</p>
+          <h1 className="text-4xl md:text-5xl font-black text-[#fafafa] leading-tight mb-2">
             Open Cases.<br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#d4af37] to-[#f4c430]">Win Big!</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#00d9ff] to-[#ff006e]">Win Big!</span>
           </h1>
-          <p className="text-[#b0a89f] text-sm mb-6 max-w-sm">
+          <p className="text-[#a0a0b0] text-sm mb-6 max-w-sm">
             Step into a world of luck and excitement where every spin and bet brings you closer to amazing rewards.
           </p>
           <div className="flex gap-3">
             <Link to={createPageUrl('Leaderboard')}>
-              <Button className="bg-gradient-to-r from-[#d4af37] to-[#f4c430] hover:from-[#f4c430] hover:to-[#d4af37] rounded-lg h-10 px-5 text-sm font-semibold text-[#0a0805] shadow-lg shadow-[#d4af37]/30">
+              <Button className="bg-gradient-to-r from-[#00d9ff] to-[#ff006e] hover:from-[#ff006e] hover:to-[#00d9ff] rounded-lg h-10 px-5 text-sm font-semibold text-[#0a0a15] shadow-lg shadow-[#00d9ff]/30">
                 <Award className="w-4 h-4 mr-2" /> View Leaderboard
               </Button>
             </Link>
             <Link to={createPageUrl('Rewards')}>
-              <Button className="border border-[#d4af37]/30 bg-[#d4af37]/10 hover:bg-[#d4af37]/20 text-[#d4af37] rounded-lg h-10 px-5 text-sm smooth-transition">
+              <Button className="border border-[#00d9ff]/30 bg-[#00d9ff]/10 hover:bg-[#00d9ff]/20 text-[#00d9ff] rounded-lg h-10 px-5 text-sm smooth-transition">
                 <Gift className="w-4 h-4 mr-2" /> Rewards
               </Button>
             </Link>
