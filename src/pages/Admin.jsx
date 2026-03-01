@@ -89,6 +89,22 @@ export default function Admin() {
     setLoading(false);
   };
 
+  const handleChangeRole = async (newRole) => {
+    if (!selectedUser) return;
+    setLoading(true);
+    try {
+      await base44.entities.User.update(selectedUser.id, { role: newRole });
+      setSelectedUser({ ...selectedUser, role: newRole });
+      addActivityLog(`Changed ${selectedUser.full_name}'s role to ${newRole}`);
+      setMessage(`User role changed to ${newRole}`);
+      setTimeout(() => setMessage(''), 3000);
+      loadAllUsers();
+    } catch (err) {
+      setMessage('Error changing role');
+    }
+    setLoading(false);
+  };
+
   const addActivityLog = (action) => {
     setActivityLog([
       { timestamp: new Date().toLocaleTimeString(), action },
@@ -260,6 +276,46 @@ export default function Admin() {
                         className="bg-amber-500 hover:bg-amber-600 text-white px-4"
                       >
                         {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <DollarSign className="w-4 h-4" />}
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* Role Management */}
+                  <div className="space-y-2">
+                    <label className="text-sm font-semibold text-white/80">Role Management</label>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Button
+                        onClick={() => handleChangeRole('user')}
+                        disabled={loading}
+                        className={`text-xs ${
+                          selectedUser.role === 'user'
+                            ? 'bg-blue-500 hover:bg-blue-600'
+                            : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300'
+                        }`}
+                      >
+                        User
+                      </Button>
+                      <Button
+                        onClick={() => handleChangeRole('mod')}
+                        disabled={loading}
+                        className={`text-xs ${
+                          selectedUser.role === 'mod'
+                            ? 'bg-purple-500 hover:bg-purple-600'
+                            : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300'
+                        }`}
+                      >
+                        Mod
+                      </Button>
+                      <Button
+                        onClick={() => handleChangeRole('admin')}
+                        disabled={loading}
+                        className={`text-xs ${
+                          selectedUser.role === 'admin'
+                            ? 'bg-red-500 hover:bg-red-600'
+                            : 'bg-red-500/20 hover:bg-red-500/30 text-red-300'
+                        }`}
+                      >
+                        Admin
                       </Button>
                     </div>
                   </div>
