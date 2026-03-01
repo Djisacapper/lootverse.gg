@@ -7,7 +7,7 @@ import ProfileModal from './components/game/ProfileModal';
 import {
   Box, Swords, Coins, TrendingUp, Gift, Award, Users,
   Menu, X, Home, LogOut, Zap, ChevronLeft,
-  ChevronRight, Wallet, Plus, Shield
+  ChevronRight, Wallet, Plus, Shield, MessageCircle
 } from 'lucide-react';
 
 const getNavSections = (userRole) => [
