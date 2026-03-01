@@ -275,10 +275,10 @@ export default function Layout({ children, currentPageName }) {
         {!chatOpen && (
           <button
             onClick={() => setChatOpen(true)}
-            className="hidden lg:flex absolute -right-3 top-14 z-50 w-6 h-6 rounded-full bg-[#242456] border border-[#00d9ff]/20 items-center justify-center text-[#00d9ff]/40 hover:text-[#00d9ff] smooth-transition"
+            className="hidden lg:flex absolute -right-4 top-20 z-50 w-10 h-10 rounded-lg bg-gradient-to-br from-[#00d9ff] to-[#ff006e] border border-[#00d9ff]/30 items-center justify-center text-[#0a0a15] hover:shadow-lg glow-cyan hover:glow-cyan-lg smooth-transition animate-pulse-slow"
             title="Open chat"
           >
-            <ChevronLeft className="w-3 h-3" />
+            <MessageCircle className="w-5 h-5" />
           </button>
         )}
         {/* Page content */}
