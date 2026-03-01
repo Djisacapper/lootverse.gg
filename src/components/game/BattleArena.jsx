@@ -697,7 +697,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
           <p className="text-2xl font-black text-white mb-1">🏆 The battle is over!</p>
           {payoutLabel && <p className="text-sm text-green-400 font-semibold mb-4">{payoutLabel}</p>}
 
-          <div className="flex items-start justify-center gap-4 overflow-x-auto">
+          <div className="flex items-center justify-center gap-6 overflow-x-auto">
             {teamList.map((mi, ti) => {
               const isW = isGroup || ti === winnerTeamIdx;
               return (
@@ -708,11 +708,15 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
                         Team {ti + 1}: {teamTotals[ti]?.toLocaleString()}
                       </p>
                     )}
-                    <div className="flex gap-3 justify-center">
+                    <div className="flex gap-4 justify-center">
                       {mi.map(pi => (
-                        <div key={pi} className="flex flex-col items-center gap-1">
-                          {isW && <span className="text-lg">{isGroup ? '🎁' : '👑'}</span>}
-                          <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center text-lg font-bold flex-shrink-0"
+                        <div key={pi} className="flex flex-col items-center" style={{ width: 64 }}>
+                          {/* Crown row — always same height regardless of winner */}
+                          <div className="h-7 flex items-center justify-center">
+                            {isW && <span className="text-lg">{isGroup ? '🎁' : '👑'}</span>}
+                          </div>
+                          {/* Avatar — fixed size, always same height */}
+                          <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-lg font-bold"
                             style={{ background: TEAM_COLORS[ti] + '33', border: `2px solid ${TEAM_COLORS[ti]}88` }}>
                             {players[pi]?.isBot
                               ? <span>🤖</span>
@@ -720,14 +724,14 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
                                 ? <img src={safeAvatarUrl(players[pi].avatar_url)} alt="" className="w-full h-full object-cover" />
                                 : <span>{players[pi]?.name?.[0]?.toUpperCase() || '?'}</span>}
                           </div>
-                          <p className="text-xs text-white/60 text-center max-w-[60px] truncate">{players[pi]?.name}</p>
+                          <p className="text-xs text-white/60 text-center mt-1 w-full truncate">{players[pi]?.name}</p>
                           <p className="text-sm font-bold text-amber-400">{playerTotals[pi]?.toLocaleString()}</p>
                         </div>
                       ))}
                     </div>
                   </div>
                   {ti < teamList.length - 1 && (
-                    <div className="flex items-center self-center px-1 text-white/20 font-black text-lg flex-shrink-0">VS</div>
+                    <div className="flex-shrink-0 text-white/20 font-black text-lg">VS</div>
                   )}
                 </React.Fragment>
               );
