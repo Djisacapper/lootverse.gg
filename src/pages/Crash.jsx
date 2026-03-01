@@ -418,6 +418,33 @@ export default function Crash() {
     processCashout(multiplierRef.current, roundRef.current);
   };
 
+  // ── Enrich live bets with fresh avatar/username from DB ──────────────────
+  useEffect(() => {
+    if (!liveBets || liveBets.length === 0) { setEnrichedBets([]); return; }
+    setEnrichedBets(liveBets); // show immediately with existing data
+
+    const realEmails = liveBets
+      .filter(b => b.user_email && !b.user_email.startsWith('bot_'))
+      .map(b => b.user_email);
+
+    if (realEmails.length === 0) return;
+
+    base44.functions.invoke('getUserAvatars', { emails: realEmails })
+      .then(res => {
+        const map = res?.data?.users || {};
+        setEnrichedBets(prev => prev.map(b => {
+          const info = map[b.user_email];
+          if (!info) return b;
+          return {
+            ...b,
+            avatar_url: info.avatar_url || b.avatar_url,
+            user_name: info.username || b.user_name,
+          };
+        }));
+      })
+      .catch(() => {});
+  }, [liveBets]);
+
   // ── Derived display ────────────────────────────────────────────────────────
   const col = mColor(multiplier, phase === 'crashed');
   const showLost = phase === 'crashed' && hasBet && !cashedOut && betProcessedRef.current;
