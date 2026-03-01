@@ -63,6 +63,17 @@ function CoinDisplay({ side, size = 'md', spinning = false }) {
   );
 }
 
+function PlayerAvatar({ avatarUrl, name, size = 8 }) {
+  const px = `w-${size} h-${size}`;
+  return (
+    <div className={`${px} rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-xs font-bold text-white overflow-hidden flex-shrink-0`}>
+      {avatarUrl
+        ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+        : (name?.[0]?.toUpperCase() || '?')}
+    </div>
+  );
+}
+
 function GameCard({ game, user, balance, onJoin, onAddBot }) {
   const isOwn = game.creator_email === user?.email;
   const opponentSide = game.creator_side === 'heads' ? 'tails' : 'heads';
@@ -83,9 +94,7 @@ function GameCard({ game, user, balance, onJoin, onAddBot }) {
           {/* Creator */}
           <div className="flex flex-col items-center gap-1.5 flex-1">
             <CoinDisplay side={game.creator_side} size="sm" />
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-xs font-bold text-white">
-              {game.creator_name?.[0]?.toUpperCase() || '?'}
-            </div>
+            <PlayerAvatar avatarUrl={game.creator_avatar_url} name={game.creator_name} />
             <p className="text-[11px] text-white/60 truncate max-w-[70px] text-center">{game.creator_name}</p>
             <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full
               ${game.creator_side === 'heads' ? 'bg-amber-500/15 text-amber-400' : 'bg-slate-500/15 text-slate-300'}`}>
