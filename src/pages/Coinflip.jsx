@@ -66,10 +66,11 @@ function CoinDisplay({ side, size = 'md', spinning = false }) {
 
 function PlayerAvatar({ avatarUrl, name, size = 8 }) {
   const px = `w-${size} h-${size}`;
+  const safe = safeAvatarUrl(avatarUrl);
   return (
     <div className={`${px} rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-xs font-bold text-white overflow-hidden flex-shrink-0`}>
-      {avatarUrl
-        ? <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+      {safe
+        ? <img src={safe} alt="" className="w-full h-full object-cover" />
         : (name?.[0]?.toUpperCase() || '?')}
     </div>
   );
