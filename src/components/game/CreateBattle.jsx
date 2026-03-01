@@ -239,9 +239,11 @@ export default function CreateBattle({ cases, balance, user, onBack, onCreate })
                         style={{ borderColor: slot ? color + '44' : 'rgba(255,255,255,0.06)', background: slot ? color + '11' : 'rgba(255,255,255,0.02)' }}>
                         {slot ? (
                           <>
-                            <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0"
+                            <div className="w-7 h-7 rounded-full overflow-hidden flex items-center justify-center text-xs font-bold flex-shrink-0"
                               style={{ background: color + '33', color }}>
-                              {slot.isBot ? '🤖' : slot.name?.[0]?.toUpperCase()}
+                              {slot.isBot ? '🤖' : slot.avatar_url
+                                ? <img src={slot.avatar_url} alt="" className="w-full h-full object-cover" />
+                                : slot.name?.[0]?.toUpperCase()}
                             </div>
                             <div className="flex-1 min-w-0">
                               <p className="text-xs text-white font-medium truncate">{slot.name}</p>
