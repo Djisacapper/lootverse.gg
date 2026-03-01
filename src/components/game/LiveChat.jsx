@@ -214,6 +214,7 @@ export default function LiveChat() {
                 placeholder="Enter message..."
                 className="flex-1 bg-transparent text-xs text-white placeholder:text-white/25 outline-none"
               />
+              <EmojiPicker onEmojiClick={(emoji) => setInput(input + emoji)} />
               <button type="submit" className="text-white/30 hover:text-violet-400 transition-colors">
                 <Send className="w-3.5 h-3.5" />
               </button>
