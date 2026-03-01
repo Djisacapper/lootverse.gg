@@ -418,29 +418,37 @@ export default function Crash() {
     processCashout(multiplierRef.current, roundRef.current);
   };
 
+  // Cache of email -> {avatar_url, user_name} so we never lose a fetched avatar
+  const avatarCacheRef = useRef({});
+
   // ── Enrich live bets with fresh avatar/username from DB ──────────────────
   useEffect(() => {
     if (!liveBets || liveBets.length === 0) { setEnrichedBets([]); return; }
-    setEnrichedBets(liveBets); // show immediately with existing data
 
-    const realEmails = liveBets
-      .filter(b => b.user_email && !b.user_email.startsWith('bot_'))
+    // Apply cache immediately — no flicker
+    const applyCache = (bets) => bets.map(b => {
+      const cached = avatarCacheRef.current[b.user_email];
+      return cached ? { ...b, ...cached } : b;
+    });
+
+    setEnrichedBets(applyCache(liveBets));
+
+    const uncached = liveBets
+      .filter(b => b.user_email && !b.user_email.startsWith('bot_') && !avatarCacheRef.current[b.user_email])
       .map(b => b.user_email);
 
-    if (realEmails.length === 0) return;
+    if (uncached.length === 0) return;
 
-    base44.functions.invoke('getUserAvatars', { emails: realEmails })
+    base44.functions.invoke('getUserAvatars', { emails: uncached })
       .then(res => {
         const map = res?.data?.users || {};
-        setEnrichedBets(prev => prev.map(b => {
-          const info = map[b.user_email];
-          if (!info) return b;
-          return {
-            ...b,
-            avatar_url: info.avatar_url || b.avatar_url,
-            user_name: info.username || b.user_name,
+        Object.entries(map).forEach(([email, info]) => {
+          if (info) avatarCacheRef.current[email] = {
+            avatar_url: info.avatar_url || null,
+            user_name: info.username || null,
           };
-        }));
+        });
+        setEnrichedBets(prev => applyCache(prev));
       })
       .catch(() => {});
   }, [liveBets]);
