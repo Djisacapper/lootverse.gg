@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useWallet } from '../components/game/useWallet';
 import { safeAvatarUrl } from '../components/game/usePlayerAvatars';
