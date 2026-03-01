@@ -129,7 +129,7 @@ export default function Layout({ children, currentPageName }) {
         {/* Collapse toggle */}
         <button
           onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="absolute -right-3 top-[72px] w-6 h-6 rounded-full bg-[#1a1a2e] border border-white/10 flex items-center justify-center text-white/40 hover:text-white transition-colors z-50"
+          className="absolute -right-3 top-[72px] w-6 h-6 rounded-full bg-[#242220] border border-[#d4af37]/20 flex items-center justify-center text-[#d4af37]/40 hover:text-[#d4af37] smooth-transition z-50"
         >
           {sidebarCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
         </button>
