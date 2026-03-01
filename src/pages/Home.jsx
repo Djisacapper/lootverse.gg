@@ -221,22 +221,22 @@ export default function Home() {
         <div>
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
-              <Box className="w-4 h-4 text-[#d4af37]" />
-              <h2 className="text-base font-bold text-[#d4af37]">Featured Cases</h2>
+              <Box className="w-4 h-4 text-[#00d9ff]" />
+              <h2 className="text-base font-bold text-[#00d9ff]">Featured Cases</h2>
             </div>
-            <Link to={createPageUrl('Cases')} className="text-xs text-[#d4af37] hover:text-[#f4c430] flex items-center gap-1 smooth-transition">
+            <Link to={createPageUrl('Cases')} className="text-xs text-[#00d9ff] hover:text-[#ff006e] flex items-center gap-1 smooth-transition">
               View all <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {featuredCases.map((c) => (
               <Link key={c.id} to={createPageUrl('CaseOpen') + `?id=${c.id}`}>
-                <div className="bg-[#1a1815] hover:bg-[#242220] border border-[#d4af37]/15 hover:border-[#d4af37]/30 rounded-xl p-4 text-center group cursor-pointer smooth-transition hover:scale-[1.02]">
-                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[#d4af37]/10 to-[#b8860b]/10 border border-[#d4af37]/15 flex items-center justify-center mx-auto mb-3 group-hover:scale-110 smooth-transition">
-                    <Box className="w-8 h-8 text-[#d4af37]" />
+                <div className="bg-[#1a1a2e] hover:bg-[#242456] border border-[#00d9ff]/15 hover:border-[#00d9ff]/30 rounded-xl p-4 text-center group cursor-pointer smooth-transition hover:scale-[1.02]">
+                  <div className="w-16 h-16 rounded-xl bg-gradient-to-br from-[#00d9ff]/10 to-[#ff006e]/10 border border-[#00d9ff]/15 flex items-center justify-center mx-auto mb-3 group-hover:scale-110 smooth-transition">
+                    <Box className="w-8 h-8 text-[#00d9ff]" />
                   </div>
-                  <h3 className="text-xs font-semibold text-[#fafaf8] mb-1 truncate">{c.name}</h3>
-                  <p className="text-[11px] font-bold text-[#f4c430]">{c.price?.toLocaleString()} coins</p>
+                  <h3 className="text-xs font-semibold text-[#fafafa] mb-1 truncate">{c.name}</h3>
+                  <p className="text-[11px] font-bold text-[#ff006e]">{c.price?.toLocaleString()} coins</p>
                 </div>
               </Link>
             ))}
