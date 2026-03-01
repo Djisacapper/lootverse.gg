@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
-import { Award, Trophy, TrendingUp, Zap, Crown } from 'lucide-react';
+import { Award, Trophy, TrendingUp, Zap, Crown, Flame, Gift } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function Leaderboard() {
   const [users, setUsers] = useState([]);
-  const [topWins, setTopWins] = useState([]);
+  const [top10, setTop10] = useState([]);
+  const [weeklyUsers, setWeeklyUsers] = useState([]);
+  const [userWagers, setUserWagers] = useState({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -14,12 +16,31 @@ export default function Leaderboard() {
   }, []);
 
   const loadData = async () => {
-    const allUsers = await base44.entities.User.list('-level', 20);
-    setUsers(allUsers);
+    try {
+      const allUsers = await base44.entities.User.list('-level', 100);
+      setUsers(allUsers.slice(0, 10));
+      setTop10(allUsers.slice(0, 10));
+      // Weekly leaderboard is same as level-based (you can modify to use timestamp if needed)
+      setWeeklyUsers(allUsers.slice(0, 10));
 
-    const wins = await base44.entities.UserInventory.list('-value', 10);
-    setTopWins(wins);
-    setLoading(false);
+      // Fetch wager data for each user
+      const wagers = {};
+      for (const u of allUsers.slice(0, 10)) {
+        const transactions = await base44.entities.Transaction.filter({ user_email: u.email }, '', 100);
+        const totalWagered = transactions.reduce((sum, t) => {
+          if (['case_purchase', 'battle_entry', 'coinflip_bet', 'crash_bet'].includes(t.type)) {
+            return sum + Math.abs(t.amount);
+          }
+          return sum;
+        }, 0);
+        wagers[u.id] = totalWagered;
+      }
+      setUserWagers(wagers);
+      setLoading(false);
+    } catch (err) {
+      console.error('Error loading leaderboard:', err);
+      setLoading(false);
+    }
   };
 
   const podiumColors = [
