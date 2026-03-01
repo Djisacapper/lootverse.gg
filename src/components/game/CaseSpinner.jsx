@@ -43,19 +43,24 @@ export default function CaseSpinner({ items, result, spinning, onComplete }) {
 
       const timer = setTimeout(() => {
         // Stop rolling sound and play ding
-        if (rollingStopRef.current) rollingStopRef.current();
+        if (rollingStopRef.current) {
+          rollingStopRef.current();
+          rollingStopRef.current = null;
+        }
         playDingSound();
         if (onComplete) onComplete();
       }, 4200);
       return () => {
         clearTimeout(timer);
-        if (rollingStopRef.current) rollingStopRef.current();
+        if (rollingStopRef.current) {
+          rollingStopRef.current();
+          rollingStopRef.current = null;
+        }
       };
     } else {
       setOffset(0);
-      if (rollingStopRef.current) rollingStopRef.current();
     }
-  }, [spinning, spinItems, playRollingSound, stopRollingSound, playDingSound]);
+  }, [spinning, spinItems, playRollingSound, playDingSound, onComplete]);
 
   if (spinItems.length === 0) {
     return <div className="h-32 glass rounded-2xl animate-pulse" />;
