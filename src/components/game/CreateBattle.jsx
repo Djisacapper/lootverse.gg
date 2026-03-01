@@ -44,7 +44,8 @@ export default function CreateBattle({ cases, balance, user, onBack, onCreate })
 
   // Slot state: array of length totalPlayers. slot 0 is always the user.
   // Each slot: null (empty) or { name, email, isBot }
-  const makeUserSlot = (u) => u ? { name: u.username || u.full_name || 'You', email: u.email, avatar_url: u.avatar_url || null, isBot: false } : null;
+  const safeAvatar = (url) => (url && url !== 'null' && url !== 'undefined') ? url : null;
+  const makeUserSlot = (u) => u ? { name: u.username || u.full_name || 'You', email: u.email, avatar_url: safeAvatar(u.avatar_url), isBot: false } : null;
 
   const [slots, setSlots] = useState(() => {
     const s = Array(totalPlayers).fill(null);
