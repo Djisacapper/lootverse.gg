@@ -171,7 +171,7 @@ export default function Home() {
                     >
                       {card.name}
                     </div>
-                    <p className="text-white/50 text-xs">{card.desc}</p>
+                    <p className="text-[#b0a89f] text-xs">{card.desc}</p>
                   </div>
                 </div>
               </Link>
