@@ -184,8 +184,8 @@ export default function CaseOpen() {
             className="glass rounded-2xl p-8 text-center border border-white/10"
           >
             <div className={`w-24 h-24 rounded-2xl bg-gradient-to-br ${getRarityColor(result.rarity)} flex items-center justify-center mx-auto mb-4 ${getRarityGlow(result.rarity)} shadow-2xl`}>
-              {result.image_url ? (
-                <img src={result.image_url} alt="" className="w-20 h-20 object-contain" />
+              {result.image_urls?.[0] || result.image_url ? (
+                <img src={result.image_urls?.[0] || result.image_url} alt="" className="w-20 h-20 object-contain" />
               ) : (
                 <Sparkles className="w-10 h-10 text-white" />
               )}
@@ -240,8 +240,8 @@ export default function CaseOpen() {
           {(caseData.items || []).map((item, i) => (
             <div key={i} className={`glass rounded-xl p-4 text-center border ${item.name === result?.name && showResult ? 'border-amber-400/40' : 'border-white/5'}`}>
               <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${getRarityColor(item.rarity)} flex items-center justify-center mx-auto mb-2`}>
-                {item.image_url ? (
-                  <img src={item.image_url} alt="" className="w-10 h-10 object-contain" />
+                {item.image_urls?.[0] || item.image_url ? (
+                  <img src={item.image_urls?.[0] || item.image_url} alt="" className="w-10 h-10 object-contain" />
                 ) : (
                   <Sparkles className="w-5 h-5 text-white" />
                 )}
