@@ -709,8 +709,8 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
                           style={{ background: TEAM_COLORS[ti] + '33', border: `2px solid ${TEAM_COLORS[ti]}88` }}>
                           {players[pi]?.isBot
                             ? <span>🤖</span>
-                            : players[pi]?.avatar_url
-                              ? <img src={players[pi].avatar_url} alt="" className="w-full h-full object-cover" />
+                            : safeAvatarUrl(players[pi]?.avatar_url)
+                              ? <img src={safeAvatarUrl(players[pi].avatar_url)} alt="" className="w-full h-full object-cover" />
                               : <span>{players[pi]?.name?.[0]?.toUpperCase() || '?'}</span>}
                         </div>
                         <p className="text-xs text-white/60">{players[pi]?.name}</p>
