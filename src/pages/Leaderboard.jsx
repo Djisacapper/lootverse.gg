@@ -95,11 +95,13 @@ export default function Leaderboard() {
                 className="glass rounded-xl p-4 flex items-center gap-4 border border-white/5"
               >
                 <span className="text-sm font-bold text-white/30 w-8 text-center">#{i + 4}</span>
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500/30 to-indigo-500/30 flex items-center justify-center text-sm font-bold text-white">
-                  {u.full_name?.[0]?.toUpperCase() || '?'}
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-violet-500/30 to-indigo-500/30 overflow-hidden flex items-center justify-center text-sm font-bold text-white">
+                  {u.avatar_url
+                    ? <img src={u.avatar_url} alt="" className="w-full h-full object-cover" />
+                    : (u.full_name?.[0]?.toUpperCase() || '?')}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-white">{u.full_name || 'Player'}</p>
+                  <p className="text-sm font-medium text-white">{u.is_anonymous ? `Anonymous #${u.id?.slice(-4)}` : (u.username || u.full_name || 'Player')}</p>
                 </div>
                 <div className="flex items-center gap-1.5 bg-violet-500/10 rounded-lg px-3 py-1.5">
                   <Zap className="w-3.5 h-3.5 text-violet-400" />
