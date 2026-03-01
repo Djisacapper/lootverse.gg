@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useWallet } from '../components/game/useWallet';
+import { safeAvatarUrl } from '../components/game/usePlayerAvatars';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Swords, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
