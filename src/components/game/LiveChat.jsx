@@ -235,7 +235,7 @@ export default function LiveChat({ onClose }) {
       ) : (
         <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-hide">
           {recentDrops.length === 0 ? (
-            <p className="text-white/20 text-xs text-center pt-8">No drops yet</p>
+            <p className="text-[#b0a89f]/30 text-xs text-center pt-8">No drops yet</p>
           ) : (
             recentDrops.map((drop, i) => (
               <motion.div
@@ -243,19 +243,19 @@ export default function LiveChat({ onClose }) {
                 initial={{ opacity: 0, x: 10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.03 }}
-                className="flex items-center gap-2.5 bg-white/[0.03] rounded-lg p-2.5 border border-white/[0.05]"
+                className="flex items-center gap-2.5 bg-[#1a1815] rounded-lg p-2.5 border border-[#d4af37]/10"
               >
                 <div
                   className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: (RARITY_COLORS[drop.rarity] || '#9ca3af') + '22', border: `1px solid ${(RARITY_COLORS[drop.rarity] || '#9ca3af')}44` }}
+                  style={{ backgroundColor: (RARITY_COLORS[drop.rarity] || '#b0a89f') + '20', border: `1px solid ${(RARITY_COLORS[drop.rarity] || '#b0a89f')}40` }}
                 >
-                  <Zap className="w-3.5 h-3.5" style={{ color: RARITY_COLORS[drop.rarity] || '#9ca3af' }} />
+                  <Zap className="w-3.5 h-3.5" style={{ color: RARITY_COLORS[drop.rarity] || '#b0a89f' }} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-semibold text-white/80 truncate">{drop.item_name}</p>
-                  <p className="text-[10px] text-white/30">{drop.source_case || 'case'}</p>
+                  <p className="text-[11px] font-semibold text-[#fafaf8] truncate">{drop.item_name}</p>
+                  <p className="text-[10px] text-[#b0a89f]/50">{drop.source_case || 'case'}</p>
                 </div>
-                <span className="text-[11px] font-bold text-amber-400">{drop.value?.toLocaleString()}</span>
+                <span className="text-[11px] font-bold text-[#f4c430]">{drop.value?.toLocaleString()}</span>
               </motion.div>
             ))
           )}
