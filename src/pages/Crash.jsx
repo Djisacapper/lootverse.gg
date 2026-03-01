@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useWallet } from '../components/game/useWallet';
+import { safeAvatarUrl } from '../components/game/usePlayerAvatars';
 import { motion } from 'framer-motion';
 import { Users, Rocket } from 'lucide-react';
 import { Button } from '@/components/ui/button';
