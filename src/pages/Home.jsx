@@ -83,12 +83,12 @@ export default function Home() {
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
-        className="relative overflow-hidden rounded-2xl border border-white/[0.07]"
-        style={{ background: 'linear-gradient(135deg, #1a0a3a 0%, #0f0f2a 50%, #0a1a3a 100%)', minHeight: 220 }}
+        className="relative overflow-hidden rounded-2xl border border-[#d4af37]/20"
+        style={{ background: 'linear-gradient(135deg, #1a1815 0%, #242220 50%, #0a0805 100%)', minHeight: 220 }}
       >
         {/* Glow orbs */}
-        <div className="absolute top-0 left-1/4 w-80 h-80 bg-violet-600/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-fuchsia-600/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 left-1/4 w-80 h-80 bg-[#d4af37]/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-[#b8860b]/8 rounded-full blur-3xl pointer-events-none" />
 
         {/* Floating coin art */}
         <div className="absolute right-6 top-1/2 -translate-y-1/2 hidden md:flex items-center gap-3 opacity-60">
