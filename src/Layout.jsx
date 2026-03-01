@@ -289,7 +289,14 @@ export default function Layout({ children, currentPageName }) {
         </main>
 
         {/* Right Chat Panel - desktop only */}
-        <aside className={`hidden lg:flex flex-col w-[260px] flex-shrink-0 h-[calc(100vh-56px)] sticky top-14 bg-gradient-to-b from-[#1a1a2e]/50 to-[#0d0d1a]/50 border-l border-[#00d9ff]/10 smooth-transition overflow-hidden ${!chatOpen ? 'w-0' : ''}`}>
+        <aside className={`hidden lg:flex flex-col flex-shrink-0 h-[calc(100vh-56px)] sticky top-14 bg-gradient-to-b from-[#1a1a2e]/50 to-[#0d0d1a]/50 border-l border-[#00d9ff]/10 transition-all duration-300 overflow-hidden relative ${chatOpen ? 'w-[260px]' : 'w-0'}`}>
+          <button
+            onClick={() => setChatOpen(false)}
+            className="absolute -right-3 top-14 z-50 w-6 h-6 rounded-full bg-[#242456] border border-[#00d9ff]/20 flex items-center justify-center text-[#00d9ff]/40 hover:text-[#00d9ff] smooth-transition"
+            title="Close chat"
+          >
+            <ChevronRight className="w-3 h-3" />
+          </button>
           <LiveChat onClose={() => setChatOpen(false)} />
         </aside>
       </div>
