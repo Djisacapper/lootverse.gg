@@ -316,7 +316,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
   };
 
   // Called when a player's NORMAL spin animation ends
-  const handleNormalSpinDone = (pi) => {
+  const handleNormalSpinDone = useCallback((pi) => {
     const round = currentRoundRef.current;
     const rolled = allRolled.current[round];
 
@@ -331,13 +331,13 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
       // Normal finish for this player
       markPlayerRoundDone(pi, round);
     }
-  };
+  }, []);
 
   // Called when the magic spin animation ends
-  const handleMagicSpinDone = (pi) => {
+  const handleMagicSpinDone = useCallback((pi) => {
     const round = currentRoundRef.current;
     markPlayerRoundDone(pi, round);
-  };
+  }, []);
 
   // Marks one player as fully done for this round
   const markPlayerRoundDone = (pi, round) => {
