@@ -78,8 +78,8 @@ export default function CaseSpinner({ items, result, spinning, onComplete }) {
                 style={{ width: ITEM_WIDTH - 8, height: 112 }}
               >
                 <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${getRarityColor(item.rarity)} flex items-center justify-center mb-1.5`}>
-                  {item.image_urls?.[0] || item.image_url ? (
-                    <img src={item.image_urls?.[0] || item.image_url} alt="" className="w-8 h-8 object-contain" />
+                  {item.image ? (
+                    <img src={item.image} alt="" className="w-8 h-8 object-contain" />
                   ) : (
                     <Sparkles className="w-5 h-5 text-white" />
                   )}
