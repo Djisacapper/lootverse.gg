@@ -167,21 +167,18 @@ export default function Admin() {
 
       // Upload item images and build final items array
       const itemsWithImages = await Promise.all(items.map(async (item) => {
-        let imageUrls = [];
+        let image = null;
         if (item.image_files && item.image_files.length > 0) {
-          imageUrls = await Promise.all(
-            item.image_files.map(async (file) => {
-              const uploadRes = await base44.integrations.Core.UploadFile({ file });
-              return uploadRes.file_url;
-            })
-          );
+          // Use first image as the primary
+          const uploadRes = await base44.integrations.Core.UploadFile({ file: item.image_files[0] });
+          image = uploadRes.file_url;
         }
         return {
           name: item.name,
           rarity: item.rarity,
           value: item.value,
           drop_rate: item.drop_rate,
-          image_urls: imageUrls
+          image: image
         };
       }));
 
