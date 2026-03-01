@@ -17,12 +17,14 @@ export function usePlayerAvatars(players) {
       return;
     }
 
+    // Always update with current player data first (so names/bots etc stay in sync)
+    setEnriched(players);
+
     const realEmails = players
       .filter(p => p && p.email && !p.isBot && !p.email.startsWith('bot_') && !p.email.includes('@system'))
       .map(p => p.email);
 
     const emailKey = realEmails.sort().join(',');
-    if (emailKey === lastEmailKey.current) return;
     lastEmailKey.current = emailKey;
 
     if (realEmails.length === 0) {
