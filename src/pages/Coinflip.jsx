@@ -344,7 +344,8 @@ export default function Coinflip() {
 
       const game = await base44.entities.CoinflipGame.create({
         creator_email: user.email,
-        creator_name: user.full_name || 'Anonymous',
+        creator_name: user.username || user.full_name || 'Anonymous',
+        creator_avatar_url: user.avatar_url || null,
         creator_side: side,
         bet_amount: amount,
         opponent_email: 'bot@system',
