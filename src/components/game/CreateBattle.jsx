@@ -46,7 +46,7 @@ export default function CreateBattle({ cases, balance, user, onBack, onCreate })
   // Each slot: null (empty) or { name, email, isBot }
   const initSlots = () => {
     const s = Array(totalPlayers).fill(null);
-    if (user) s[0] = { name: user.full_name || 'You', email: user.email, isBot: false };
+    if (user) s[0] = { name: user.username || user.full_name || 'You', email: user.email, avatar_url: user.avatar_url || null, isBot: false };
     return s;
   };
   const [slots, setSlots] = useState(initSlots);
