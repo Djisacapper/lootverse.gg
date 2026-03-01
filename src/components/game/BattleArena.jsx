@@ -50,8 +50,6 @@ function ConfettiEffect({ active }) {
 
 /* ─── Vertical Spinner ──────────────────────────────────────────────────────── */
 function VerticalSpinner({ items, winnerItem, onDone, fast }) {
-  const { playRollingSound, stopRollingSound, playDingSound } = useAudio();
-  const rollingStopRef = useRef(null);
   const ITEM_H = 80;
   const WIN_POS = 28;
   const TOTAL = 36;
@@ -68,17 +66,9 @@ function VerticalSpinner({ items, winnerItem, onDone, fast }) {
 
   useEffect(() => {
     const spinMs = fast ? 1500 : 3100;
-    rollingStopRef.current = playRollingSound();
-    const t = setTimeout(() => {
-      if (rollingStopRef.current) rollingStopRef.current();
-      playDingSound();
-      onDone();
-    }, spinMs);
-    return () => {
-      clearTimeout(t);
-      if (rollingStopRef.current) rollingStopRef.current();
-    };
-  }, [playRollingSound, playDingSound, fast, onDone]);
+    const t = setTimeout(onDone, spinMs);
+    return () => clearTimeout(t);
+  }, [fast, onDone]);
 
   return (
     <div className="relative overflow-hidden rounded-xl border border-white/10 bg-[#08080f]" style={{ height: VISIBLE_H }}>
