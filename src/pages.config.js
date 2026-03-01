@@ -59,6 +59,7 @@ import Leaderboard from './pages/Leaderboard';
 import Referrals from './pages/Referrals';
 import Rewards from './pages/Rewards';
 import Upgrade from './pages/Upgrade';
+import Admin from './pages/Admin';
 import __Layout from './Layout.jsx';
 
 
@@ -75,6 +76,7 @@ export const PAGES = {
     "Referrals": Referrals,
     "Rewards": Rewards,
     "Upgrade": Upgrade,
+    "Admin": Admin,
 }
 
 export const pagesConfig = {
