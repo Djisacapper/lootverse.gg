@@ -5,7 +5,6 @@ import { getRarityColor, getRarityBorder, rollItem } from './useWallet';
 import { motion, AnimatePresence } from 'framer-motion';
 import JackpotWheel from './JackpotWheel';
 import { usePlayerAvatars, safeAvatarUrl } from './usePlayerAvatars';
-import Portal from '@/components/Portal';
 
 const TEAM_COLORS = ['#8b5cf6', '#3b82f6', '#ef4444', '#10b981'];
 const PLAYER_COLORS = ['#8b5cf6','#3b82f6','#ef4444','#10b981','#f59e0b','#ec4899','#06b6d4','#84cc16'];
@@ -691,63 +690,56 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
         </motion.div>
       )}
 
-      {/* ── Battle Over Modal (viewport-centered via portal) ── */}
+      {/* ── Battle Over Banner ── */}
       {done && (
-        <Portal>
-          <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.92 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="rounded-2xl border border-amber-400/30 bg-[#13131f] p-6 text-center max-w-lg w-full mx-4 shadow-2xl"
-            >
-              <p className="text-2xl font-black text-white mb-1">🏆 The battle is over!</p>
-              {payoutLabel && <p className="text-sm text-green-400 font-semibold mb-4">{payoutLabel}</p>}
+        <motion.div initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }}
+          className="rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-500/15 to-transparent p-5 text-center">
+          <p className="text-2xl font-black text-white mb-1">🏆 The battle is over!</p>
+          {payoutLabel && <p className="text-sm text-green-400 font-semibold mb-4">{payoutLabel}</p>}
 
-              <div className="flex items-start justify-center gap-4 overflow-x-auto">
-                {teamList.map((mi, ti) => {
-                  const isW = isGroup || ti === winnerTeamIdx;
-                  return (
-                    <React.Fragment key={ti}>
-                      <div className={`flex flex-col items-center gap-2 flex-shrink-0 ${isW ? '' : 'opacity-35'}`}>
-                        {teamList.length > 1 && (
-                          <p className="text-sm font-bold" style={{ color: TEAM_COLORS[ti] }}>
-                            Team {ti + 1}: {teamTotals[ti]?.toLocaleString()}
-                          </p>
-                        )}
-                        <div className="flex gap-3 justify-center">
-                          {mi.map(pi => (
-                            <div key={pi} className="flex flex-col items-center gap-1">
-                              {isW && <span className="text-lg">{isGroup ? '🎁' : '👑'}</span>}
-                              <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center text-lg font-bold flex-shrink-0"
-                                style={{ background: TEAM_COLORS[ti] + '33', border: `2px solid ${TEAM_COLORS[ti]}88` }}>
-                                {players[pi]?.isBot
-                                  ? <span>🤖</span>
-                                  : safeAvatarUrl(players[pi]?.avatar_url)
-                                    ? <img src={safeAvatarUrl(players[pi].avatar_url)} alt="" className="w-full h-full object-cover" />
-                                    : <span>{players[pi]?.name?.[0]?.toUpperCase() || '?'}</span>}
-                              </div>
-                              <p className="text-xs text-white/60 text-center max-w-[60px] truncate">{players[pi]?.name}</p>
-                              <p className="text-sm font-bold text-amber-400">{playerTotals[pi]?.toLocaleString()}</p>
-                            </div>
-                          ))}
+          <div className="flex items-start justify-center gap-4 overflow-x-auto">
+            {teamList.map((mi, ti) => {
+              const isW = isGroup || ti === winnerTeamIdx;
+              return (
+                <React.Fragment key={ti}>
+                  <div className={`flex flex-col items-center gap-2 flex-shrink-0 ${isW ? '' : 'opacity-35'}`}>
+                    {teamList.length > 1 && (
+                      <p className="text-sm font-bold" style={{ color: TEAM_COLORS[ti] }}>
+                        Team {ti + 1}: {teamTotals[ti]?.toLocaleString()}
+                      </p>
+                    )}
+                    <div className="flex gap-3 justify-center">
+                      {mi.map(pi => (
+                        <div key={pi} className="flex flex-col items-center gap-1">
+                          {isW && <span className="text-lg">{isGroup ? '🎁' : '👑'}</span>}
+                          <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center text-lg font-bold flex-shrink-0"
+                            style={{ background: TEAM_COLORS[ti] + '33', border: `2px solid ${TEAM_COLORS[ti]}88` }}>
+                            {players[pi]?.isBot
+                              ? <span>🤖</span>
+                              : safeAvatarUrl(players[pi]?.avatar_url)
+                                ? <img src={safeAvatarUrl(players[pi].avatar_url)} alt="" className="w-full h-full object-cover" />
+                                : <span>{players[pi]?.name?.[0]?.toUpperCase() || '?'}</span>}
+                          </div>
+                          <p className="text-xs text-white/60 text-center max-w-[60px] truncate">{players[pi]?.name}</p>
+                          <p className="text-sm font-bold text-amber-400">{playerTotals[pi]?.toLocaleString()}</p>
                         </div>
-                      </div>
-                      {ti < teamList.length - 1 && (
-                        <div className="flex items-center self-center px-1 text-white/20 font-black text-lg flex-shrink-0">VS</div>
-                      )}
-                    </React.Fragment>
-                  );
-                })}
-              </div>
-
-              <div className="flex justify-center mt-5">
-                <Button onClick={onClose} className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl px-12 h-11">
-                  Done
-                </Button>
-              </div>
-            </motion.div>
+                      ))}
+                    </div>
+                  </div>
+                  {ti < teamList.length - 1 && (
+                    <div className="flex items-center self-center px-1 text-white/20 font-black text-lg flex-shrink-0">VS</div>
+                  )}
+                </React.Fragment>
+              );
+            })}
           </div>
-        </Portal>
+
+          <div className="flex justify-center mt-5">
+            <Button onClick={onClose} className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl px-12 h-11">
+              Done
+            </Button>
+          </div>
+        </motion.div>
       )}
 
       {/* ── Countdown ── */}
