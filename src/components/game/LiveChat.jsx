@@ -1,8 +1,48 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Zap, Send, Crown, Shield, Badge } from 'lucide-react';
+import { MessageCircle, Zap, Send, Crown, Shield, Badge, Smile } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
 import UserStatsModal from './UserStatsModal';
+
+const EMOJIS = ['😀', '😂', '😍', '🔥', '💯', '👑', '🎉', '🎮', '⚡', '✨', '🌙', '💎', '🚀', '👻', '🤔', '😎', '🤖', '🎲', '💰', '🏆'];
+
+const EmojiPicker = ({ onEmojiClick, className }) => {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className={`text-white/30 hover:text-violet-400 transition-colors ${className}`}
+      >
+        <Smile className="w-3.5 h-3.5" />
+      </button>
+      {open && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0, scale: 0.9 }}
+          className="absolute bottom-full right-0 mb-2 bg-[#16161f] border border-white/10 rounded-lg p-2 grid grid-cols-5 gap-1 w-40 shadow-lg"
+        >
+          {EMOJIS.map(emoji => (
+            <button
+              key={emoji}
+              type="button"
+              onClick={() => {
+                onEmojiClick(emoji);
+                setOpen(false);
+              }}
+              className="text-lg hover:bg-white/10 rounded p-1 transition-colors"
+            >
+              {emoji}
+            </button>
+          ))}
+        </motion.div>
+      )}
+    </div>
+  );
+};
 
 const MOCK_MESSAGES = [
   { id: 1, user: 'ShadowKing', level: 9, text: 'just hit legendary on celestial!!', time: '2m' },
