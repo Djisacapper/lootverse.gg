@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
-import { Shield, Search, DollarSign, Ban, Trash2, Activity, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
+import { Shield, Search, DollarSign, Ban, Trash2, Activity, AlertCircle, CheckCircle2, Loader2, Box, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -15,6 +15,16 @@ export default function Admin() {
   const [activityLog, setActivityLog] = useState([]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
+  const [caseName, setCaseName] = useState('');
+  const [caseDescription, setCaseDescription] = useState('');
+  const [casePrice, setCasePrice] = useState('');
+  const [caseCategory, setCaseCategory] = useState('standard');
+  const [caseImage, setCaseImage] = useState(null);
+  const [items, setItems] = useState([]);
+  const [itemName, setItemName] = useState('');
+  const [itemRarity, setItemRarity] = useState('common');
+  const [itemValue, setItemValue] = useState('');
+  const [itemDropRate, setItemDropRate] = useState('');
 
   useEffect(() => {
     checkAdminAccess();
@@ -112,6 +122,62 @@ export default function Admin() {
     ]);
   };
 
+  const handleAddItem = () => {
+    if (!itemName || !itemValue || !itemDropRate) return;
+    setItems([...items, {
+      name: itemName,
+      rarity: itemRarity,
+      value: parseInt(itemValue),
+      drop_rate: parseInt(itemDropRate)
+    }]);
+    setItemName('');
+    setItemValue('');
+    setItemDropRate('');
+  };
+
+  const handleRemoveItem = (index) => {
+    setItems(items.filter((_, i) => i !== index));
+  };
+
+  const handleCreateCase = async () => {
+    if (!caseName || !casePrice || items.length === 0) {
+      setMessage('Please fill in all required fields and add at least one item');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      let imageUrl = null;
+      if (caseImage) {
+        const uploadRes = await base44.integrations.Core.UploadFile({ file: caseImage });
+        imageUrl = uploadRes.file_url;
+      }
+
+      await base44.entities.CaseTemplate.create({
+        name: caseName,
+        description: caseDescription,
+        price: parseInt(casePrice),
+        category: caseCategory,
+        image_url: imageUrl,
+        items: items,
+        is_active: true
+      });
+
+      addActivityLog(`Created new case: ${caseName}`);
+      setMessage('Case created successfully!');
+      setCaseName('');
+      setCaseDescription('');
+      setCasePrice('');
+      setItems([]);
+      setCaseImage(null);
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('Error creating case');
+      console.error(err);
+    }
+    setLoading(false);
+  };
+
   if (user?.role !== 'admin') {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -158,6 +224,9 @@ export default function Admin() {
         <TabsList className="bg-white/5 border border-white/10 rounded-xl">
           <TabsTrigger value="users" className="data-[state=active]:bg-red-500/20 data-[state=active]:text-red-300 rounded-lg">
             <Search className="w-3.5 h-3.5 mr-1.5" /> User Management
+          </TabsTrigger>
+          <TabsTrigger value="cases" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 rounded-lg">
+            <Box className="w-3.5 h-3.5 mr-1.5" /> Create Cases
           </TabsTrigger>
           <TabsTrigger value="activity" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 rounded-lg">
             <Activity className="w-3.5 h-3.5 mr-1.5" /> Activity Log
@@ -360,6 +429,164 @@ export default function Admin() {
                 </div>
               </div>
             )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="cases" className="space-y-4">
+          <div className="glass rounded-xl p-6 border border-white/5 space-y-6">
+            <div>
+              <h2 className="text-xl font-bold text-cyan-400 mb-4">Create New Case</h2>
+              
+              {/* Case Info */}
+              <div className="space-y-4 mb-6">
+                <div>
+                  <label className="text-sm font-semibold text-white/80 block mb-2">Case Name</label>
+                  <Input
+                    placeholder="e.g. Celestial Case"
+                    value={caseName}
+                    onChange={(e) => setCaseName(e.target.value)}
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-semibold text-white/80 block mb-2">Description</label>
+                  <Input
+                    placeholder="Short description"
+                    value={caseDescription}
+                    onChange={(e) => setCaseDescription(e.target.value)}
+                    className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-sm font-semibold text-white/80 block mb-2">Price</label>
+                    <Input
+                      type="number"
+                      placeholder="100"
+                      value={casePrice}
+                      onChange={(e) => setCasePrice(e.target.value)}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-semibold text-white/80 block mb-2">Category</label>
+                    <select
+                      value={caseCategory}
+                      onChange={(e) => setCaseCategory(e.target.value)}
+                      className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="budget">Budget</option>
+                      <option value="standard">Standard</option>
+                      <option value="premium">Premium</option>
+                      <option value="legendary">Legendary</option>
+                      <option value="event">Event</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-semibold text-white/80 block mb-2">Case Image</label>
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => setCaseImage(e.target.files?.[0] || null)}
+                      className="bg-white/5 border-white/10 text-white/60 text-xs"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Items */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-white">Items</h3>
+
+                {/* Add Item Form */}
+                <div className="bg-white/[0.02] rounded-lg p-4 space-y-3">
+                  <div className="grid grid-cols-4 gap-2">
+                    <Input
+                      placeholder="Item name"
+                      value={itemName}
+                      onChange={(e) => setItemName(e.target.value)}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
+                    />
+                    <select
+                      value={itemRarity}
+                      onChange={(e) => setItemRarity(e.target.value)}
+                      className="bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-sm"
+                    >
+                      <option value="common">Common</option>
+                      <option value="uncommon">Uncommon</option>
+                      <option value="rare">Rare</option>
+                      <option value="epic">Epic</option>
+                      <option value="legendary">Legendary</option>
+                    </select>
+                    <Input
+                      type="number"
+                      placeholder="Value"
+                      value={itemValue}
+                      onChange={(e) => setItemValue(e.target.value)}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
+                    />
+                    <Input
+                      type="number"
+                      placeholder="Drop % (0-100)"
+                      value={itemDropRate}
+                      onChange={(e) => setItemDropRate(e.target.value)}
+                      className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
+                    />
+                  </div>
+                  <Button
+                    onClick={handleAddItem}
+                    disabled={!itemName || !itemValue || !itemDropRate}
+                    className="w-full bg-cyan-500 hover:bg-cyan-600 text-white"
+                  >
+                    <Plus className="w-4 h-4 mr-2" /> Add Item
+                  </Button>
+                </div>
+
+                {/* Items List */}
+                {items.length > 0 && (
+                  <div className="space-y-2">
+                    {items.map((item, idx) => (
+                      <motion.div
+                        key={idx}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="flex items-center justify-between bg-white/5 rounded-lg p-3 border border-white/10"
+                      >
+                        <div>
+                          <p className="text-sm font-semibold text-white">{item.name}</p>
+                          <p className="text-xs text-white/50">{item.rarity} • ${item.value} • {item.drop_rate}%</p>
+                        </div>
+                        <Button
+                          onClick={() => handleRemoveItem(idx)}
+                          size="sm"
+                          className="bg-red-500/20 hover:bg-red-500/30 text-red-400"
+                        >
+                          <X className="w-3 h-3" />
+                        </Button>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Create Button */}
+            <Button
+              onClick={handleCreateCase}
+              disabled={loading || !caseName || !casePrice || items.length === 0}
+              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3"
+            >
+              {loading ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Box className="w-4 h-4 mr-2" />
+              )}
+              Create Case
+            </Button>
           </div>
         </TabsContent>
 
