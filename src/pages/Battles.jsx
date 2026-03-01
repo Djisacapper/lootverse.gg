@@ -363,8 +363,8 @@ export default function Battles() {
                       <div className="flex items-center gap-2">
                         {(b.players || []).slice(0, 4).map((p, i) => (
                           <div key={i} title={p.name} className="w-7 h-7 rounded-full bg-gradient-to-br from-violet-500 to-fuchsia-600 overflow-hidden flex items-center justify-center text-[10px] font-bold text-white">
-                            {p.avatar_url
-                              ? <img src={p.avatar_url} alt="" className="w-full h-full object-cover" />
+                            {safeAvatarUrl(p.avatar_url)
+                              ? <img src={safeAvatarUrl(p.avatar_url)} alt="" className="w-full h-full object-cover" />
                               : (p.name?.[0]?.toUpperCase() || '?')}
                           </div>
                         ))}
