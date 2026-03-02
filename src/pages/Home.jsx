@@ -5,8 +5,8 @@ import { createPageUrl } from '@/utils';
 import { useWallet } from '../components/game/useWallet';
 import { motion } from 'framer-motion';
 import { Swords, TrendingUp, Zap, Gift, ChevronRight, Trophy, Star, Sparkles, Box } from 'lucide-react';
-import irishImg from '../assets/Luck_Of_The_Irish.png';
-import roseImg  from '../assets/Rose_Love.png';
+import irishImg from '../assets/Luck Of The Irish.png';
+import roseImg  from '../assets/Rose Love.png';
 import vtechImg from '../assets/V-Tech.png';
 
 /* ─────────────────────────────────────────────────────────────
@@ -15,7 +15,6 @@ import vtechImg from '../assets/V-Tech.png';
    sky #38bdf8 · violet #8b5cf6
 ───────────────────────────────────────────────────────────── */
 
-// Real case images — imported from src/assets/
 const CASE_IMGS = {
   irish: irishImg,
   rose:  roseImg,
