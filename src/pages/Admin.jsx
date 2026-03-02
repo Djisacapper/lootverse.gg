@@ -173,12 +173,14 @@ export default function Admin() {
           image = uploadRes.file_url;
         }
         return {
-          name: item.name,
-          rarity: item.rarity,
-          value: item.value,
-          drop_rate: item.drop_rate,
-          image: image
-        };
+  name: item.name,
+  rarity: item.rarity,
+  value: item.value,
+  drop_rate: item.drop_rate,
+  image: image,
+  image_url: image,
+  image_urls: image ? [image] : [],
+};
       }));
       await base44.entities.CaseTemplate.create({
         name: caseName,
