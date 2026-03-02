@@ -77,7 +77,7 @@ export default function CaseSpinner({ items, result, spinning, onComplete }) {
                   }`}
                 style={{ width: ITEM_WIDTH - 8, height: 112 }}
               >
-                <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-1.5 ${getRarityGlow(item.rarity)}`}>
+                <div className={`w-10 h-10 flex items-center justify-center mb-1.5 ${getRarityGlow(item.rarity)}`}>
                   {item.image ? (
                     <img src={item.image} alt="" className="w-8 h-8 object-contain" />
                   ) : (
