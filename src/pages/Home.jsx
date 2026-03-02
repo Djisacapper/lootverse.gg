@@ -587,29 +587,27 @@ export default function Home() {
               >
                 <TiltCard>
                   <Link to={createPageUrl('CaseOpen') + `?id=${c.id}`}>
-                    {({ isHovered }) => (
-                      <div className="relative overflow-hidden rounded-xl p-5 text-center cursor-pointer group"
+                    <div className="relative overflow-hidden rounded-xl p-5 text-center cursor-pointer group"
+                      style={{
+                        background: 'linear-gradient(135deg, #0f0f20, #0a0a18)',
+                        border: '1px solid rgba(0,217,255,0.12)',
+                        transition: 'all 0.3s cubic-bezier(0.22,1,0.36,1)',
+                      }}
+                    >
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                        style={{ background: 'linear-gradient(135deg, rgba(0,217,255,0.06), rgba(255,0,110,0.04))' }}
+                      />
+                      <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
                         style={{
-                          background: 'linear-gradient(135deg, #0f0f20, #0a0a18)',
-                          border: '1px solid rgba(0,217,255,0.12)',
-                          transition: 'all 0.3s cubic-bezier(0.22,1,0.36,1)',
+                          background: 'linear-gradient(135deg, rgba(0,217,255,0.12), rgba(255,0,110,0.08))',
+                          border: '1px solid rgba(0,217,255,0.2)',
                         }}
                       >
-                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                          style={{ background: 'linear-gradient(135deg, rgba(0,217,255,0.06), rgba(255,0,110,0.04))' }}
-                        />
-                        <div className="w-16 h-16 rounded-2xl mx-auto mb-4 flex items-center justify-center group-hover:scale-110 transition-transform duration-300"
-                          style={{
-                            background: 'linear-gradient(135deg, rgba(0,217,255,0.12), rgba(255,0,110,0.08))',
-                            border: '1px solid rgba(0,217,255,0.2)',
-                          }}
-                        >
-                          <Box className="w-8 h-8 text-[#00d9ff]" />
-                        </div>
-                        <h3 className="text-xs font-bold text-white mb-1 truncate">{c.name}</h3>
-                        <p className="text-xs font-black text-[#ff006e]">{c.price?.toLocaleString()} coins</p>
+                        <Box className="w-8 h-8 text-[#00d9ff]" />
                       </div>
-                    )}
+                      <h3 className="text-xs font-bold text-white mb-1 truncate">{c.name}</h3>
+                      <p className="text-xs font-black text-[#ff006e]">{c.price?.toLocaleString()} coins</p>
+                    </div>
                   </Link>
                 </TiltCard>
               </motion.div>
