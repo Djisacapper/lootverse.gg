@@ -44,17 +44,17 @@ export default function CaseSpinner({ items, result, spinning, onComplete }) {
 
   const getRarityDropShadow = (rarity) => {
     const shadows = {
-      legendary: 'drop-shadow(0 0 6px rgba(251,191,36,0.8))',
-      epic:      'drop-shadow(0 0 6px rgba(168,85,247,0.7))',
-      rare:      'drop-shadow(0 0 6px rgba(59,130,246,0.7))',
-      uncommon:  'drop-shadow(0 0 6px rgba(34,197,94,0.6))',
-      common:    'drop-shadow(0 0 4px rgba(161,161,170,0.4))',
+      legendary: 'drop-shadow(0 0 12px rgba(251,191,36,0.95)) drop-shadow(0 0 20px rgba(251,191,36,0.5))',
+      epic:      'drop-shadow(0 0 12px rgba(168,85,247,0.9)) drop-shadow(0 0 20px rgba(168,85,247,0.4))',
+      rare:      'drop-shadow(0 0 12px rgba(59,130,246,0.9)) drop-shadow(0 0 20px rgba(59,130,246,0.4))',
+      uncommon:  'drop-shadow(0 0 12px rgba(34,197,94,0.8)) drop-shadow(0 0 20px rgba(34,197,94,0.3))',
+      common:    'drop-shadow(0 0 8px rgba(161,161,170,0.6))',
     };
     return shadows[rarity] || shadows.common;
   };
 
-if (!spinItems || spinItems.length === 0) {
-      return <div className="h-32 glass rounded-2xl animate-pulse" />;
+  if (spinItems.length === 0) {
+    return <div className="h-32 glass rounded-2xl animate-pulse" />;
   }
 
   return (
