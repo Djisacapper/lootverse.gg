@@ -17,7 +17,8 @@ export default function Leaderboard() {
 
   const loadData = async () => {
     try {
-      const allUsers = await base44.entities.User.list('-level', 100);
+      const entries = await base44.entities.LeaderboardEntry.list('-total_wagered', 10);
+setTop10(entries);
       setUsers(allUsers.slice(0, 10));
       setTop10(allUsers.slice(0, 10));
       // Weekly leaderboard is same as level-based (you can modify to use timestamp if needed)
