@@ -14,7 +14,6 @@ export default function CaseSpinner({ items, result, spinning, onComplete }) {
   useEffect(() => {
     if (!items || items.length === 0) return;
 
-    // Build spin strip
     const strip = [];
     for (let i = 0; i < VISIBLE_ITEMS; i++) {
       if (i === WINNER_INDEX && result) {
@@ -31,7 +30,6 @@ export default function CaseSpinner({ items, result, spinning, onComplete }) {
     if (spinning && spinItems.length > 0 && containerRef.current) {
       const containerWidth = containerRef.current.offsetWidth;
       const targetOffset = (WINNER_INDEX * ITEM_WIDTH) - (containerWidth / 2) + (ITEM_WIDTH / 2);
-      // Add small random offset for realism
       const jitter = (Math.random() - 0.5) * 40;
       setOffset(targetOffset + jitter);
 
@@ -43,6 +41,17 @@ export default function CaseSpinner({ items, result, spinning, onComplete }) {
       setOffset(0);
     }
   }, [spinning, spinItems]);
+
+  const getRarityDropShadow = (rarity) => {
+    const shadows = {
+      legendary: 'drop-shadow(0 0 6px rgba(251,191,36,0.8))',
+      epic:      'drop-shadow(0 0 6px rgba(168,85,247,0.7))',
+      rare:      'drop-shadow(0 0 6px rgba(59,130,246,0.7))',
+      uncommon:  'drop-shadow(0 0 6px rgba(34,197,94,0.6))',
+      common:    'drop-shadow(0 0 4px rgba(161,161,170,0.4))',
+    };
+    return shadows[rarity] || shadows.common;
+  };
 
   if (spinItems.length === 0) {
     return <div className="h-32 glass rounded-2xl animate-pulse" />;
@@ -73,13 +82,18 @@ export default function CaseSpinner({ items, result, spinning, onComplete }) {
                 className={`flex-shrink-0 rounded-xl border p-2 flex flex-col items-center justify-center transition-all
                   ${item.isWinner && !spinning
                     ? `${getRarityBorder(item.rarity)} bg-gradient-to-b from-white/10 to-transparent shadow-lg ${getRarityGlow(item.rarity)}`
-                    : `border-transparent bg-transparent`
+                    : `border-white/5 bg-white/[0.02]`
                   }`}
                 style={{ width: ITEM_WIDTH - 8, height: 112 }}
               >
-                <div className={`w-10 h-10 flex items-center justify-center mb-1.5 ${getRarityGlow(item.rarity)}`}>
+                <div className="w-10 h-10 flex items-center justify-center mb-1.5">
                   {item.image ? (
-                    <img src={item.image} alt="" className="w-8 h-8 object-contain" />
+                    <img
+                      src={item.image}
+                      alt=""
+                      className="w-8 h-8 object-contain"
+                      style={{ filter: getRarityDropShadow(item.rarity) }}
+                    />
                   ) : (
                     <Sparkles className="w-5 h-5 text-white" />
                   )}
