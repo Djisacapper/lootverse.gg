@@ -17,51 +17,39 @@ Deno.serve(async (req) => {
             1000
           );
 
-          const totalWagered = transactions.reduce((sum, t) => {
+          const totalWagered = transactions.reduce((sum: number, t: any) => {
             if (['case_purchase', 'battle_entry', 'coinflip_bet', 'crash_bet'].includes(t.type)) {
               return sum + Math.abs(t.amount);
             }
             return sum;
           }, 0);
 
-          return { user: u, totalWagered };
+          return {
+            username: u.username || u.full_name || 'Player',
+            avatar_url: u.avatar_url || null,
+            level: u.level || 1,
+            total_wagered: totalWagered,
+            user_email: u.email,
+          };
         } catch {
-          return { user: u, totalWagered: 0 };
+          return null;
         }
       })
     );
 
-    // Sort by total wagered, take top 10
-    const top10 = wagerResults
-      .filter(r => r.status === 'fulfilled')
-      .map(r => (r as PromiseFulfilledResult<{ user: any; totalWagered: number }>).value)
-      .sort((a, b) => b.totalWagered - a.totalWagered)
-      .slice(0, 10);
+    // Sort by total wagered, take top 10, filter out nulls
+    const entries = wagerResults
+      .filter(r => r.status === 'fulfilled' && r.value !== null)
+      .map(r => (r as PromiseFulfilledResult<any>).value)
+      .sort((a, b) => b.total_wagered - a.total_wagered)
+      .slice(0, 10)
+      .map((entry, index) => ({ ...entry, rank: index + 1 }));
 
-    // Clear existing leaderboard entries
-    const existing = await base44.asServiceRole.entities.LeaderboardEntry.list('', 50);
-    await Promise.allSettled(
-      existing.map(e => base44.asServiceRole.entities.LeaderboardEntry.delete(e.id))
-    );
+    // Return entries directly — no entity needed
+    return Response.json({ success: true, entries });
 
-    // Write new leaderboard entries
-    await Promise.all(
-      top10.map((entry, index) =>
-        base44.asServiceRole.entities.LeaderboardEntry.create({
-          username: entry.user.username || entry.user.full_name || 'Player',
-          avatar_url: entry.user.avatar_url || null,
-          level: entry.user.level || 1,
-          total_wagered: entry.totalWagered,
-          rank: index + 1,
-          user_email: entry.user.email,
-        })
-      )
-    );
-
-    console.log(`Leaderboard synced: ${top10.length} entries written`);
-    return Response.json({ success: true, synced: top10.length });
-
-  } catch (error) {
-    console.error('Leaderboard sync error:', error);
+  } catch (error: any) {
+    console.error('Leaderboard error:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
+});
