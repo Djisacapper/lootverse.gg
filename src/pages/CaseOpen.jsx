@@ -243,7 +243,7 @@ export default function CaseOpen() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           {(caseData.items || []).map((item, i) => (
             <div key={i} className={`glass rounded-xl p-4 text-center border ${item.name === result?.name && showResult ? 'border-amber-400/40' : 'border-white/5'}`}>
-              <div className={`w-12 h-12 rounded-lg bg-gradient-to-br ${getRarityColor(item.rarity)} flex items-center justify-center mx-auto mb-2`}>
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-2">
                  {item.image ? (
                    <img src={item.image} alt="" className="w-10 h-10 object-contain" />
                  ) : (
