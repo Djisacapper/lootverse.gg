@@ -143,20 +143,7 @@ const GAMES = [
       { w:80, h:80, right:'30%', top:'5%', bg:'radial-gradient(circle at 35% 35%,#fde68a,#d97706)', br:'50%', rotate:'0deg', glow:'rgba(253,230,138,.5)' },
     ],
   },
-  {
-    name: 'Upgrade',
-    page: 'Upgrade',
-    icon: TrendingUp,
-    size: 'sm',
-    bg: 'linear-gradient(135deg,#001a0a 0%,#003d1a 50%,#001a00 100%)',
-    accent: '#34d399',
-    glowColor: 'rgba(52,211,153,.35)',
-    caseImg: vtechImg,
-    caseGlow: 'drop-shadow(0 0 24px rgba(52,211,153,.8)) drop-shadow(0 10px 32px rgba(0,0,0,.9))',
-    deco: [
-      { w:72, h:72, right:'28%', top:'8%', bg:'radial-gradient(circle at 40% 35%,#6ee7b7,#059669)', br:'16px', rotate:'15deg', glow:'rgba(110,231,183,.5)' },
-    ],
-  },
+
   {
     name: 'Crash',
     page: 'Crash',
@@ -624,13 +611,67 @@ export default function Home() {
             {lgGames.map((g, i) => <LgGameCard key={g.name} g={g} i={i} />)}
           </div>
 
-          {/* 3-col small */}
+          {/* 3-col: Coinflip | Crash | Featured Cases teaser */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
             {smGames.map((g, i) => <SmGameCard key={g.name} g={g} i={i} />)}
+
+            {/* Featured Cases slot — replaces where Upgrade was */}
+            <motion.div
+              initial={{ opacity: 0, y: 24, scale: .96 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ delay: .46, duration: .65, ease: [.22, 1, .36, 1] }}>
+              <Link to={createPageUrl('Cases')}>
+                <div className="card-lift"
+                  style={{
+                    position: 'relative', overflow: 'hidden', borderRadius: 14, cursor: 'pointer',
+                    height: 160,
+                    background: 'linear-gradient(135deg,#1a0a3d 0%,#2d0a5a 50%,#0d0a2e 100%)',
+                    boxShadow: '0 0 0 1px rgba(255,255,255,.07), 0 12px 40px rgba(0,0,0,.65), 0 0 50px rgba(167,139,250,.25)',
+                    border: '1px solid rgba(167,139,250,.2)',
+                  }}>
+                  {/* Glow */}
+                  <div style={{
+                    position: 'absolute', inset: 0, pointerEvents: 'none',
+                    background: 'radial-gradient(ellipse 80% 70% at 80% 35%,rgba(167,139,250,.22) 0%,transparent 60%)',
+                  }} />
+                  {/* Floating case images inside */}
+                  <img src={vtechImg} alt="" style={{
+                    position: 'absolute', right: 4, top: -6, width: 90,
+                    filter: 'drop-shadow(0 0 18px rgba(167,139,250,.7)) drop-shadow(0 8px 24px rgba(0,0,0,.9))',
+                    animation: 'float-hero-a 6s ease-in-out infinite',
+                  }} />
+                  <img src={irishImg} alt="" style={{
+                    position: 'absolute', right: 52, top: 40, width: 62,
+                    filter: 'drop-shadow(0 0 14px rgba(251,191,36,.65)) drop-shadow(0 6px 18px rgba(0,0,0,.9))',
+                    animation: 'float-hero-c 8s ease-in-out infinite .6s',
+                    opacity: .9,
+                  }} />
+                  {/* Bottom label */}
+                  <div style={{
+                    position: 'absolute', bottom: 0, left: 0, right: 0,
+                    background: 'linear-gradient(to top,rgba(0,0,0,.88) 0%,rgba(0,0,0,.5) 55%,transparent 100%)',
+                    padding: '18px 16px 12px',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <Star style={{ width: 14, height: 14, color: '#a78bfa' }} />
+                        <span style={{ fontSize: 15, fontWeight: 800, color: '#fff' }}>Featured Cases</span>
+                      </div>
+                      <ChevronRight style={{ width: 14, height: 14, color: 'rgba(167,139,250,.6)' }} />
+                    </div>
+                  </div>
+                  {/* Top accent line */}
+                  <div style={{
+                    position: 'absolute', top: 0, left: 0, right: 0, height: 2,
+                    background: 'linear-gradient(90deg,transparent,#a78bfa,transparent)',
+                  }} />
+                </div>
+              </Link>
+            </motion.div>
           </div>
         </section>
 
-        {/* Featured Cases */}
+        {/* Featured Cases — full section below */}
         {featuredCases.length > 0 && (
           <section>
             <SectionHead
