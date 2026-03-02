@@ -5,6 +5,9 @@ import { createPageUrl } from '@/utils';
 import { useWallet } from '../components/game/useWallet';
 import { motion } from 'framer-motion';
 import { Swords, TrendingUp, Zap, Gift, ChevronRight, Trophy, Star, Sparkles, Box } from 'lucide-react';
+import irishImg from '../assets/Luck_Of_The_Irish.png';
+import roseImg  from '../assets/Rose_Love.png';
+import vtechImg from '../assets/V-Tech.png';
 
 /* ─────────────────────────────────────────────────────────────
    PALETTE  deep midnight + jewel accents (easy on eyes)
@@ -12,11 +15,11 @@ import { Swords, TrendingUp, Zap, Gift, ChevronRight, Trophy, Star, Sparkles, Bo
    sky #38bdf8 · violet #8b5cf6
 ───────────────────────────────────────────────────────────── */
 
-// Real case images uploaded by user
+// Real case images — imported from src/assets/
 const CASE_IMGS = {
-  irish: '/src/assets/Luck_Of_The_Irish.png',
-  rose:  '/src/assets/Rose_Love.png',
-  vtech: '/src/assets/V-Tech.png',
+  irish: irishImg,
+  rose:  roseImg,
+  vtech: vtechImg,
 };
 
 // Floating case elevator config — each case has position + animation offset
