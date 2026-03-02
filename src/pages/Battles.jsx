@@ -4,7 +4,7 @@ import { useWallet } from '../components/game/useWallet';
 import { safeAvatarUrl } from '../components/game/usePlayerAvatars';
 import { normalizeItemImage } from '../components/game/normalizeItem';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Swords, Plus, Trophy, Users, Eye, ChevronDown, Zap, Shield, Star, Flame } from 'lucide-react';
+import { Swords, Plus, Eye, ChevronDown } from 'lucide-react';
 import CreateBattle from '../components/game/CreateBattle';
 import BattleArena from '../components/game/BattleArena';
 
@@ -636,7 +636,6 @@ export default function Battles() {
 
   const liveBattles   = sortedBattles.filter(b => b.status === 'in_progress');
   const openBattles   = sortedBattles.filter(b => b.status === 'waiting');
-  const totalPot      = waitingBattles.reduce((s, b) => s + (b.entry_cost || 0), 0);
 
   return (
     <div className="bt-root" style={{ background:'#04000a', minHeight:'100vh', padding:'20px 0 80px' }}>
@@ -679,37 +678,9 @@ export default function Battles() {
               <Swords style={{ width:20, height:20, color:'#fbbf24' }} />
               <h1 style={{ fontSize:28, fontWeight:900, color:'#fff', margin:0 }}>Battles</h1>
             </div>
-            <p style={{ fontSize:13, color:'rgba(255,255,255,.35)', fontWeight:600, marginLeft:13, marginBottom:20 }}>
+            <p style={{ fontSize:13, color:'rgba(255,255,255,.35)', fontWeight:600, marginLeft:13 }}>
               Open cases against opponents · Winner takes the pot
             </p>
-
-            {/* Stats row */}
-            <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
-              {[
-                { icon:Swords,   label:'Open Battles', val:openBattles.length,        color:'#fbbf24' },
-                { icon:Flame,    label:'Live Now',      val:liveBattles.length,         color:'#f97316' },
-                { icon:Trophy,   label:'Total Pot',     val:`${totalPot.toLocaleString()} coins`, color:'#a855f7' },
-                { icon:Zap,      label:'Your Balance',  val:`${balance?.toLocaleString() ?? 0}`,  color:'#60a5fa' },
-              ].map(({ icon:Icon, label, val, color }) => (
-                <div key={label} style={{
-                  display:'flex', alignItems:'center', gap:8,
-                  padding:'8px 14px', borderRadius:12,
-                  background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.07)',
-                }}>
-                  <div style={{
-                    width:28, height:28, borderRadius:8, flexShrink:0,
-                    background:`${color}18`, border:`1px solid ${color}30`,
-                    display:'flex', alignItems:'center', justifyContent:'center',
-                  }}>
-                    <Icon style={{ width:13, height:13, color }} />
-                  </div>
-                  <div>
-                    <p style={{ fontSize:9, color:'rgba(255,255,255,.3)', textTransform:'uppercase', letterSpacing:'.12em', marginBottom:1 }}>{label}</p>
-                    <p style={{ fontSize:13, fontWeight:900, color:'#fff' }}>{val}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
 
           {/* Bottom accent line */}
