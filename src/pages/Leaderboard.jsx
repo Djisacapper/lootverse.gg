@@ -20,7 +20,7 @@ export default function Leaderboard() {
       // Call the syncLeaderboard function which runs with service role (no 403)
       const result = await base44.functions.invoke('syncLeaderboard', {});
       // result.entries is the top 10 array returned by the function
-      setTop10(result.entries || []);
+      setTop10(result?.entries || result?.data?.entries || []);
     } catch (err) {
       console.error('Error loading leaderboard:', err);
       setError('Failed to load leaderboard. Please try again.');
