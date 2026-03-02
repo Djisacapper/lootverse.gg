@@ -76,8 +76,6 @@ export function useWallet() {
 }
 
 export function getXpForLevel(level) {
-  // Progressive XP requirement: each level gets harder
-  // Level 1: 500 XP, Level 2: 1100 XP, Level 3: 1800 XP, etc.
   return Math.floor(500 * level + 100 * (level * (level - 1) / 2));
 }
 
@@ -130,11 +128,11 @@ export function getRarityBorder(rarity) {
 
 export function getRarityGlow(rarity) {
   const colors = {
-    common: 'shadow-zinc-400/20',
-    uncommon: 'shadow-green-400/20',
-    rare: 'shadow-blue-400/20',
-    epic: 'shadow-purple-400/30',
-    legendary: 'shadow-amber-400/40',
+    common: 'shadow-lg shadow-zinc-400/40',
+    uncommon: 'shadow-lg shadow-green-400/50',
+    rare: 'shadow-lg shadow-blue-400/60',
+    epic: 'shadow-lg shadow-purple-400/70',
+    legendary: 'shadow-xl shadow-amber-400/80',
   };
   return colors[rarity] || colors.common;
 }
