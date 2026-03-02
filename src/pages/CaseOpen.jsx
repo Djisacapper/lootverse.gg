@@ -4,7 +4,7 @@ import { rollItem, getRarityColor, getRarityGlow } from '../components/game/useW
 import CaseSpinner from '../components/game/CaseSpinner';
 import { normalizeItems } from '../components/game/normalizeItem';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Box, ArrowLeft, RefreshCw, Sparkles, Percent, Play, Eye, Zap } from 'lucide-react';
+import { Box, ArrowLeft, RefreshCw, Sparkles, Percent, Eye, Zap, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
@@ -61,21 +61,17 @@ const CSS = `
 }
 .win-burst { animation: win-burst .55s cubic-bezier(.34,1.56,.64,1) forwards; }
 
-@keyframes particle-rise {
-  0%  { transform:translateY(0) scale(1); opacity:1; }
-  100%{ transform:translateY(-80px) scale(0); opacity:0; }
+@keyframes demo-lock-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(168,85,247,.5); }
+  50%     { box-shadow: 0 0 0 10px rgba(168,85,247,0); }
 }
+.demo-lock-pulse { animation: demo-lock-pulse 2s ease-in-out infinite; }
 
-@keyframes demo-badge {
+@keyframes demo-badge-pulse {
   0%,100% { box-shadow: 0 0 0 0 rgba(168,85,247,.4); }
   50%     { box-shadow: 0 0 0 8px rgba(168,85,247,0); }
 }
-.demo-badge-pulse { animation: demo-badge 2s ease-in-out infinite; }
-
-@keyframes card-enter {
-  0%  { opacity:0; transform:translateY(20px) scale(.95); }
-  100%{ opacity:1; transform:translateY(0) scale(1); }
-}
+.demo-badge-pulse { animation: demo-badge-pulse 2s ease-in-out infinite; }
 
 .item-card {
   transition: transform .24s cubic-bezier(.34,1.56,.64,1), border-color .24s, box-shadow .24s;
@@ -109,15 +105,11 @@ const RARITY = {
 };
 const rs = r => RARITY[r?.toLowerCase()] || RARITY.common;
 
-/* ── Particle burst ── */
 function Particles({ color, count = 16 }) {
   const pts = Array.from({ length: count }, (_, i) => ({
-    id: i,
-    angle: (360 / count) * i,
-    dist: 60 + Math.random() * 60,
-    size: 3 + Math.random() * 4,
-    delay: Math.random() * .4,
-    dur: .8 + Math.random() * .6,
+    id: i, angle: (360 / count) * i,
+    dist: 60 + Math.random() * 60, size: 3 + Math.random() * 4,
+    delay: Math.random() * .4, dur: .8 + Math.random() * .6,
   }));
   return (
     <div style={{ position:'absolute', inset:0, pointerEvents:'none', overflow:'visible', zIndex:10 }}>
@@ -127,14 +119,11 @@ function Particles({ color, count = 16 }) {
         const ty = Math.sin(rad) * p.dist;
         return (
           <div key={p.id} style={{
-            position:'absolute',
-            left:'50%', top:'50%',
-            width: p.size, height: p.size,
-            borderRadius:'50%',
-            background: color,
-            boxShadow:`0 0 ${p.size*2}px ${color}`,
+            position:'absolute', left:'50%', top:'50%',
+            width:p.size, height:p.size, borderRadius:'50%',
+            background:color, boxShadow:`0 0 ${p.size*2}px ${color}`,
             animation:`particle-burst ${p.dur}s ease-out ${p.delay}s forwards`,
-            '--tx': `${tx}px`, '--ty': `${ty}px`,
+            '--tx':`${tx}px`, '--ty':`${ty}px`,
           }} />
         );
       })}
@@ -152,17 +141,18 @@ export default function CaseOpen() {
   const params = new URLSearchParams(window.location.search);
   const caseId = params.get('id');
 
-  const [caseData,    setCaseData]    = useState(null);
-  const [loading,     setLoading]     = useState(true);
-  const [spinning,    setSpinning]    = useState(false);
-  const [result,      setResult]      = useState(null);
-  const [showResult,  setShowResult]  = useState(false);
-  const [user,        setUser]        = useState(null);
-  const [userLoading, setUserLoading] = useState(true);
-  const [isDemo,      setIsDemo]      = useState(false);
+  const [caseData,      setCaseData]      = useState(null);
+  const [loading,       setLoading]       = useState(true);
+  const [spinning,      setSpinning]      = useState(false);
+  const [result,        setResult]        = useState(null);
+  const [showResult,    setShowResult]    = useState(false);
+  const [user,          setUser]          = useState(null);
+  const [userLoading,   setUserLoading]   = useState(true);
+  const [isDemo,        setIsDemo]        = useState(false);
+  const [demoLocked,    setDemoLocked]    = useState(false); // one-way lock
   const [showParticles, setShowParticles] = useState(false);
-  const [hovItem,     setHovItem]     = useState(null);
-  const [activeTab,   setActiveTab]   = useState('contents'); // 'contents' | 'odds'
+  const [hovItem,       setHovItem]       = useState(null);
+  const [activeTab,     setActiveTab]     = useState('contents');
 
   useEffect(() => {
     base44.auth.me().then(me => { setUser(me); setUserLoading(false); }).catch(() => setUserLoading(false));
@@ -187,7 +177,8 @@ export default function CaseOpen() {
   };
 
   const handleOpen = async () => {
-    if (!caseData || spinning || !user) return;
+    // Blocked entirely if demo was ever used
+    if (demoLocked || !caseData || spinning || !user) return;
     if ((user.balance || 0) < caseData.price) return;
     const wonItem = rollItem(caseData.items || []);
     const costDeducted = (user.balance || 0) - caseData.price;
@@ -206,9 +197,9 @@ export default function CaseOpen() {
 
   const handleDemo = () => {
     if (spinning || !caseData) return;
-    const wonItem = rollItem(caseData.items || []);
     setIsDemo(true);
-    doSpin(wonItem);
+    setDemoLocked(true); // 🔒 permanent — never resets
+    doSpin(rollItem(caseData.items || []));
   };
 
   const handleSpinComplete = async () => {
@@ -219,9 +210,9 @@ export default function CaseOpen() {
 
     if (!isDemo && result && user) {
       const newBalance = (user.balance || 0) + result.value;
-      const xpGain     = Math.floor(caseData.price / 10);
-      const newXp      = (user.xp || 0) + xpGain;
-      const newLevel   = Math.floor(newXp / 500) + 1;
+      const xpGain = Math.floor(caseData.price / 10);
+      const newXp = (user.xp || 0) + xpGain;
+      const newLevel = Math.floor(newXp / 500) + 1;
       await base44.auth.updateMe({ balance: newBalance, xp: newXp, level: newLevel });
       setUser({ ...user, balance: newBalance });
       base44.entities.Transaction.create({
@@ -239,18 +230,25 @@ export default function CaseOpen() {
     }
   };
 
-  const handleTryAgain = async () => {
-    if (isDemo) { handleDemo(); return; }
-    setResult(null); setShowResult(false);
-    const me = await base44.auth.me();
-    setUser(me);
-    if (!caseData || !me || (me.balance || 0) < caseData.price) return;
-    const wonItem = rollItem(caseData.items || []);
-    const costDeducted = (me.balance || 0) - caseData.price;
-    await base44.auth.updateMe({ balance: costDeducted });
-    setUser({ ...me, balance: costDeducted });
-    setIsDemo(false);
-    doSpin(wonItem);
+  // Always routes through demo if locked — no escape
+  const handleTryAgain = () => {
+    if (demoLocked) {
+      handleDemo();
+      return;
+    }
+    // Real re-open (only reachable if demo was never triggered)
+    setResult(null);
+    setShowResult(false);
+    base44.auth.me().then(me => {
+      setUser(me);
+      if (!caseData || !me || (me.balance || 0) < caseData.price) return;
+      const wonItem = rollItem(caseData.items || []);
+      const costDeducted = (me.balance || 0) - caseData.price;
+      base44.auth.updateMe({ balance: costDeducted });
+      setUser({ ...me, balance: costDeducted });
+      setIsDemo(false);
+      doSpin(wonItem);
+    });
   };
 
   /* ── Loading ── */
@@ -281,58 +279,54 @@ export default function CaseOpen() {
     </div>
   );
 
-  const canAfford = (user?.balance || 0) >= (caseData?.price || 0);
-  const resultRs  = result ? rs(result.rarity) : null;
-  const items     = caseData.items || [];
+  const canAfford  = !demoLocked && (user?.balance || 0) >= (caseData?.price || 0);
+  const resultRs   = result ? rs(result.rarity) : null;
+  const items      = caseData.items || [];
 
   return (
-    <div className="co" style={{
-      background:'#04000a', minHeight:'100vh',
-      marginLeft:-24, marginRight:-24,
-      padding:'0 0 80px',
-    }}>
+    <div className="co" style={{ background:'#04000a', minHeight:'100vh', marginLeft:-24, marginRight:-24, padding:'0 0 80px' }}>
       <style>{CSS}</style>
 
-      {/* ══ HERO TOP SECTION ══ */}
+      {/* ══ HERO ══ */}
       <div style={{
         position:'relative', overflow:'hidden',
         background:'linear-gradient(180deg,#0e0020 0%,#07000f 100%)',
         borderBottom:'1px solid rgba(251,191,36,.1)',
         padding:'24px 24px 0',
-        marginBottom:0,
       }}>
-        {/* Ambient */}
         <div style={{
           position:'absolute', inset:0, pointerEvents:'none',
           background:'radial-gradient(ellipse 70% 60% at 50% -10%,rgba(168,85,247,.15) 0%,transparent 70%)',
         }} />
-        <div style={{
-          position:'absolute', top:0, left:0, right:0, height:1,
-          background:'linear-gradient(90deg,transparent,#fbbf24,#a855f7,transparent)',
-        }} />
+        <div style={{ position:'absolute', top:0, left:0, right:0, height:1, background:'linear-gradient(90deg,transparent,#fbbf24,#a855f7,transparent)' }} />
 
-        {/* Back + title row */}
         <div style={{ position:'relative', display:'flex', alignItems:'flex-start', gap:14, marginBottom:20 }}>
           <Link to={createPageUrl('Cases')}>
             <motion.button whileHover={{ scale:1.08, x:-2 }} whileTap={{ scale:.94 }} style={{
-              marginTop:3, width:34, height:34, borderRadius:9, border:'none', cursor:'pointer',
+              marginTop:3, width:34, height:34, borderRadius:9, cursor:'pointer',
               background:'rgba(251,191,36,.08)', border:'1px solid rgba(251,191,36,.15)',
-              display:'flex', alignItems:'center', justifyContent:'center',
-              color:'rgba(251,191,36,.6)',
+              display:'flex', alignItems:'center', justifyContent:'center', color:'rgba(251,191,36,.6)',
             }}>
               <ArrowLeft style={{ width:15, height:15 }} />
             </motion.button>
           </Link>
 
           <div style={{ flex:1 }}>
-            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:3 }}>
-              {isDemo && (
-                <span style={{
-                  fontSize:9, fontWeight:800, letterSpacing:'.14em', textTransform:'uppercase',
-                  padding:'2px 8px', borderRadius:100,
-                  background:'rgba(168,85,247,.15)', border:'1px solid rgba(168,85,247,.3)',
-                  color:'#c084fc',
-                }}>DEMO MODE</span>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
+              {/* Demo locked banner */}
+              {demoLocked && (
+                <motion.div
+                  initial={{ opacity:0, scale:.8 }} animate={{ opacity:1, scale:1 }}
+                  style={{
+                    display:'inline-flex', alignItems:'center', gap:5,
+                    fontSize:9, fontWeight:800, letterSpacing:'.14em', textTransform:'uppercase',
+                    padding:'3px 10px', borderRadius:100,
+                    background:'rgba(168,85,247,.15)', border:'1px solid rgba(168,85,247,.35)',
+                    color:'#c084fc',
+                  }}>
+                  <Lock style={{ width:8, height:8 }} />
+                  DEMO MODE LOCKED
+                </motion.div>
               )}
             </div>
             <h1 className="shimmer-text" style={{ margin:0, fontSize:26, fontWeight:900, lineHeight:1.1 }}>
@@ -345,7 +339,6 @@ export default function CaseOpen() {
             )}
           </div>
 
-          {/* Case image floating */}
           {caseData.image_url && (
             <div className="float-slow" style={{
               width:70, height:70, flexShrink:0,
@@ -356,10 +349,7 @@ export default function CaseOpen() {
           )}
         </div>
 
-        {/* Price strip */}
-        <div style={{
-          display:'flex', alignItems:'center', gap:16, paddingBottom:20,
-        }}>
+        <div style={{ display:'flex', alignItems:'center', gap:16, paddingBottom:20 }}>
           <div style={{
             display:'flex', alignItems:'center', gap:7,
             background:'rgba(251,191,36,.08)', border:'1px solid rgba(251,191,36,.18)',
@@ -373,9 +363,12 @@ export default function CaseOpen() {
             }}>
               <span style={{ fontSize:9, fontWeight:900, color:'#000' }}>$</span>
             </div>
-            <span style={{ fontSize:14, fontWeight:900, color:'#fbbf24' }}>
+            <span style={{ fontSize:14, fontWeight:900, color: demoLocked ? 'rgba(251,191,36,.35)' : '#fbbf24', textDecoration: demoLocked ? 'line-through' : 'none' }}>
               {caseData.price?.toLocaleString()} coins
             </span>
+            {demoLocked && (
+              <span style={{ fontSize:11, fontWeight:800, color:'#c084fc' }}>FREE</span>
+            )}
           </div>
           <span style={{ fontSize:11, color:'rgba(255,255,255,.2)', fontWeight:600 }}>
             {caseData.total_opened ? `${caseData.total_opened.toLocaleString()} opened` : `${items.length} items inside`}
@@ -385,23 +378,17 @@ export default function CaseOpen() {
 
       <div style={{ padding:'0 24px' }}>
 
-        {/* ══ SPINNER PANEL ══ */}
+        {/* ══ SPINNER ══ */}
         <div style={{
           position:'relative', overflow:'hidden',
           borderRadius:'0 0 16px 16px',
           background:'linear-gradient(180deg,#0a0018 0%,#060010 100%)',
-          border:'1px solid rgba(251,191,36,.08)',
-          borderTop:'none',
+          border:'1px solid rgba(251,191,36,.08)', borderTop:'none',
           marginBottom:20,
           boxShadow:'0 16px 50px rgba(0,0,0,.6), 0 0 80px rgba(168,85,247,.06)',
         }}>
           <div className="scan" />
-          <CaseSpinner
-            items={items}
-            result={result}
-            spinning={spinning}
-            onComplete={handleSpinComplete}
-          />
+          <CaseSpinner items={items} result={result} spinning={spinning} onComplete={handleSpinComplete} />
         </div>
 
         {/* ══ RESULT ══ */}
@@ -414,44 +401,42 @@ export default function CaseOpen() {
               exit={{ opacity:0, y:-12, scale:.94 }}
               transition={{ type:'spring', stiffness:260, damping:22 }}
               style={{
-                position:'relative', overflow:'hidden',
-                borderRadius:16, marginBottom:20,
-                background:`linear-gradient(145deg,#08001a,#110028)`,
+                position:'relative', overflow:'hidden', borderRadius:16, marginBottom:20,
+                background:'linear-gradient(145deg,#08001a,#110028)',
                 border:`1px solid ${resultRs.color}35`,
                 boxShadow:`0 0 50px ${resultRs.glow}, 0 12px 40px rgba(0,0,0,.6)`,
                 padding:'28px 20px 24px',
               }}>
               <div className="scan" />
-
-              {/* Glow blob */}
               <div style={{
                 position:'absolute', top:-40, left:'50%', transform:'translateX(-50%)',
                 width:200, height:200, borderRadius:'50%', pointerEvents:'none',
-                background:`radial-gradient(circle,${resultRs.glow.replace('.6','.18').replace('.5','.15').replace('.45','.13').replace('.4','.12').replace('.35','.1')} 0%,transparent 70%)`,
+                background:`radial-gradient(circle,${resultRs.color}18 0%,transparent 70%)`,
               }} />
 
               {/* Demo watermark */}
-              {isDemo && (
+              {demoLocked && (
                 <div style={{
                   position:'absolute', top:10, right:12,
+                  display:'flex', alignItems:'center', gap:4,
                   fontSize:9, fontWeight:800, letterSpacing:'.14em', textTransform:'uppercase',
-                  color:'rgba(192,132,252,.5)', border:'1px solid rgba(192,132,252,.2)',
-                  borderRadius:6, padding:'2px 7px',
-                }}>DEMO</div>
+                  color:'rgba(192,132,252,.55)', border:'1px solid rgba(192,132,252,.2)',
+                  borderRadius:6, padding:'2px 8px',
+                }}>
+                  <Lock style={{ width:7, height:7 }} /> DEMO
+                </div>
               )}
 
-              {/* Particles */}
               {showParticles && <Particles color={resultRs.color} count={20} />}
 
               <div className="win-burst" style={{ position:'relative', zIndex:2, textAlign:'center' }}>
-                {/* Big item display */}
                 <div style={{ position:'relative', width:110, height:110, margin:'0 auto 16px' }}>
-                  <div style={{ position:'relative', color: resultRs.color }}>
+                  <div style={{ position:'absolute', inset:0, borderRadius:22, color:resultRs.color }}>
                     <div className="pulse-ring" />
                   </div>
                   <div style={{
                     width:110, height:110, borderRadius:22,
-                    background: resultRs.bg,
+                    background:resultRs.bg,
                     display:'flex', alignItems:'center', justifyContent:'center',
                     boxShadow:`0 0 40px ${resultRs.glow}, 0 8px 30px rgba(0,0,0,.6)`,
                     border:`1px solid ${resultRs.color}50`,
@@ -463,7 +448,6 @@ export default function CaseOpen() {
                   </div>
                 </div>
 
-                {/* Rarity */}
                 <div style={{
                   display:'inline-flex', alignItems:'center', gap:6, marginBottom:8,
                   padding:'3px 12px', borderRadius:100,
@@ -477,7 +461,7 @@ export default function CaseOpen() {
 
                 <h2 style={{ margin:'0 0 6px', fontSize:20, fontWeight:900, color:'#fff' }}>{result.name}</h2>
                 <p style={{ margin:0, fontSize:13, fontWeight:700, color:'rgba(255,255,255,.35)' }}>
-                  {isDemo ? 'Demo spin — no coins spent' : `Worth ${result.value?.toLocaleString()} coins`}
+                  {demoLocked ? 'Demo spin — no coins spent' : `Worth ${result.value?.toLocaleString()} coins`}
                 </p>
               </div>
             </motion.div>
@@ -488,28 +472,68 @@ export default function CaseOpen() {
         <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:28 }}>
 
           {showResult ? (
+            /* After result — always demo if locked */
             <motion.button
-              className="open-btn"
+              className={`open-btn ${demoLocked ? 'demo-lock-pulse' : ''}`}
               whileTap={{ scale:.97 }}
               onClick={handleTryAgain}
               style={{
                 width:'100%', padding:'15px 0', borderRadius:13, border:'none', cursor:'pointer',
                 fontSize:15, fontWeight:900, fontFamily:'Nunito,sans-serif',
-                color: isDemo ? '#fff' : '#000',
-                background: isDemo
-                  ? 'linear-gradient(135deg,#4c1d95,#7c3aed)'
+                color: demoLocked ? '#fff' : '#000',
+                background: demoLocked
+                  ? 'linear-gradient(135deg,#6d28d9,#7c3aed,#a855f7)'
                   : 'linear-gradient(135deg,#fbbf24,#f59e0b,#fde68a)',
-                boxShadow: isDemo
-                  ? '0 0 30px rgba(124,58,237,.4), 0 4px 16px rgba(0,0,0,.5)'
+                boxShadow: demoLocked
+                  ? '0 0 40px rgba(124,58,237,.5), 0 4px 16px rgba(0,0,0,.5)'
                   : '0 0 40px rgba(251,191,36,.45), 0 4px 16px rgba(0,0,0,.5)',
                 display:'flex', alignItems:'center', justifyContent:'center', gap:9,
               }}>
-              <RefreshCw style={{ width:16, height:16 }} />
-              {isDemo ? 'Spin Again (Demo)' : `Open Again — ${caseData.price?.toLocaleString()} coins`}
+              {demoLocked
+                ? <><Eye style={{ width:16, height:16 }} /> Spin Again (Demo)</>
+                : <><RefreshCw style={{ width:16, height:16 }} /> Open Again — {caseData.price?.toLocaleString()} coins</>
+              }
             </motion.button>
-          ) : (
+
+          ) : demoLocked ? (
+            /* Demo locked — only show demo button as primary */
             <>
-              {/* Real open */}
+              <motion.button
+                className="open-btn demo-lock-pulse"
+                onClick={handleDemo}
+                disabled={spinning}
+                style={{
+                  width:'100%', padding:'16px 0', borderRadius:13, border:'none',
+                  cursor: spinning ? 'not-allowed' : 'pointer',
+                  fontSize:16, fontWeight:900, fontFamily:'Nunito,sans-serif', color:'#fff',
+                  background:'linear-gradient(135deg,#6d28d9,#7c3aed,#a855f7)',
+                  boxShadow:'0 0 40px rgba(124,58,237,.5), 0 4px 20px rgba(0,0,0,.5)',
+                  opacity: spinning ? .6 : 1,
+                  display:'flex', alignItems:'center', justifyContent:'center', gap:9,
+                }}>
+                {spinning
+                  ? <div style={{ width:17, height:17, borderRadius:'50%', border:'2.5px solid rgba(255,255,255,.25)', borderTopColor:'#fff', animation:'spin-loader 1s linear infinite' }} />
+                  : <Eye style={{ width:17, height:17 }} />
+                }
+                {spinning ? 'Spinning…' : 'Demo Spin — Free Preview'}
+              </motion.button>
+
+              {/* Lock notice */}
+              <div style={{
+                display:'flex', alignItems:'center', justifyContent:'center', gap:6,
+                padding:'10px 16px', borderRadius:10,
+                background:'rgba(168,85,247,.06)', border:'1px solid rgba(168,85,247,.15)',
+              }}>
+                <Lock style={{ width:11, height:11, color:'rgba(192,132,252,.5)' }} />
+                <span style={{ fontSize:11, color:'rgba(192,132,252,.45)', fontWeight:700 }}>
+                  Demo mode active — reload page to open for real
+                </span>
+              </div>
+            </>
+
+          ) : (
+            /* Normal state — both buttons available */
+            <>
               <motion.button
                 className="open-btn"
                 onClick={handleOpen}
@@ -528,14 +552,13 @@ export default function CaseOpen() {
                   display:'flex', alignItems:'center', justifyContent:'center', gap:9,
                   transition:'background .3s, box-shadow .3s, color .3s',
                 }}>
-                {spinning && !isDemo
+                {spinning
                   ? <div style={{ width:17, height:17, borderRadius:'50%', border:'2.5px solid rgba(0,0,0,.25)', borderTopColor:'#000', animation:'spin-loader 1s linear infinite' }} />
                   : <Zap style={{ width:17, height:17 }} />
                 }
-                {spinning && !isDemo ? 'Opening…' : `Open Case — ${caseData.price?.toLocaleString()} coins`}
+                {spinning ? 'Opening…' : `Open Case — ${caseData.price?.toLocaleString()} coins`}
               </motion.button>
 
-              {/* Demo spin */}
               <motion.button
                 className="open-btn demo-badge-pulse"
                 onClick={handleDemo}
@@ -554,24 +577,23 @@ export default function CaseOpen() {
                 <Eye style={{ width:15, height:15 }} />
                 Demo Spin — Free Preview
               </motion.button>
-            </>
-          )}
 
-          {!canAfford && !spinning && !showResult && (
-            <p style={{ textAlign:'center', fontSize:11, color:'rgba(239,68,68,.6)', fontWeight:700, margin:0 }}>
-              Not enough coins.{' '}
-              <Link to={createPageUrl('Deposit')} style={{ color:'#c084fc', textDecoration:'underline' }}>
-                Deposit more
-              </Link>
-            </p>
+              {!canAfford && !spinning && (
+                <p style={{ textAlign:'center', fontSize:11, color:'rgba(239,68,68,.6)', fontWeight:700, margin:0 }}>
+                  Not enough coins.{' '}
+                  <Link to={createPageUrl('Deposit')} style={{ color:'#c084fc', textDecoration:'underline' }}>
+                    Deposit more
+                  </Link>
+                </p>
+              )}
+            </>
           )}
         </div>
 
         {/* ══ CONTENTS / ODDS TABS ══ */}
         <div>
-          {/* Tab bar */}
           <div style={{ display:'flex', gap:0, marginBottom:16, background:'rgba(255,255,255,.03)', borderRadius:10, padding:3 }}>
-            {[['contents','Contents'], ['odds','Odds']].map(([id, label]) => (
+            {[['contents','Contents'],['odds','Odds']].map(([id, label]) => (
               <button key={id} onClick={() => setActiveTab(id)} style={{
                 flex:1, padding:'8px 0', borderRadius:8, border:'none', cursor:'pointer',
                 fontSize:12, fontWeight:800, fontFamily:'Nunito,sans-serif',
@@ -583,7 +605,6 @@ export default function CaseOpen() {
             ))}
           </div>
 
-          {/* Section label */}
           <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
             <div style={{ width:3, height:18, borderRadius:2, background:'linear-gradient(to bottom,#fbbf24,#a855f7)' }} />
             <Percent style={{ width:13, height:13, color:'#fbbf24' }} />
@@ -592,12 +613,11 @@ export default function CaseOpen() {
             </span>
           </div>
 
-          {/* Grid */}
           <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:10 }}>
             {items.map((item, i) => {
-              const itemRs  = rs(item.rarity);
-              const isWon   = item.name === result?.name && showResult;
-              const isHov   = hovItem === i;
+              const itemRs = rs(item.rarity);
+              const isWon  = item.name === result?.name && showResult;
+              const isHov  = hovItem === i;
 
               return (
                 <motion.div
@@ -609,20 +629,16 @@ export default function CaseOpen() {
                   onMouseEnter={() => setHovItem(i)}
                   onMouseLeave={() => setHovItem(null)}
                   style={{
-                    position:'relative', overflow:'hidden',
-                    borderRadius:12, padding:'14px 12px',
-                    background: isWon
-                      ? `linear-gradient(145deg,#0f0010,#180028)`
-                      : 'linear-gradient(145deg,#07000f,#0d0018)',
+                    position:'relative', overflow:'hidden', borderRadius:12,
+                    padding:'14px 12px',
+                    background: isWon ? 'linear-gradient(145deg,#0f0010,#180028)' : 'linear-gradient(145deg,#07000f,#0d0018)',
                     border:`1px solid ${isWon ? itemRs.color+'55' : isHov ? 'rgba(251,191,36,.18)' : 'rgba(251,191,36,.06)'}`,
                     boxShadow: isWon ? `0 0 22px ${itemRs.glow}` : undefined,
-                    textAlign:'center',
-                    cursor:'default',
+                    textAlign:'center', cursor:'default',
                     transition:'border-color .25s, box-shadow .25s',
                   }}>
                   <div className="scan" />
 
-                  {/* Won badge */}
                   {isWon && (
                     <div style={{
                       position:'absolute', top:7, right:7,
@@ -630,19 +646,16 @@ export default function CaseOpen() {
                       padding:'2px 6px', borderRadius:5,
                       background:'linear-gradient(135deg,#fbbf24,#f59e0b)', color:'#000',
                       boxShadow:'0 0 10px rgba(251,191,36,.5)', zIndex:3,
-                    }}>WON</div>
+                    }}>{demoLocked ? 'DEMO' : 'WON'}</div>
                   )}
 
                   {activeTab === 'contents' ? (
                     <>
-                      {/* Icon */}
                       <div style={{
                         width:52, height:52, borderRadius:12, margin:'0 auto 10px',
-                        background: itemRs.bg,
+                        background:itemRs.bg,
                         display:'flex', alignItems:'center', justifyContent:'center',
-                        boxShadow: isHov || isWon
-                          ? `0 0 20px ${itemRs.glow}`
-                          : `0 0 8px ${itemRs.glow.replace('.4','.12').replace('.5','.15').replace('.6','.15')}`,
+                        boxShadow: isHov || isWon ? `0 0 20px ${itemRs.glow}` : `0 0 8px ${itemRs.glow.replace('.4','.12').replace('.5','.15').replace('.6','.15')}`,
                         border:`1px solid ${itemRs.color}25`,
                         transition:'box-shadow .25s',
                       }}>
@@ -651,11 +664,7 @@ export default function CaseOpen() {
                           : <Sparkles style={{ width:18, height:18, color:itemRs.color }} />
                         }
                       </div>
-                      <div style={{
-                        display:'inline-block', marginBottom:6,
-                        width:7, height:7, borderRadius:'50%',
-                        background: itemRs.color, boxShadow:`0 0 5px ${itemRs.color}`,
-                      }} />
+                      <div style={{ display:'inline-block', marginBottom:6, width:7, height:7, borderRadius:'50%', background:itemRs.color, boxShadow:`0 0 5px ${itemRs.color}` }} />
                       <p style={{ margin:'0 0 3px', fontSize:11, fontWeight:800, color:'rgba(255,255,255,.8)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                         {item.name}
                       </p>
@@ -665,30 +674,26 @@ export default function CaseOpen() {
                     </>
                   ) : (
                     <>
-                      {/* Odds view */}
                       <div style={{ display:'flex', alignItems:'center', gap:8, textAlign:'left', padding:'2px 0' }}>
                         <div style={{ width:8, height:8, borderRadius:'50%', flexShrink:0, background:itemRs.color, boxShadow:`0 0 5px ${itemRs.color}` }} />
                         <span style={{ flex:1, fontSize:10, fontWeight:700, color:'rgba(255,255,255,.6)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                           {item.name}
                         </span>
-                        <span style={{ fontSize:11, fontWeight:900, color: item.drop_rate > 20 ? '#34d399' : item.drop_rate > 5 ? '#fbbf24' : '#c084fc', flexShrink:0 }}>
+                        <span style={{ fontSize:11, fontWeight:900, flexShrink:0, color: item.drop_rate > 20 ? '#34d399' : item.drop_rate > 5 ? '#fbbf24' : '#c084fc' }}>
                           {item.drop_rate}%
                         </span>
                       </div>
-                      {/* Bar */}
                       <div style={{ marginTop:8, height:3, background:'rgba(255,255,255,.05)', borderRadius:99, overflow:'hidden' }}>
                         <div style={{
                           height:'100%', width:`${Math.min(100, item.drop_rate * 2.5)}%`,
                           background:`linear-gradient(90deg,${itemRs.color},${itemRs.color}99)`,
-                          borderRadius:99,
-                          boxShadow:`0 0 6px ${itemRs.color}`,
+                          borderRadius:99, boxShadow:`0 0 6px ${itemRs.color}`,
                           transition:'width .5s ease',
                         }} />
                       </div>
                     </>
                   )}
 
-                  {/* Hover top line */}
                   <motion.div animate={{ opacity: isHov || isWon ? 1 : 0 }} style={{
                     position:'absolute', top:0, left:0, right:0, height:2,
                     background:`linear-gradient(90deg,transparent,${itemRs.color},transparent)`,
