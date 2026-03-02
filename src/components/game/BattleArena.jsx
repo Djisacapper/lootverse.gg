@@ -200,27 +200,27 @@ function VerticalSpinner({ items, winnerItem, onDone, fast }) {
   return (
     <div style={{
       position:'relative', overflow:'hidden', borderRadius:14,
-      border:'1px solid rgba(251,191,36,.15)',
-      background:'linear-gradient(145deg,#060010,#0a0018)',
+      border:'1px solid rgba(251,191,36,.25)',
+      background:'#0a0018',
       height:VISIBLE_H,
     }}>
       {/* Centre highlight line */}
       <div style={{
         position:'absolute', inset:'0 0', top:'50%', transform:'translateY(-50%)',
         height:ITEM_H, zIndex:10, pointerEvents:'none',
-        background:'rgba(251,191,36,.04)',
-        borderTop:'1px solid rgba(251,191,36,.4)',
-        borderBottom:'1px solid rgba(251,191,36,.4)',
+        background:'rgba(251,191,36,.06)',
+        borderTop:'2px solid rgba(251,191,36,.5)',
+        borderBottom:'2px solid rgba(251,191,36,.5)',
       }} />
       {/* Top fade */}
       <div style={{
         position:'absolute', inset:'0 0', bottom:'auto', height:72, zIndex:20, pointerEvents:'none',
-        background:'linear-gradient(to bottom,#080012 0%,transparent 100%)',
+        background:'linear-gradient(to bottom,#0a0018 0%,transparent 100%)',
       }} />
       {/* Bottom fade */}
       <div style={{
         position:'absolute', inset:'0 0', top:'auto', height:72, zIndex:20, pointerEvents:'none',
-        background:'linear-gradient(to top,#080012 0%,transparent 100%)',
+        background:'linear-gradient(to top,#0a0018 0%,transparent 100%)',
       }} />
       <motion.div
         style={{ position:'absolute', left:0, right:0, top:0, display:'flex', flexDirection:'column' }}
@@ -264,9 +264,9 @@ function ItemChip({ item, index = 0 }) {
       style={{
         display:'flex', alignItems:'center', gap:8, padding:'7px 10px',
         borderRadius:10,
-        background:'linear-gradient(145deg,#080012,#0e001c)',
-        border:`1px solid ${rc}33`,
-        boxShadow:`0 2px 12px rgba(0,0,0,.4)`,
+        background:'#1a1030',
+        border:`1px solid ${rc}55`,
+        boxShadow:`0 2px 8px rgba(0,0,0,.6), inset 0 0 12px ${rc}08`,
         animationDelay:`${index*0.04}s`,
       }}>
       <div style={{
@@ -297,14 +297,17 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
 
   return (
     <div
-      className={`ba-shim ${isWinner ? 'ba-winner-glow' : ''}`}
+      className={isWinner ? 'ba-winner-glow' : ''}
       style={{
         position:'relative', flex:1, display:'flex', flexDirection:'column',
         borderRadius:16, overflow:'hidden', minHeight:0,
         background: isWinner
-          ? 'linear-gradient(145deg,#140c00,#1a1000,#0a0800)'
-          : 'linear-gradient(145deg,#080012,#0e001c,#04000a)',
-        border:`1px solid ${isWinner ? 'rgba(251,191,36,.45)' : playerColor+'33'}`,
+          ? '#1a0e00'
+          : '#0f0020',
+        border:`2px solid ${isWinner ? '#fbbf24' : playerColor}`,
+        boxShadow: isWinner
+          ? `0 0 0 1px rgba(251,191,36,.2), inset 0 0 40px rgba(251,191,36,.05)`
+          : `0 0 0 1px ${playerColor}22, inset 0 0 30px ${playerColor}08`,
         transition:'border-color .4s, box-shadow .4s',
       }}>
       {/* Top accent bar */}
@@ -325,14 +328,14 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
       )}
 
       {/* Header */}
-      <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 12px 6px', flexShrink:0 }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8, padding:'12px 12px 8px', flexShrink:0 }}>
         {/* Avatar */}
         <div style={{
-          width:32, height:32, borderRadius:'50%', flexShrink:0, overflow:'hidden',
-          background:`linear-gradient(135deg,${playerColor}33,${playerColor}18)`,
-          border:`2px solid ${playerColor}55`,
+          width:36, height:36, borderRadius:'50%', flexShrink:0, overflow:'hidden',
+          background:`${playerColor}33`,
+          border:`2px solid ${playerColor}`,
           display:'flex', alignItems:'center', justifyContent:'center',
-          boxShadow:`0 0 10px ${playerColor}33`,
+          boxShadow:`0 0 14px ${playerColor}55`,
         }}>
           {player.isBot
             ? <Bot style={{ width:14, height:14, color:playerColor }} />
@@ -349,12 +352,15 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
         {isWinner && <Crown style={{ width:14, height:14, color:'#fbbf24', flexShrink:0 }} />}
       </div>
 
+      {/* Divider */}
+      <div style={{ height:1, background:`linear-gradient(90deg,transparent,${playerColor}44,transparent)`, margin:'0 8px' }} />
+
       {/* Total value */}
-      <div style={{ textAlign:'center', padding:'4px 8px 6px', flexShrink:0 }}>
-        <span style={{ fontSize:22, fontWeight:900, color: isWinner ? '#fbbf24' : 'rgba(255,255,255,.85)' }}>
+      <div style={{ textAlign:'center', padding:'8px 8px 6px', flexShrink:0 }}>
+        <span style={{ fontSize:24, fontWeight:900, color: isWinner ? '#fbbf24' : '#ffffff', letterSpacing:'-.02em' }}>
           {total.toLocaleString()}
         </span>
-        <span style={{ fontSize:10, color:'rgba(255,255,255,.3)', fontWeight:700, marginLeft:4 }}>coins</span>
+        <span style={{ fontSize:10, color:'rgba(255,255,255,.4)', fontWeight:700, marginLeft:4 }}>coins</span>
       </div>
 
       {/* Jackpot % bar */}
