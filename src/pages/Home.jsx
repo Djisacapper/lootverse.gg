@@ -205,9 +205,11 @@ function Particles({ accent, count = 14 }) {
 
 /* ─── 3-D deco object ────────────────────────────────────────── */
 function DecoObj({ d, hov }) {
+  // Convert rotate string like "15deg" or "-15deg" to a number for framer-motion
+  const baseRot = parseFloat(d.rotate) || 0;
   return (
     <motion.div
-      animate={{ y: hov ? -6 : 0, rotate: hov ? `calc(${d.rotate} + 8deg)` : d.rotate }}
+      animate={{ y: hov ? -6 : 0, rotate: hov ? baseRot + 8 : baseRot }}
       transition={{ type: 'spring', stiffness: 160, damping: 16 }}
       style={{
         position: 'absolute',
@@ -215,7 +217,6 @@ function DecoObj({ d, hov }) {
         width: d.w, height: d.h,
         background: d.bg,
         borderRadius: d.br,
-        transform: `rotate(${d.rotate})`,
         boxShadow: `0 8px 32px ${d.glow}, 0 2px 8px rgba(0,0,0,.6)`,
         pointerEvents: 'none',
       }}
