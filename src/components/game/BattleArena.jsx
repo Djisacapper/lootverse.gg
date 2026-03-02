@@ -1,99 +1,249 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bot, User, ArrowLeft, Crown, Zap, Gem, CheckCircle2, Loader2, Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Bot, User, ArrowLeft, Crown, Zap, CheckCircle2, Loader2, Plus, Swords } from 'lucide-react';
 import { getRarityColor, getRarityBorder, rollItem } from './useWallet';
 import { motion, AnimatePresence } from 'framer-motion';
 import JackpotWheel from './JackpotWheel';
 import { usePlayerAvatars, safeAvatarUrl } from './usePlayerAvatars';
 
-const TEAM_COLORS = ['#8b5cf6', '#3b82f6', '#ef4444', '#10b981'];
-const PLAYER_COLORS = ['#8b5cf6','#3b82f6','#ef4444','#10b981','#f59e0b','#ec4899','#06b6d4','#84cc16'];
+/* ─── CSS ──────────────────────────────────────────────────────── */
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
 
-/* ─── Confetti ─────────────────────────────────────────────────────────────── */
+.ba-root { font-family: 'Nunito', sans-serif; }
+
+@keyframes ba-scan {
+  0%  { top:-1px; opacity:0; }
+  5%  { opacity:.5; }
+  95% { opacity:.5; }
+  100%{ top:100%; opacity:0; }
+}
+.ba-scan {
+  position:absolute; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,220,0,.18),transparent);
+  animation:ba-scan 7s linear infinite; pointer-events:none;
+}
+
+@keyframes ba-shimmer {
+  0%  { transform:translateX(-120%) skewX(-15deg); }
+  100%{ transform:translateX(350%)  skewX(-15deg); }
+}
+.ba-shim { position:relative; overflow:hidden; }
+.ba-shim::after {
+  content:''; position:absolute; top:0; left:0; width:25%; height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,220,0,.04),transparent);
+  animation:ba-shimmer 6s ease-in-out infinite; pointer-events:none; border-radius:inherit;
+}
+
+@keyframes ba-p-rise {
+  0%   { transform:translateY(0) translateX(0); opacity:0; }
+  8%   { opacity:1; }
+  90%  { opacity:.5; }
+  100% { transform:translateY(-90px) translateX(var(--dx)); opacity:0; }
+}
+.ba-pt {
+  position:absolute; border-radius:50%; pointer-events:none;
+  animation:ba-p-rise var(--d) ease-out infinite var(--dl);
+}
+
+@keyframes ba-hex-pulse {
+  0%,100% { opacity:.02; }
+  50%     { opacity:.05; }
+}
+.ba-hex {
+  position:absolute; inset:0; pointer-events:none;
+  background-image:
+    linear-gradient(rgba(255,220,0,.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,220,0,.035) 1px, transparent 1px);
+  background-size:32px 32px;
+  animation:ba-hex-pulse 5s ease-in-out infinite;
+}
+
+@keyframes ba-live-ping {
+  0%   { transform:scale(1); opacity:.8; }
+  100% { transform:scale(2.8); opacity:0; }
+}
+.ba-live-ring { animation:ba-live-ping 1.6s ease-out infinite; }
+
+@keyframes ba-glow-pulse {
+  0%,100% { box-shadow:0 0 0 1px rgba(251,191,36,.15), 0 0 40px rgba(251,191,36,.08); }
+  50%     { box-shadow:0 0 0 1px rgba(251,191,36,.3),  0 0 70px rgba(251,191,36,.18); }
+}
+.ba-winner-glow { animation:ba-glow-pulse 2s ease-in-out infinite; }
+
+@keyframes ba-vs-pulse {
+  0%,100% { transform:scale(1) translateY(-50%); opacity:.5; }
+  50%     { transform:scale(1.15) translateY(-50%); opacity:1; }
+}
+.ba-vs { animation:ba-vs-pulse 2s ease-in-out infinite; transform-origin:center; }
+
+@keyframes ba-float-swords {
+  0%,100% { transform:translateY(0) rotate(-6deg); }
+  50%     { transform:translateY(-8px) rotate(6deg); }
+}
+.ba-swords-float { animation:ba-float-swords 3.5s ease-in-out infinite; }
+
+@keyframes ba-countdown-pop {
+  0%   { transform:scale(0.1); opacity:0; }
+  60%  { transform:scale(1.12); opacity:1; }
+  100% { transform:scale(1); opacity:1; }
+}
+.ba-cd-num { animation:ba-countdown-pop 0.4s cubic-bezier(.34,1.56,.64,1) forwards; }
+
+@keyframes ba-round-pip-active {
+  0%,100% { box-shadow:0 0 0 0 rgba(251,191,36,.5); }
+  50%     { box-shadow:0 0 0 4px rgba(251,191,36,.2); }
+}
+.ba-pip-active { animation:ba-round-pip-active 1.2s ease-in-out infinite; }
+
+@keyframes ba-item-arrive {
+  0%  { transform:translateY(10px) scale(.92); opacity:0; }
+  100%{ transform:translateY(0) scale(1);     opacity:1; }
+}
+.ba-item-arrive { animation:ba-item-arrive .35s cubic-bezier(.22,1,.36,1) forwards; }
+
+@keyframes ba-winner-banner {
+  0%  { transform:translateY(-24px) scale(.94); opacity:0; }
+  100%{ transform:translateY(0) scale(1);       opacity:1; }
+}
+.ba-winner-banner { animation:ba-winner-banner .5s cubic-bezier(.34,1.56,.64,1) forwards; }
+
+@keyframes ba-magic-label {
+  0%,100% { opacity:.7; letter-spacing:.18em; }
+  50%     { opacity:1; letter-spacing:.28em; }
+}
+.ba-magic-label { animation:ba-magic-label 1.4s ease-in-out infinite; }
+
+.ba-scrollbar::-webkit-scrollbar { width:3px; }
+.ba-scrollbar::-webkit-scrollbar-thumb { background:rgba(251,191,36,.2); border-radius:4px; }
+`;
+
+/* ─── Theme ─────────────────────────────────────────────────────── */
+const TEAM_PALETTE = [
+  { color:'#fbbf24', glow:'rgba(251,191,36,.3)',  bg:'rgba(251,191,36,.07)',  border:'rgba(251,191,36,.25)' },
+  { color:'#a855f7', glow:'rgba(168,85,247,.3)',   bg:'rgba(168,85,247,.07)',  border:'rgba(168,85,247,.25)'  },
+  { color:'#60a5fa', glow:'rgba(96,165,250,.3)',   bg:'rgba(96,165,250,.07)',  border:'rgba(96,165,250,.25)'  },
+  { color:'#34d399', glow:'rgba(52,211,153,.3)',   bg:'rgba(52,211,153,.07)',  border:'rgba(52,211,153,.25)'  },
+];
+const PLAYER_COLORS = ['#fbbf24','#a855f7','#60a5fa','#34d399','#f472b6','#fb923c','#22d3ee','#a3e635'];
+
+/* ─── Particles ─────────────────────────────────────────────────── */
+function Particles({ accent = '#fbbf24', count = 10 }) {
+  const pts = React.useRef(
+    Array.from({ length: count }, (_, i) => ({
+      id:i, left:`${8+Math.random()*84}%`, bottom:`${Math.random()*20}%`,
+      size:1.5+Math.random()*2.5,
+      d:`${3+Math.random()*5}s`, dl:`${-Math.random()*6}s`,
+      dx:`${(Math.random()-.5)*40}px`,
+    }))
+  ).current;
+  return (
+    <div style={{ position:'absolute', inset:0, pointerEvents:'none', overflow:'hidden' }}>
+      {pts.map(p => (
+        <div key={p.id} className="ba-pt" style={{
+          left:p.left, bottom:p.bottom, width:p.size, height:p.size,
+          background:accent, boxShadow:`0 0 ${p.size*4}px ${accent}`,
+          '--d':p.d, '--dl':p.dl, '--dx':p.dx,
+        }} />
+      ))}
+    </div>
+  );
+}
+
+/* ─── Confetti ───────────────────────────────────────────────────── */
 function ConfettiEffect({ active }) {
   const ref = useRef(null);
   useEffect(() => {
     if (!active) return;
-    const canvas = ref.current;
-    if (!canvas) return;
+    const canvas = ref.current; if (!canvas) return;
     const ctx = canvas.getContext('2d');
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    const pieces = Array.from({ length: 130 }, () => ({
-      x: Math.random() * canvas.width, y: -20,
-      r: Math.random() * 8 + 4,
-      color: ['#f59e0b','#8b5cf6','#06b6d4','#10b981','#ef4444','#ec4899'][Math.floor(Math.random()*6)],
-      vx: (Math.random()-.5)*4, vy: Math.random()*4+2,
-      angle: Math.random()*360, va: (Math.random()-.5)*6,
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const pieces = Array.from({ length: 160 }, () => ({
+      x:Math.random()*canvas.width, y:-20,
+      r:Math.random()*8+4,
+      color:['#fbbf24','#a855f7','#60a5fa','#34d399','#f472b6','#fb923c'][Math.floor(Math.random()*6)],
+      vx:(Math.random()-.5)*5, vy:Math.random()*4+2,
+      angle:Math.random()*360, va:(Math.random()-.5)*7,
     }));
     let frame;
     const draw = () => {
       ctx.clearRect(0,0,canvas.width,canvas.height);
       pieces.forEach(p => {
         p.x+=p.vx; p.y+=p.vy; p.angle+=p.va;
-        if (p.y>canvas.height){p.y=-20;p.x=Math.random()*canvas.width;}
+        if(p.y>canvas.height){p.y=-20;p.x=Math.random()*canvas.width;}
         ctx.save(); ctx.translate(p.x,p.y); ctx.rotate(p.angle*Math.PI/180);
         ctx.fillStyle=p.color; ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r); ctx.restore();
       });
-      frame = requestAnimationFrame(draw);
+      frame=requestAnimationFrame(draw);
     };
     draw();
-    const t = setTimeout(()=>cancelAnimationFrame(frame), 4500);
-    return ()=>{ cancelAnimationFrame(frame); clearTimeout(t); };
-  }, [active]);
-  if (!active) return null;
-  return <canvas ref={ref} className="fixed inset-0 pointer-events-none z-50" />;
+    const t=setTimeout(()=>cancelAnimationFrame(frame),5000);
+    return()=>{ cancelAnimationFrame(frame); clearTimeout(t); };
+  },[active]);
+  if(!active) return null;
+  return <canvas ref={ref} style={{ position:'fixed',inset:0,pointerEvents:'none',zIndex:9999 }} />;
 }
 
-
-
-/* ─── Vertical Spinner ──────────────────────────────────────────────────────── */
+/* ─── Vertical Spinner ───────────────────────────────────────────── */
 function VerticalSpinner({ items, winnerItem, onDone, fast }) {
-  const ITEM_H = 80;
-  const WIN_POS = 28;
-  const TOTAL = 36;
-  const VISIBLE_H = 240;
+  const ITEM_H=80, WIN_POS=28, TOTAL=36, VISIBLE_H=240;
   const duration = fast ? 1.4 : 3.0;
-
   const strip = useRef(
     Array.from({ length: TOTAL }, (_, i) =>
-      i === WIN_POS ? winnerItem : items[Math.floor(Math.random() * items.length)]
+      i===WIN_POS ? winnerItem : items[Math.floor(Math.random()*items.length)]
     )
   ).current;
-
-  const targetY = -(WIN_POS * ITEM_H - VISIBLE_H / 2 + ITEM_H / 2);
-
+  const targetY = -(WIN_POS*ITEM_H - VISIBLE_H/2 + ITEM_H/2);
   useEffect(() => {
-    const spinMs = fast ? 1500 : 3100;
-    const t = setTimeout(onDone, spinMs);
+    const t = setTimeout(onDone, fast ? 1500 : 3100);
     return () => clearTimeout(t);
   }, []);
-
   return (
-    <div className="relative overflow-hidden rounded-xl border border-white/10 bg-[#08080f]" style={{ height: VISIBLE_H }}>
-      <div className="absolute inset-x-0 top-1/2 -translate-y-1/2 pointer-events-none z-10"
-        style={{ height: ITEM_H, background: 'rgba(255,255,255,0.03)', borderTop: '1px solid rgba(245,158,11,0.5)', borderBottom: '1px solid rgba(245,158,11,0.5)' }} />
-      <div className="absolute inset-x-0 top-0 h-16 pointer-events-none z-20"
-        style={{ background: 'linear-gradient(to bottom, #08080f 0%, transparent 100%)' }} />
-      <div className="absolute inset-x-0 bottom-0 h-16 pointer-events-none z-20"
-        style={{ background: 'linear-gradient(to top, #08080f 0%, transparent 100%)' }} />
-
+    <div style={{
+      position:'relative', overflow:'hidden', borderRadius:14,
+      border:'1px solid rgba(251,191,36,.15)',
+      background:'linear-gradient(145deg,#060010,#0a0018)',
+      height:VISIBLE_H,
+    }}>
+      {/* Centre highlight line */}
+      <div style={{
+        position:'absolute', inset:'0 0', top:'50%', transform:'translateY(-50%)',
+        height:ITEM_H, zIndex:10, pointerEvents:'none',
+        background:'rgba(251,191,36,.04)',
+        borderTop:'1px solid rgba(251,191,36,.4)',
+        borderBottom:'1px solid rgba(251,191,36,.4)',
+      }} />
+      {/* Top fade */}
+      <div style={{
+        position:'absolute', inset:'0 0', bottom:'auto', height:72, zIndex:20, pointerEvents:'none',
+        background:'linear-gradient(to bottom,#080012 0%,transparent 100%)',
+      }} />
+      {/* Bottom fade */}
+      <div style={{
+        position:'absolute', inset:'0 0', top:'auto', height:72, zIndex:20, pointerEvents:'none',
+        background:'linear-gradient(to top,#080012 0%,transparent 100%)',
+      }} />
       <motion.div
-        className="absolute left-0 right-0 top-0 flex flex-col"
-        initial={{ y: 0 }}
-        animate={{ y: targetY }}
-        transition={{ duration, ease: [0.04, 0.82, 0.165, 1] }}
-      >
+        style={{ position:'absolute', left:0, right:0, top:0, display:'flex', flexDirection:'column' }}
+        initial={{ y:0 }}
+        animate={{ y:targetY }}
+        transition={{ duration, ease:[0.04,0.82,0.165,1] }}>
         {strip.map((item, i) => (
-          <div key={i} className="flex items-center gap-2 px-3 flex-shrink-0" style={{ height: ITEM_H }}>
-            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${getRarityColor(item?.rarity || 'common')} flex-shrink-0 flex items-center justify-center overflow-hidden`}>
+          <div key={i} style={{
+            height:ITEM_H, display:'flex', alignItems:'center', gap:8, padding:'0 10px', flexShrink:0,
+          }}>
+            <div style={{
+              width:48, height:48, borderRadius:12, flexShrink:0, overflow:'hidden',
+              background:'linear-gradient(145deg,rgba(168,85,247,.2),rgba(251,191,36,.1))',
+              border:'1px solid rgba(255,255,255,.08)',
+              display:'flex', alignItems:'center', justifyContent:'center',
+            }}>
               {item?.image_url
-                ? <img src={item.image_url} alt={item?.name} className="w-11 h-11 object-contain" />
-                : <span className="text-2xl">📦</span>}
+                ? <img src={item.image_url} alt={item?.name} style={{ width:42, height:42, objectFit:'contain' }} />
+                : <span style={{ fontSize:22 }}>📦</span>}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[11px] text-white/80 font-medium truncate">{item?.name || '—'}</p>
-              <p className="text-xs text-amber-400 font-bold">{item?.value?.toLocaleString() || 0}</p>
+            <div style={{ flex:1, minWidth:0 }}>
+              <p style={{ fontSize:11, color:'rgba(255,255,255,.75)', fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item?.name || '—'}</p>
+              <p style={{ fontSize:12, color:'#fbbf24', fontWeight:900 }}>{item?.value?.toLocaleString() || 0}</p>
             </div>
           </div>
         ))}
@@ -102,153 +252,393 @@ function VerticalSpinner({ items, winnerItem, onDone, fast }) {
   );
 }
 
-/* ─── Item Chip ──────────────────────────────────────────────────────────────── */
-function ItemChip({ item }) {
+/* ─── Item Chip ──────────────────────────────────────────────────── */
+function ItemChip({ item, index = 0 }) {
+  const RARITY_COLORS = {
+    legendary:'#fbbf24', epic:'#a855f7', rare:'#60a5fa', uncommon:'#34d399', common:'rgba(255,255,255,.35)'
+  };
+  const rc = RARITY_COLORS[item?.rarity] || RARITY_COLORS.common;
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 6 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`flex items-center gap-1.5 p-1.5 rounded-lg border ${getRarityBorder(item?.rarity)} bg-white/[0.02]`}
-    >
-      <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${getRarityColor(item?.rarity || 'common')} flex-shrink-0 flex items-center justify-center overflow-hidden`}>
+    <div
+      className="ba-item-arrive"
+      style={{
+        display:'flex', alignItems:'center', gap:8, padding:'7px 10px',
+        borderRadius:10,
+        background:'linear-gradient(145deg,#080012,#0e001c)',
+        border:`1px solid ${rc}33`,
+        boxShadow:`0 2px 12px rgba(0,0,0,.4)`,
+        animationDelay:`${index*0.04}s`,
+      }}>
+      <div style={{
+        width:28, height:28, borderRadius:8, flexShrink:0, overflow:'hidden',
+        background:`linear-gradient(135deg,${rc}22,${rc}10)`,
+        border:`1px solid ${rc}33`,
+        display:'flex', alignItems:'center', justifyContent:'center',
+      }}>
         {item?.image_url
-          ? <img src={item.image_url} alt={item.name} className="w-6 h-6 object-contain" />
-          : <span className="text-xs">📦</span>}
+          ? <img src={item.image_url} alt={item?.name} style={{ width:24, height:24, objectFit:'contain' }} />
+          : <span style={{ fontSize:13 }}>📦</span>}
       </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[10px] text-white/70 truncate">{item?.name}</p>
-        <p className="text-[10px] text-amber-400 font-bold">{item?.value?.toLocaleString()}</p>
+      <div style={{ flex:1, minWidth:0 }}>
+        <p style={{ fontSize:10, color:'rgba(255,255,255,.65)', fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item?.name}</p>
+        <p style={{ fontSize:10, color:rc, fontWeight:900 }}>{item?.value?.toLocaleString()}</p>
       </div>
-    </motion.div>
+    </div>
   );
 }
 
-/* ─── Player Column ──────────────────────────────────────────────────────────── */
-// spinPhase: 'idle' | 'spinning' | 'magic_overlay' | 'magic_spin' | 'done'
-function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, caseItems, spinnerKey, spinnerItem, magicItem, onSpinDone, onMagicSpinDone, fast, showPct, pct, grandTotal }) {
+/* ─── Player Column ──────────────────────────────────────────────── */
+function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, caseItems, spinnerKey, spinnerItem, magicItem, onSpinDone, onMagicSpinDone, fast, showPct, pct }) {
   if (!player) return null;
-  
-  const total = wonItems.reduce((s, it) => s + (it?.value || 0), 0);
+  const total = wonItems.reduce((s, it) => s + (it?.value||0), 0);
   const isMagic = !!magicItem;
-
-  const TOP_RARITIES = ['epic', 'legendary'];
-    const topItems = caseItems.filter(it => TOP_RARITIES.includes(it.rarity));
-    const magicCaseItems = topItems.length > 0 ? topItems : caseItems;
+  const topItems = caseItems.filter(it => ['epic','legendary'].includes(it.rarity));
+  const magicPool = topItems.length > 0 ? topItems : caseItems;
 
   return (
     <div
-      className={`relative flex-1 flex flex-col rounded-2xl border transition-all duration-500 min-h-0
-        ${isWinner ? 'border-amber-400/60 shadow-lg shadow-amber-400/10' : ''}
-        ${isMagic && spinPhase !== 'idle' ? 'shadow-lg shadow-cyan-400/20' : ''}`}
+      className={`ba-shim ${isWinner ? 'ba-winner-glow' : ''}`}
       style={{
-        borderColor: isWinner ? undefined : (isMagic && spinPhase !== 'idle') ? 'rgba(56,189,248,0.5)' : playerColor + '55',
-        background: isWinner ? 'rgba(245,158,11,0.05)' : (playerColor + '0d'),
-      }}
-    >
+        position:'relative', flex:1, display:'flex', flexDirection:'column',
+        borderRadius:16, overflow:'hidden', minHeight:0,
+        background: isWinner
+          ? 'linear-gradient(145deg,#140c00,#1a1000,#0a0800)'
+          : 'linear-gradient(145deg,#080012,#0e001c,#04000a)',
+        border:`1px solid ${isWinner ? 'rgba(251,191,36,.45)' : playerColor+'33'}`,
+        transition:'border-color .4s, box-shadow .4s',
+      }}>
+      {/* Top accent bar */}
+      <div style={{
+        height:2,
+        background: isWinner
+          ? 'linear-gradient(90deg,transparent,#fbbf24,#f59e0b,transparent)'
+          : `linear-gradient(90deg,transparent,${playerColor}88,transparent)`,
+      }} />
+      <div className="ba-scan" />
+
+      {/* Winner crown flash */}
+      {isWinner && (
+        <div style={{
+          position:'absolute', inset:0, pointerEvents:'none',
+          background:'radial-gradient(ellipse 60% 40% at 50% 0%,rgba(251,191,36,.12) 0%,transparent 70%)',
+        }} />
+      )}
+
       {/* Header */}
-      <div className="flex items-center gap-2 px-3 pt-3 pb-1 flex-shrink-0">
-        <div className="w-8 h-8 rounded-full flex-shrink-0 overflow-hidden flex items-center justify-center text-xs font-bold"
-          style={{ background: playerColor + '33', border: `2px solid ${playerColor}66` }}>
+      <div style={{ display:'flex', alignItems:'center', gap:8, padding:'10px 12px 6px', flexShrink:0 }}>
+        {/* Avatar */}
+        <div style={{
+          width:32, height:32, borderRadius:'50%', flexShrink:0, overflow:'hidden',
+          background:`linear-gradient(135deg,${playerColor}33,${playerColor}18)`,
+          border:`2px solid ${playerColor}55`,
+          display:'flex', alignItems:'center', justifyContent:'center',
+          boxShadow:`0 0 10px ${playerColor}33`,
+        }}>
           {player.isBot
-            ? <Bot className="w-4 h-4" style={{ color: playerColor }} />
+            ? <Bot style={{ width:14, height:14, color:playerColor }} />
             : safeAvatarUrl(player.avatar_url)
-              ? <img src={safeAvatarUrl(player.avatar_url)} alt="" className="w-full h-full object-cover" />
-              : <User className="w-4 h-4" style={{ color: playerColor }} />}
+              ? <img src={safeAvatarUrl(player.avatar_url)} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+              : <User style={{ width:14, height:14, color:playerColor }} />}
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-bold text-white truncate">{player.name}</p>
-          {player.isBot && <p className="text-[9px] font-semibold" style={{ color: playerColor }}>BOT</p>}
+        <div style={{ flex:1, minWidth:0 }}>
+          <p style={{ fontSize:12, fontWeight:900, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{player.name}</p>
+          {player.isBot && (
+            <p style={{ fontSize:9, fontWeight:800, color:playerColor, textTransform:'uppercase', letterSpacing:'.1em' }}>BOT</p>
+          )}
         </div>
-        {isWinner && <Crown className="w-4 h-4 text-amber-400 flex-shrink-0" />}
+        {isWinner && <Crown style={{ width:14, height:14, color:'#fbbf24', flexShrink:0 }} />}
       </div>
 
-      <p className="text-xl font-black text-amber-400 text-center py-1 flex-shrink-0">{total.toLocaleString()}</p>
+      {/* Total value */}
+      <div style={{ textAlign:'center', padding:'4px 8px 6px', flexShrink:0 }}>
+        <span style={{ fontSize:22, fontWeight:900, color: isWinner ? '#fbbf24' : 'rgba(255,255,255,.85)' }}>
+          {total.toLocaleString()}
+        </span>
+        <span style={{ fontSize:10, color:'rgba(255,255,255,.3)', fontWeight:700, marginLeft:4 }}>coins</span>
+      </div>
 
-      {/* Jackpot percentage bar */}
-      {showPct && grandTotal > 0 && (
-        <div className="px-3 pb-1 flex-shrink-0">
-          <div className="flex justify-between items-center mb-0.5">
-            <span className="text-[10px] font-bold" style={{ color: playerColor }}>{Math.round(pct * 100)}%</span>
+      {/* Jackpot % bar */}
+      {showPct && (
+        <div style={{ padding:'0 10px 6px', flexShrink:0 }}>
+          <div style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}>
+            <span style={{ fontSize:9, fontWeight:800, color:playerColor, textTransform:'uppercase', letterSpacing:'.1em' }}>
+              {Math.round(pct*100)}%
+            </span>
           </div>
-          <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+          <div style={{ height:4, borderRadius:4, background:'rgba(255,255,255,.07)', overflow:'hidden' }}>
             <motion.div
-              className="h-full rounded-full"
-              style={{ background: playerColor }}
-              initial={{ width: '0%' }}
-              animate={{ width: `${pct * 100}%` }}
-              transition={{ duration: 0.6, ease: 'easeOut' }}
+              style={{ height:'100%', borderRadius:4, background:`linear-gradient(90deg,${playerColor},${playerColor}aa)` }}
+              initial={{ width:'0%' }}
+              animate={{ width:`${pct*100}%` }}
+              transition={{ duration:0.6, ease:'easeOut' }}
             />
           </div>
         </div>
       )}
 
-      {/* Spinner area */}
-      {(spinPhase === 'spinning' || spinPhase === 'magic_spin') && caseItems.length > 0 && (() => {
-        const TOP_RARITIES = ['epic', 'legendary'];
-        const topItems = caseItems.filter(it => TOP_RARITIES.includes(it.rarity));
-        
-        let spinPool = caseItems;
-        let winItem = spinnerItem;
-        
-        if (spinPhase === 'magic_spin') {
-          spinPool = topItems.length > 0 ? topItems : caseItems;
-          winItem = magicItem;
-        }
+      {/* Spinner */}
+      {(spinPhase==='spinning'||spinPhase==='magic_spin') && caseItems.length>0 && (
+        <div style={{ padding:'0 8px 8px', flex:1, minHeight:0 }}>
+          {spinPhase==='magic_spin' && (
+            <div style={{ textAlign:'center', marginBottom:6 }}>
+              <span className="ba-magic-label" style={{
+                fontSize:9, fontWeight:900, color:'#22d3ee',
+                textTransform:'uppercase', letterSpacing:'.18em',
+              }}>✦ Magic Spin ✦</span>
+            </div>
+          )}
+          <VerticalSpinner
+            key={`${spinnerKey}-${spinPhase}`}
+            items={spinPhase==='magic_spin' ? magicPool : caseItems}
+            winnerItem={spinPhase==='magic_spin' ? magicItem : spinnerItem}
+            onDone={spinPhase==='magic_spin' ? onMagicSpinDone : onSpinDone}
+            fast={fast}
+          />
+        </div>
+      )}
 
-        return (
-          <div className="px-2 pb-2 flex-1 min-h-0">
-            {spinPhase === 'magic_spin' && (
-              <div className="text-center mb-1">
-                <span className="text-[10px] font-bold text-cyan-300 tracking-widest uppercase">✦ Magic Spin ✦</span>
-              </div>
-            )}
-            <VerticalSpinner
-              key={`${spinnerKey}-${spinPhase}`}
-              items={spinPool}
-              winnerItem={winItem}
-              onDone={spinPhase === 'magic_spin' ? onMagicSpinDone : onSpinDone}
-              fast={fast}
-            />
-          </div>
-        );
-      })()}
-
-      {/* Won items display */}
-      <div className="px-2 pb-3 flex-1 min-h-0 overflow-hidden">
-        <div className="space-y-1 max-h-full overflow-y-auto scrollbar-hide">
-          {wonItems.map((item, i) => (
-            <ItemChip key={i} item={item} />
-          ))}
+      {/* Won items */}
+      <div className="ba-scrollbar" style={{ padding:'0 8px 10px', flex:1, minHeight:0, overflowY:'auto' }}>
+        <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
+          {wonItems.map((item, i) => <ItemChip key={i} item={item} index={i} />)}
         </div>
       </div>
     </div>
   );
 }
 
-/* ─── Battle Arena ──────────────────────────────────────────────────────────── */
-export default function BattleArena({ battle, selectedCases, players: rawPlayers, teams, modeLabel, battleModes = {}, userEmail, onClose, onReward, onJoin, onAddBot, onFillBots, onBattleUpdated, balance = 0 }) {
-  // Always fetch fresh avatars from DB for all real players
-  const players = usePlayerAvatars(rawPlayers);
-  const totalRounds = selectedCases.length;
-  const teamList = teams || [players.map((_, i) => i)];
-  const isWaiting = battle?.status === 'waiting';
+/* ─── Mode Notice ────────────────────────────────────────────────── */
+function ModeNotice({ icon, label, color, children }) {
+  return (
+    <div style={{
+      display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderRadius:12,
+      background:`${color}12`, border:`1px solid ${color}30`,
+    }}>
+      <span style={{ fontSize:16, flexShrink:0 }}>{icon}</span>
+      <p style={{ fontSize:12, color:`${color}cc`, fontWeight:700 }}>{children}</p>
+    </div>
+  );
+}
 
-  // Poll DB while waiting so both players see each other join and battle auto-starts
+/* ─── VS Divider ─────────────────────────────────────────────────── */
+function VsDivider() {
+  return (
+    <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'center', padding:'0 2px', flexShrink:0, alignSelf:'stretch' }}>
+      <div style={{
+        position:'absolute', top:'50%', left:'50%',
+        transform:'translateX(-50%) translateY(-50%)',
+        width:28, height:28, borderRadius:'50%',
+        background:'linear-gradient(135deg,#080012,#0e001c)',
+        border:'1px solid rgba(255,255,255,.1)',
+        display:'flex', alignItems:'center', justifyContent:'center',
+        zIndex:2,
+      }}>
+        <span className="ba-vs" style={{
+          fontSize:9, fontWeight:900, color:'rgba(255,255,255,.4)',
+          letterSpacing:'.05em', display:'block',
+        }}>VS</span>
+      </div>
+      <div style={{ width:1, height:'100%', background:'rgba(255,255,255,.06)' }} />
+    </div>
+  );
+}
+
+/* ─── Waiting Lobby ──────────────────────────────────────────────── */
+function WaitingLobby({ battle, players, teams, modeLabel, userEmail, onClose, onJoin, onAddBot, onFillBots, balance }) {
+  const maxPlayers  = battle.max_players || 2;
+  const isCreator   = battle.creator_email === userEmail;
+  const hasJoined   = players.some(p => p && p.email === userEmail && !p.isBot);
+  const filledCount = players.filter(p => p && p.email).length;
+
+  const waitingTeamList = teams && teams.length > 0
+    ? teams
+    : [
+        Array.from({ length: Math.ceil(maxPlayers/2) }, (_,i) => i),
+        Array.from({ length: Math.floor(maxPlayers/2) }, (_,i) => i + Math.ceil(maxPlayers/2)),
+      ];
+
+  return (
+    <div style={{ position:'relative', overflow:'hidden', borderRadius:18,
+      background:'linear-gradient(145deg,#080012,#0e001c,#040009)',
+      border:'1px solid rgba(168,85,247,.2)',
+      padding:'22px 20px',
+      boxShadow:'0 0 60px rgba(168,85,247,.1)',
+    }}>
+      <div className="ba-scan" />
+      <div className="ba-hex" />
+      <Particles accent="#a855f7" count={8} />
+      <Particles accent="#fbbf24" count={5} />
+
+      {/* Top accent */}
+      <div style={{
+        position:'absolute', top:0, left:0, right:0, height:2,
+        background:'linear-gradient(90deg,transparent,#a855f7,#fbbf24,transparent)',
+      }} />
+
+      {/* Waiting header */}
+      <div style={{ position:'relative', zIndex:2, display:'flex', alignItems:'center', gap:10, marginBottom:22 }}>
+        <div style={{ position:'relative', width:8, height:8 }}>
+          <div className="ba-live-ring" style={{ position:'absolute', inset:0, borderRadius:'50%', background:'rgba(168,85,247,.5)' }} />
+          <div style={{ position:'absolute', inset:0, borderRadius:'50%', background:'#a855f7' }} />
+        </div>
+        <span style={{ fontSize:13, fontWeight:900, color:'#c084fc', letterSpacing:'.08em', textTransform:'uppercase' }}>Waiting for players</span>
+        <span style={{
+          fontSize:10, fontWeight:800, padding:'2px 9px', borderRadius:20,
+          background:'rgba(251,191,36,.12)', color:'#fbbf24',
+          border:'1px solid rgba(251,191,36,.25)', marginLeft:'auto',
+        }}>{filledCount}/{maxPlayers}</span>
+      </div>
+
+      {/* Team grid */}
+      <div style={{ position:'relative', zIndex:2, display:'flex', gap:8, alignItems:'stretch', overflowX:'auto' }}>
+        {waitingTeamList.map((memberIndices, ti) => {
+          const pal = TEAM_PALETTE[ti % TEAM_PALETTE.length];
+          return (
+            <React.Fragment key={ti}>
+              <div style={{ flex:1, minWidth:0, display:'flex', flexDirection:'column', gap:8 }}>
+                {waitingTeamList.length > 1 && (
+                  <div style={{ textAlign:'center' }}>
+                    <span style={{
+                      fontSize:10, fontWeight:900, padding:'2px 12px', borderRadius:20,
+                      background:pal.bg, color:pal.color, border:`1px solid ${pal.border}`,
+                      textTransform:'uppercase', letterSpacing:'.1em',
+                    }}>Team {ti+1}</span>
+                  </div>
+                )}
+                <div style={{ display:'flex', gap:8 }}>
+                  {memberIndices.map((globalIdx) => {
+                    const p       = players[globalIdx];
+                    const filled  = p && p.email;
+                    const canJoin = !filled && !hasJoined && !isCreator;
+                    return (
+                      <div key={globalIdx} style={{
+                        flex:1, minWidth:100, borderRadius:14,
+                        background: filled ? pal.bg : 'rgba(255,255,255,.02)',
+                        border:`1px solid ${filled ? pal.border : 'rgba(255,255,255,.07)'}`,
+                        minHeight:180, display:'flex', flexDirection:'column',
+                        alignItems:'center', justifyContent:'center', gap:10, padding:'16px 10px',
+                        transition:'border-color .3s, background .3s',
+                      }}>
+                        {filled ? (
+                          <>
+                            <div style={{
+                              width:44, height:44, borderRadius:'50%', overflow:'hidden',
+                              background:`linear-gradient(135deg,${pal.color}33,${pal.color}18)`,
+                              border:`2px solid ${pal.color}66`,
+                              display:'flex', alignItems:'center', justifyContent:'center',
+                              boxShadow:`0 0 16px ${pal.glow}`,
+                            }}>
+                              {p.isBot
+                                ? <Bot style={{ width:18, height:18, color:pal.color }} />
+                                : (p.avatar_url && p.avatar_url!=='null' && p.avatar_url!=='undefined')
+                                  ? <img src={p.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                                  : <User style={{ width:18, height:18, color:pal.color }} />}
+                            </div>
+                            <div style={{ textAlign:'center' }}>
+                              <p style={{ fontSize:13, fontWeight:800, color:'#fff' }}>{p.name}</p>
+                              {p.isBot && (
+                                <p style={{ fontSize:9, fontWeight:800, color:pal.color, textTransform:'uppercase', letterSpacing:'.1em' }}>BOT</p>
+                              )}
+                            </div>
+                            <div style={{
+                              display:'flex', alignItems:'center', gap:5, padding:'3px 10px',
+                              borderRadius:20, background:'rgba(52,211,153,.12)', border:'1px solid rgba(52,211,153,.3)',
+                            }}>
+                              <CheckCircle2 style={{ width:11, height:11, color:'#34d399' }} />
+                              <span style={{ fontSize:10, fontWeight:800, color:'#34d399' }}>Ready</span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div style={{
+                              width:44, height:44, borderRadius:'50%',
+                              border:`2px dashed ${pal.border}`,
+                              display:'flex', alignItems:'center', justifyContent:'center',
+                            }}>
+                              <Loader2 style={{ width:18, height:18, color:pal.color, opacity:.4 }} className="animate-spin" />
+                            </div>
+                            <p style={{ fontSize:11, color:'rgba(255,255,255,.2)', fontWeight:700, textAlign:'center' }}>
+                              Waiting...
+                            </p>
+                            {canJoin && (
+                              <button
+                                onClick={() => onJoin()}
+                                disabled={battle.entry_cost > balance}
+                                style={{
+                                  padding:'7px 18px', borderRadius:10, border:'none',
+                                  cursor: battle.entry_cost > balance ? 'not-allowed' : 'pointer',
+                                  background: battle.entry_cost > balance
+                                    ? 'rgba(255,255,255,.06)'
+                                    : 'linear-gradient(135deg,#fbbf24,#f59e0b)',
+                                  color: battle.entry_cost > balance ? 'rgba(255,255,255,.2)' : '#000',
+                                  fontSize:12, fontWeight:900, fontFamily:'Nunito,sans-serif',
+                                  boxShadow: battle.entry_cost <= balance ? '0 0 20px rgba(251,191,36,.4)' : 'none',
+                                }}>
+                                Join
+                              </button>
+                            )}
+                            {isCreator && (
+                              <div style={{ display:'flex', flexDirection:'column', gap:6, width:'100%', padding:'0 6px' }}>
+                                <button onClick={onAddBot} style={{
+                                  padding:'6px 0', borderRadius:9, border:'1px solid rgba(168,85,247,.3)',
+                                  background:'rgba(168,85,247,.1)', color:'#c084fc',
+                                  fontSize:11, fontWeight:800, fontFamily:'Nunito,sans-serif', cursor:'pointer',
+                                  display:'flex', alignItems:'center', justifyContent:'center', gap:5,
+                                  transition:'background .2s',
+                                }}
+                                onMouseEnter={e=>e.currentTarget.style.background='rgba(168,85,247,.2)'}
+                                onMouseLeave={e=>e.currentTarget.style.background='rgba(168,85,247,.1)'}>
+                                  <Bot style={{ width:11, height:11 }} /> Add Bot
+                                </button>
+                                <button onClick={onFillBots} style={{
+                                  padding:'6px 0', borderRadius:9, border:'1px solid rgba(251,191,36,.25)',
+                                  background:'rgba(251,191,36,.1)', color:'#fbbf24',
+                                  fontSize:11, fontWeight:800, fontFamily:'Nunito,sans-serif', cursor:'pointer',
+                                  display:'flex', alignItems:'center', justifyContent:'center', gap:5,
+                                  transition:'background .2s',
+                                }}
+                                onMouseEnter={e=>e.currentTarget.style.background='rgba(251,191,36,.18)'}
+                                onMouseLeave={e=>e.currentTarget.style.background='rgba(251,191,36,.1)'}>
+                                  Fill All
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+              {ti < waitingTeamList.length-1 && <VsDivider />}
+            </React.Fragment>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ─── Main BattleArena ───────────────────────────────────────────── */
+export default function BattleArena({ battle, selectedCases, players: rawPlayers, teams, modeLabel, battleModes={}, userEmail, onClose, onReward, onJoin, onAddBot, onFillBots, onBattleUpdated, balance=0 }) {
+  const players    = usePlayerAvatars(rawPlayers);
+  const totalRounds = selectedCases.length;
+  const teamList   = teams || [players.map((_,i) => i)];
+  const isWaiting  = battle?.status === 'waiting';
+
   useEffect(() => {
     if (!isWaiting || !battle?.id) return;
     const poll = async () => {
       try {
         const { base44 } = await import('@/api/base44Client');
-        const fresh = await base44.entities.CaseBattle.filter({ id: battle.id });
+        const fresh   = await base44.entities.CaseBattle.filter({ id: battle.id });
         const updated = fresh?.[0];
         if (!updated) return;
-        const filledCount = (updated.players || []).filter(p => p && p.email).length;
-        const maxPlayers = updated.max_players || 2;
-        // Always notify parent with fresh data so lobby UI updates
+        const filledCount = (updated.players||[]).filter(p=>p&&p.email).length;
+        const maxPlayers  = updated.max_players || 2;
         if (onBattleUpdated) onBattleUpdated(updated);
-        // If now full, mark in_progress and start
-        if (filledCount >= maxPlayers && updated.status === 'waiting') {
-          await base44.entities.CaseBattle.update(updated.id, { status: 'in_progress' });
+        if (filledCount >= maxPlayers && updated.status==='waiting') {
+          await base44.entities.CaseBattle.update(updated.id, { status:'in_progress' });
         }
       } catch {}
     };
@@ -256,583 +646,482 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
     return () => clearInterval(interval);
   }, [isWaiting, battle?.id]);
 
-  const modes       = battleModes && typeof battleModes === 'object' ? battleModes : {};
-  const isCrazy     = modes.crazy     === true;
-  const isTerminal  = modes.terminal  === true;
-  const isGroup     = modes.group     === true;
-  const isMagicSpin = modes.magic_spin === true;
-  const isFastMode  = modes.fast_mode  === true;
-  const isJackpot   = modes.jackpot   === true;
+  const modes       = battleModes && typeof battleModes==='object' ? battleModes : {};
+  const isCrazy     = modes.crazy===true;
+  const isTerminal  = modes.terminal===true;
+  const isGroup     = modes.group===true;
+  const isMagicSpin = modes.magic_spin===true;
+  const isFastMode  = modes.fast_mode===true;
+  const isJackpot   = modes.jackpot===true;
 
-  const [phase, setPhase]               = useState('countdown');
-  const [countdown, setCountdown]       = useState(3);
-  const [currentRound, setCurrentRound] = useState(0);
-  const [playerItems, setPlayerItems]   = useState(players.map(() => []));
-  const [done, setDone]                 = useState(false);
-  const [jackpotPhase, setJackpotPhase] = useState(false);
+  const [phase, setPhase]                 = useState('countdown');
+  const [countdown, setCountdown]         = useState(3);
+  const [currentRound, setCurrentRound]   = useState(0);
+  const [playerItems, setPlayerItems]     = useState(players.map(()=>[]));
+  const [done, setDone]                   = useState(false);
+  const [jackpotPhase, setJackpotPhase]   = useState(false);
   const [winnerTeamIdx, setWinnerTeamIdx] = useState(null);
   const [showConfetti, setShowConfetti]   = useState(false);
+  const [playerPhases, setPlayerPhases]   = useState(players.map(()=>'idle'));
 
-  // Per-player spin phase: 'idle' | 'spinning' | 'magic_spin'
-  const [playerPhases, setPlayerPhases] = useState(players.map(() => 'idle'));
-
-  const allRolled   = useRef(null);
+  const allRolled      = useRef(null);
   const roundDoneCount = useRef(0);
   const currentRoundRef = useRef(0);
-  const rewardGiven = useRef(false);
+  const rewardGiven    = useRef(false);
 
   const rollWithMagicSpin = (caseItems) => {
-    const item = rollItem(caseItems) || { name: 'Nothing', value: 0, rarity: 'common', image_url: null };
-    if (!isMagicSpin) return { item, isMagic: false };
-    const topItems = caseItems.filter(it => ['epic', 'legendary'].includes(it.rarity));
-    if (topItems.length > 0 && Math.random() < 0.20) {
-      return { item: rollItem(topItems) || item, isMagic: true };
-    }
-    return { item, isMagic: false };
+    const item = rollItem(caseItems) || { name:'Nothing', value:0, rarity:'common', image_url:null };
+    if (!isMagicSpin) return { item, isMagic:false };
+    const topItems = caseItems.filter(it => ['epic','legendary'].includes(it.rarity));
+    if (topItems.length>0 && Math.random()<0.20) return { item: rollItem(topItems)||item, isMagic:true };
+    return { item, isMagic:false };
   };
 
   useEffect(() => {
     if (isWaiting) return;
-    allRolled.current = selectedCases.map(c =>
-      players.map(() => rollWithMagicSpin(c.items || []))
-    );
-  }, []); // runs once on mount; component is remounted when status flips to in_progress
+    allRolled.current = selectedCases.map(c => players.map(()=>rollWithMagicSpin(c.items||[])));
+  }, []);
 
   useEffect(() => {
-    if (isWaiting) return;
-    if (phase !== 'countdown') return;
-    if (countdown === 0) { setPhase('spinning'); launchRound(0); return; }
-    const t = setTimeout(() => setCountdown(c => c - 1), 1000);
-    return () => clearTimeout(t);
+    if (isWaiting || phase!=='countdown') return;
+    if (countdown===0) { setPhase('spinning'); launchRound(0); return; }
+    const t = setTimeout(()=>setCountdown(c=>c-1), 1000);
+    return ()=>clearTimeout(t);
   }, [phase, countdown, isWaiting]);
 
   const launchRound = (round) => {
-    roundDoneCount.current = 0;
-    currentRoundRef.current = round;
+    roundDoneCount.current=0; currentRoundRef.current=round;
     setCurrentRound(round);
-    // All players start spinning simultaneously
-    setPlayerPhases(players.map(() => 'spinning'));
+    setPlayerPhases(players.map(()=>'spinning'));
   };
 
-  // Called when a player's NORMAL spin animation ends
   const handleNormalSpinDone = (pi) => {
-    const round = currentRoundRef.current;
+    const round  = currentRoundRef.current;
     const rolled = allRolled.current[round];
-
     if (rolled[pi].isMagic) {
-      // This player triggered magic spin → go straight to magic spin (no overlay)
-      setPlayerPhases(prev => {
-        const next = [...prev];
-        next[pi] = 'magic_spin';
-        return next;
-      });
+      setPlayerPhases(prev=>{ const n=[...prev]; n[pi]='magic_spin'; return n; });
     } else {
-      // Normal finish for this player
       markPlayerRoundDone(pi, round);
     }
   };
 
-  // Called when the magic spin animation ends
-  const handleMagicSpinDone = (pi) => {
-    const round = currentRoundRef.current;
-    markPlayerRoundDone(pi, round);
-  };
+  const handleMagicSpinDone = (pi) => markPlayerRoundDone(pi, currentRoundRef.current);
 
-  // Marks one player as fully done for this round
   const markPlayerRoundDone = (pi, round) => {
     const rolled = allRolled.current[round];
-    // Add this player's item to their won list
-    setPlayerItems(prev => {
-      const next = [...prev];
-      next[pi] = [...next[pi], rolled[pi].item];
-      return next;
-    });
-    setPlayerPhases(prev => {
-      const next = [...prev];
-      next[pi] = 'idle';
-      return next;
-    });
-
+    setPlayerItems(prev => { const n=[...prev]; n[pi]=[...n[pi], rolled[pi].item]; return n; });
+    setPlayerPhases(prev => { const n=[...prev]; n[pi]='idle'; return n; });
     roundDoneCount.current += 1;
-    // Only advance when ALL players are done
     if (roundDoneCount.current >= players.length) {
-      if (round + 1 >= totalRounds) {
-        setTimeout(() => {
-          if (isJackpot) setJackpotPhase(true);
-          else finishBattle();
-        }, isFastMode ? 1200 : 2500);
+      if (round+1 >= totalRounds) {
+        setTimeout(() => { if (isJackpot) setJackpotPhase(true); else finishBattle(); }, isFastMode ? 1200 : 2500);
       } else {
-        setTimeout(() => launchRound(round + 1), isFastMode ? 1500 : 4500);
+        setTimeout(() => launchRound(round+1), isFastMode ? 1500 : 4500);
       }
     }
   };
 
   const getPlayerTotal = (pi) => {
     if (!allRolled.current) return 0;
-    if (isTerminal) {
-      const lastRound = allRolled.current[totalRounds - 1];
-      return lastRound?.[pi]?.item?.value || 0;
-    }
-    return allRolled.current.reduce((s, r) => s + (r[pi]?.item?.value || 0), 0);
+    if (isTerminal) return allRolled.current[totalRounds-1]?.[pi]?.item?.value || 0;
+    return allRolled.current.reduce((s,r)=>s+(r[pi]?.item?.value||0),0);
   };
 
-  const getTeamTotal = (mi) => {
-    if (mi.length === 0) return 0;
-    return mi.reduce((s, pi) => s + getPlayerTotal(pi), 0) / mi.length;
-  };
-
-  const finishBattle = (forcedWinnerTi = null) => {
+  const finishBattle = (forcedWinnerTi=null) => {
     let winIdx;
-    if (forcedWinnerTi !== null) {
-      winIdx = forcedWinnerTi;
-    } else if (isGroup) {
-      winIdx = -1;
-    } else {
-      const teamVals = teamList.map(mi => getTeamTotal(mi));
-      winIdx = isCrazy
-        ? teamVals.indexOf(Math.min(...teamVals))
-        : teamVals.indexOf(Math.max(...teamVals));
+    if (forcedWinnerTi!==null) winIdx=forcedWinnerTi;
+    else if (isGroup) winIdx=-1;
+    else {
+      const vals = teamList.map(mi => mi.reduce((s,pi)=>s+getPlayerTotal(pi),0)/mi.length);
+      winIdx = isCrazy ? vals.indexOf(Math.min(...vals)) : vals.indexOf(Math.max(...vals));
     }
-    setWinnerTeamIdx(winIdx);
-    setDone(true);
-    setJackpotPhase(false);
+    setWinnerTeamIdx(winIdx); setDone(true); setJackpotPhase(false);
 
     if (!rewardGiven.current) {
       rewardGiven.current = true;
-
-      // totalPot = every slot's entry_cost summed (max_players × entry_cost)
-      const maxPlayers = battle?.max_players || players.length;
-      const pot = maxPlayers * (battle?.entry_cost || 0);
-
-      const userPi = players.findIndex(p => p.email === userEmail);
-
-      // Total items value rolled by ALL players across all rounds
-      const totalItemsValue = allRolled.current.reduce((roundSum, round) =>
-        roundSum + round.reduce((pSum, rolled) => pSum + (rolled?.item?.value || 0), 0), 0
-      );
-
+      const totalItemsValue = allRolled.current.reduce((rs,round)=>rs+round.reduce((ps,r)=>ps+(r?.item?.value||0),0),0);
+      const userPi = players.findIndex(p=>p.email===userEmail);
       if (isGroup) {
-        // Group: split evenly — user gets their equal share
-        const share = Math.floor(totalItemsValue / players.length);
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 5000);
+        const share = Math.floor(totalItemsValue/players.length);
+        setShowConfetti(true); setTimeout(()=>setShowConfetti(false),5000);
         onReward && onReward(share);
       } else {
-        const userWins = winIdx >= 0 && teamList[winIdx]?.includes(userPi);
-        if (userWins) {
-          setShowConfetti(true);
-          setTimeout(() => setShowConfetti(false), 5000);
-          // Winner(s) split the total items value
-          const winnerCount = teamList[winIdx]?.length || 1;
-          const payout = Math.floor(totalItemsValue / winnerCount);
+        if (winIdx>=0 && teamList[winIdx]?.includes(userPi)) {
+          setShowConfetti(true); setTimeout(()=>setShowConfetti(false),5000);
+          const payout = Math.floor(totalItemsValue/(teamList[winIdx]?.length||1));
           onReward && onReward(payout);
         }
       }
     }
   };
 
-  const playerTotals = playerItems.map(items => items.reduce((s, it) => s + (it?.value || 0), 0));
-  const teamTotals   = teamList.map(mi => mi.reduce((s, pi) => s + (playerTotals[pi] || 0), 0));
-  // entry_cost is what each player paid; totalPot = all players' contributions
-  const totalPot = (battle?.max_players || players.length) * (battle?.entry_cost || 0);
-
+  const playerTotals = playerItems.map(items=>items.reduce((s,it)=>s+(it?.value||0),0));
+  const teamTotals   = teamList.map(mi=>mi.reduce((s,pi)=>s+(playerTotals[pi]||0),0));
+  const totalPot     = (battle?.max_players||players.length)*(battle?.entry_cost||0);
   const allPlayerIndices = teamList.flat();
-  const playerColorMap = {};
-  allPlayerIndices.forEach((pi, idx) => { playerColorMap[pi] = PLAYER_COLORS[idx % PLAYER_COLORS.length]; });
-
-  const grandPlayerTotal = playerTotals.reduce((s, v) => s + v, 0);
-  const caseItems = (selectedCases[currentRound] || selectedCases[0])?.items || [];
-
+  const playerColorMap   = {};
+  allPlayerIndices.forEach((pi,idx)=>{ playerColorMap[pi]=PLAYER_COLORS[idx%PLAYER_COLORS.length]; });
+  const grandPlayerTotal = playerTotals.reduce((s,v)=>s+v,0);
+  const caseItems = (selectedCases[currentRound]||selectedCases[0])?.items||[];
   const totalItemsValue = allRolled.current
-    ? allRolled.current.reduce((roundSum, round) =>
-        roundSum + round.reduce((pSum, rolled) => pSum + (rolled?.item?.value || 0), 0), 0)
-    : 0;
+    ? allRolled.current.reduce((rs,round)=>rs+round.reduce((ps,r)=>ps+(r?.item?.value||0),0),0) : 0;
 
   let payoutLabel = '';
   if (done) {
-    if (isGroup) {
-      payoutLabel = `Everyone gets ${Math.floor(totalItemsValue / players.length).toLocaleString()} coins`;
-    } else if (winnerTeamIdx >= 0) {
-      const winnerCount = teamList[winnerTeamIdx]?.length || 1;
-      if (winnerCount === 1) {
-        payoutLabel = `Winner takes all items value: ${totalItemsValue.toLocaleString()} coins`;
-      } else {
-        payoutLabel = `Each winner gets ${Math.floor(totalItemsValue / winnerCount).toLocaleString()} coins (split ${winnerCount} ways)`;
-      }
+    if (isGroup) payoutLabel=`Everyone gets ${Math.floor(totalItemsValue/players.length).toLocaleString()} coins`;
+    else if (winnerTeamIdx>=0) {
+      const wc = teamList[winnerTeamIdx]?.length||1;
+      payoutLabel = wc===1
+        ? `Winner takes all: ${totalItemsValue.toLocaleString()} coins`
+        : `Each winner gets ${Math.floor(totalItemsValue/wc).toLocaleString()} coins`;
     }
   }
 
   const activeModes = [
-    isCrazy     && { icon: '🎭', label: 'Crazy', color: '#ec4899' },
-    isTerminal  && { icon: '⚡', label: 'Terminal', color: '#f59e0b' },
-    isGroup     && { icon: '🔄', label: 'Group', color: '#10b981' },
-    isMagicSpin && { icon: '✨', label: 'Magic Spin', color: '#8b5cf6' },
-    isFastMode  && { icon: '⚡', label: 'Fast', color: '#06b6d4' },
-    isJackpot   && { icon: '👑', label: 'Jackpot', color: '#f59e0b' },
+    isCrazy&&{icon:'🎭',label:'Crazy',color:'#f472b6'},
+    isTerminal&&{icon:'⚡',label:'Terminal',color:'#fbbf24'},
+    isGroup&&{icon:'🔄',label:'Group',color:'#34d399'},
+    isMagicSpin&&{icon:'✨',label:'Magic Spin',color:'#a855f7'},
+    isFastMode&&{icon:'💨',label:'Fast',color:'#22d3ee'},
+    isJackpot&&{icon:'👑',label:'Jackpot',color:'#fbbf24'},
   ].filter(Boolean);
 
-  // If waiting, render arena-style lobby matching the battle grid exactly
+  /* ── Waiting Lobby ── */
   if (isWaiting) {
-    const maxPlayers = battle.max_players || 2;
-    const isCreator = battle.creator_email === userEmail;
-    const hasJoined = players.some(p => p && p.email === userEmail && !p.isBot);
-    const filledCount = players.filter(p => p && p.email).length;
-    const emptySlots = maxPlayers - filledCount;
-    const allFilled = filledCount >= maxPlayers;
-
-    // Use teams config to determine team sizes, fallback to splitting evenly
-    const waitingTeamList = teams && teams.length > 0
-      ? teams
-      : [Array.from({ length: Math.ceil(maxPlayers / 2) }, (_, i) => i),
-         Array.from({ length: Math.floor(maxPlayers / 2) }, (_, i) => i + Math.ceil(maxPlayers / 2))];
-
-    // Build slot info: player at global index or empty
-    const getSlot = (globalIdx) => {
-      const p = players[globalIdx];
-      if (p && p.email) return { filled: true, player: p };
-      return { filled: false };
-    };
-
     return (
-      <div className="space-y-4">
-        {/* Header — identical to battle header */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <button onClick={onClose} className="text-white/40 hover:text-white transition-colors">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <div>
-            <p className="text-xs text-white/40">{modeLabel || '1v1'}</p>
-            <p className="text-sm font-bold text-white/60">
-              Battle cost <span className="text-amber-400">{(battle.entry_cost * maxPlayers)?.toLocaleString()}</span>
-            </p>
+      <div className="ba-root" style={{ background:'#04000a', minHeight:'100vh', padding:'20px 0 80px' }}>
+        <style>{CSS}</style>
+        <div style={{ maxWidth:860, margin:'0 auto', display:'flex', flexDirection:'column', gap:22 }}>
+          {/* Header */}
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <button onClick={onClose} style={{
+              width:32, height:32, borderRadius:10, border:'1px solid rgba(255,255,255,.12)',
+              background:'rgba(255,255,255,.05)', display:'flex', alignItems:'center',
+              justifyContent:'center', cursor:'pointer', color:'rgba(255,255,255,.5)',
+              transition:'all .2s',
+            }}
+            onMouseEnter={e=>{ e.currentTarget.style.borderColor='rgba(251,191,36,.4)'; e.currentTarget.style.color='#fbbf24'; }}
+            onMouseLeave={e=>{ e.currentTarget.style.borderColor='rgba(255,255,255,.12)'; e.currentTarget.style.color='rgba(255,255,255,.5)'; }}>
+              <ArrowLeft style={{ width:15, height:15 }} />
+            </button>
+            <div style={{ width:3, height:22, borderRadius:2, background:'linear-gradient(to bottom,#fbbf24,#a855f7)' }} />
+            <Swords style={{ width:16, height:16, color:'#fbbf24' }} />
+            <span style={{ fontSize:18, fontWeight:900, color:'#fff' }}>Battle Lobby</span>
+            <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:6 }}>
+              <span style={{ fontSize:12, color:'rgba(255,255,255,.35)', fontWeight:700 }}>Cost:</span>
+              <span style={{ fontSize:14, fontWeight:900, color:'#fbbf24' }}>{(battle.entry_cost*(battle.max_players||2)).toLocaleString()}</span>
+              <span style={{ fontSize:10, color:'rgba(251,191,36,.5)', fontWeight:700 }}>coins</span>
+            </div>
           </div>
-          <div className="flex-1" />
-          <span className="text-sm text-white/40 font-medium">
-            {filledCount}/{maxPlayers} players
-          </span>
-        </div>
-
-        {/* Team grid — same structure as battle arena */}
-        <div className="flex gap-2 items-start overflow-x-auto max-w-full">
-          {waitingTeamList.map((memberIndices, ti) => (
-            <React.Fragment key={ti}>
-              <div className="flex-1 min-w-0 space-y-2">
-                {waitingTeamList.length > 1 && (
-                  <div className="text-center">
-                    <span className="text-xs font-bold px-3 py-0.5 rounded-full"
-                      style={{ background: TEAM_COLORS[ti] + '33', color: TEAM_COLORS[ti] }}>
-                      Team {ti + 1}
-                    </span>
-                  </div>
-                )}
-                <div className="flex gap-2">
-                  {memberIndices.map((globalIdx) => {
-                    const slot = getSlot(globalIdx);
-                    const color = PLAYER_COLORS[globalIdx % PLAYER_COLORS.length];
-                    const isEmptySlot = !slot.filled;
-                    const canJoin = isEmptySlot && !hasJoined && !isCreator;
-
-                    return (
-                      <div
-                        key={globalIdx}
-                        className="flex-1 min-w-[100px] flex flex-col rounded-2xl border transition-all duration-300"
-                        style={{
-                          borderColor: isEmptySlot ? 'rgba(255,255,255,0.08)' : color + '55',
-                          background: isEmptySlot ? 'rgba(255,255,255,0.02)' : color + '0d',
-                          minHeight: 180,
-                        }}
-                      >
-                        {slot.filled ? (
-                          /* ── Filled slot ── */
-                          <div className="flex flex-col items-center justify-center flex-1 gap-2 px-2 py-4">
-                            <div className="w-11 h-11 rounded-full overflow-hidden flex items-center justify-center text-base font-bold flex-shrink-0"
-                              style={{ background: color + '33', border: `2px solid ${color}88` }}>
-                              {slot.player.isBot
-                                ? <Bot className="w-5 h-5" style={{ color }} />
-                                : (slot.player.avatar_url && slot.player.avatar_url !== 'null' && slot.player.avatar_url !== 'undefined')
-                                  ? <img src={slot.player.avatar_url} alt="" className="w-full h-full object-cover" />
-                                  : <User className="w-5 h-5" style={{ color }} />}
-                            </div>
-                            <div className="text-center w-full px-1">
-                              <p className="text-sm font-bold text-white truncate">{slot.player.name}</p>
-                              {slot.player.isBot && (
-                                <p className="text-[9px] font-semibold uppercase tracking-wider" style={{ color }}>BOT</p>
-                              )}
-                            </div>
-                            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-500/15 border border-green-400/30">
-                              <CheckCircle2 className="w-3 h-3 text-green-400" />
-                              <span className="text-[10px] font-bold text-green-400">Ready</span>
-                            </div>
-                          </div>
-                        ) : (
-                          /* ── Empty slot ── */
-                          <div className="flex flex-col items-center justify-center flex-1 gap-2 px-2 py-4">
-                            <Loader2 className="w-8 h-8 text-white/15 animate-spin" />
-                            <p className="text-[10px] text-white/25 font-medium text-center">Waiting for player...</p>
-                            {/* Non-creator visitor: Join button */}
-                            {canJoin && (
-                              <Button
-                                onClick={() => onJoin()}
-                                disabled={battle.entry_cost > balance}
-                                size="sm"
-                                className="h-7 px-4 text-xs bg-blue-500 hover:bg-blue-400 rounded-lg mt-1"
-                              >
-                                Join
-                              </Button>
-                            )}
-                            {/* Creator: add bot to this slot */}
-                            {isCreator && (
-                              <div className="flex flex-col gap-1 mt-1">
-                                <Button
-                                  onClick={onAddBot}
-                                  size="sm"
-                                  className="h-7 px-3 text-xs bg-white/[0.08] hover:bg-white/15 text-white/60 hover:text-white rounded-lg border border-white/10"
-                                >
-                                  <Bot className="w-3 h-3 mr-1" /> Add Bot
-                                </Button>
-                                <Button
-                                  onClick={onFillBots}
-                                  size="sm"
-                                  className="h-7 px-3 text-xs bg-violet-500/20 hover:bg-violet-500/30 text-violet-300 hover:text-violet-200 rounded-lg border border-violet-400/20"
-                                >
-                                  Fill
-                                </Button>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              {ti < waitingTeamList.length - 1 && (
-                <div className="flex items-start justify-center pt-10 px-1">
-                  <span className="text-white/20 font-black text-sm">VS</span>
-                </div>
-              )}
-            </React.Fragment>
-          ))}
+          <WaitingLobby
+            battle={battle} players={players} teams={teams} modeLabel={modeLabel}
+            userEmail={userEmail} onClose={onClose} onJoin={onJoin}
+            onAddBot={onAddBot} onFillBots={onFillBots} balance={balance}
+          />
         </div>
       </div>
     );
   }
 
+  /* ── Active Arena ── */
   return (
-    <div className="space-y-4 relative max-w-full overflow-hidden">
+    <div className="ba-root" style={{ background:'#04000a', minHeight:'100vh', padding:'20px 0 80px', position:'relative' }}>
+      <style>{CSS}</style>
       <ConfettiEffect active={showConfetti} />
 
-      {/* ── Header ── */}
-      <div className="flex items-center gap-3 flex-wrap">
-        <button onClick={onClose} className="text-white/40 hover:text-white transition-colors">
-          <ArrowLeft className="w-5 h-5" />
-        </button>
-        <div>
-          <p className="text-xs text-white/40">{modeLabel || '1v1'}</p>
-          <p className="text-sm font-bold text-white/60">
-            Battle cost <span className="text-amber-400">{totalPot.toLocaleString()}</span>
-          </p>
-        </div>
-        {activeModes.length > 0 && (
-          <div className="flex gap-1 flex-wrap">
-            {activeModes.map(m => (
-              <span key={m.label} className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                style={{ background: m.color + '22', color: m.color, border: `1px solid ${m.color}44` }}>
-                {m.icon} {m.label}
-              </span>
-            ))}
-          </div>
-        )}
-        <div className="flex-1" />
-        <div className="flex items-center gap-1">
-          {selectedCases.map((_, i) => (
-            <div key={i} className={`h-2 rounded-full transition-all duration-300
-              ${i < currentRound ? 'w-5 bg-violet-500'
-                : i === currentRound ? 'w-5 bg-amber-400'
-                : 'w-2 bg-white/10'}`} />
-          ))}
-        </div>
-        <p className="text-xs font-bold text-white/50">
-          Rounds {done ? totalRounds : currentRound + 1}/{totalRounds}
-        </p>
-      </div>
+      <div style={{ maxWidth:860, margin:'0 auto', display:'flex', flexDirection:'column', gap:18 }}>
 
-      {/* ── Mode notices ── */}
-      {isTerminal && !done && (
-        <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-400/20 rounded-xl px-3 py-2">
-          <Zap className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-          <p className="text-xs text-amber-400/80">Terminal mode — only the <strong>last round</strong> determines the winner.</p>
-        </div>
-      )}
+        {/* ── Arena Header ── */}
+        <div style={{
+          position:'relative', overflow:'hidden', borderRadius:16,
+          background:'linear-gradient(120deg,#04000a 0%,#0e0020 40%,#100030 70%,#08000e 100%)',
+          border:'1px solid rgba(251,191,36,.12)',
+          padding:'16px 20px',
+        }}>
+          <div className="ba-scan" />
+          <div style={{
+            position:'absolute', inset:0, pointerEvents:'none',
+            background:'radial-gradient(ellipse 40% 100% at 90% 50%,rgba(168,85,247,.12) 0%,transparent 60%)',
+          }} />
 
-      {isCrazy && !done && (
-        <div className="flex items-center gap-2 bg-pink-500/10 border border-pink-400/20 rounded-xl px-3 py-2">
-          <span className="text-sm">🎭</span>
-          <p className="text-xs text-pink-400/80">Crazy mode — the player with the <strong>lowest</strong> total wins!</p>
-        </div>
-      )}
-      {isGroup && !done && (
-        <div className="flex items-center gap-2 bg-green-500/10 border border-green-400/20 rounded-xl px-3 py-2">
-          <span className="text-sm">🔄</span>
-          <p className="text-xs text-green-400/80">Group mode — all profit is split equally among all players.</p>
-        </div>
-      )}
+          <div style={{ position:'relative', zIndex:2, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+            <button onClick={onClose} style={{
+              width:30, height:30, borderRadius:9, border:'1px solid rgba(255,255,255,.12)',
+              background:'rgba(255,255,255,.05)', display:'flex', alignItems:'center',
+              justifyContent:'center', cursor:'pointer', color:'rgba(255,255,255,.5)', flexShrink:0,
+              transition:'all .2s',
+            }}
+            onMouseEnter={e=>{ e.currentTarget.style.borderColor='rgba(251,191,36,.4)'; e.currentTarget.style.color='#fbbf24'; }}
+            onMouseLeave={e=>{ e.currentTarget.style.borderColor='rgba(255,255,255,.12)'; e.currentTarget.style.color='rgba(255,255,255,.5)'; }}>
+              <ArrowLeft style={{ width:13, height:13 }} />
+            </button>
 
-      {/* ── Jackpot Wheel ── */}
-      {jackpotPhase && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-          <JackpotWheel
-            teamList={teamList}
-            players={players}
-            playerTotals={players.map((_, pi) => getPlayerTotal(pi))}
-            onWinner={(winnerTi) => setTimeout(() => finishBattle(winnerTi), 800)}
-          />
-        </motion.div>
-      )}
-
-      {/* ── Battle Over Banner ── */}
-      {done && (
-        <motion.div initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }}
-          className="rounded-2xl border border-amber-400/30 bg-gradient-to-br from-amber-500/15 to-transparent p-5 text-center">
-          <p className="text-2xl font-black text-white mb-1">🏆 The battle is over!</p>
-          {payoutLabel && <p className="text-sm text-green-400 font-semibold mb-4">{payoutLabel}</p>}
-
-          <div className="flex items-center justify-center gap-6 overflow-x-auto">
-            {teamList.map((mi, ti) => {
-              const isW = isGroup || ti === winnerTeamIdx;
-              return (
-                <React.Fragment key={ti}>
-                  <div className={`flex flex-col items-center gap-2 flex-shrink-0 ${isW ? '' : 'opacity-35'}`}>
-                    {teamList.length > 1 && (
-                      <p className="text-sm font-bold" style={{ color: TEAM_COLORS[ti] }}>
-                        Team {ti + 1}: {teamTotals[ti]?.toLocaleString()}
-                      </p>
-                    )}
-                    <div className="flex gap-4 justify-center">
-                      {mi.map(pi => (
-                        <div key={pi} className="flex flex-col items-center" style={{ width: 64 }}>
-                          {/* Crown row — always same height regardless of winner */}
-                          <div className="h-7 flex items-center justify-center">
-                            {isW && <span className="text-lg">{isGroup ? '🎁' : '👑'}</span>}
-                          </div>
-                          {/* Avatar — fixed size, always same height */}
-                          <div className="w-12 h-12 rounded-full overflow-hidden flex-shrink-0 flex items-center justify-center text-lg font-bold"
-                            style={{ background: TEAM_COLORS[ti] + '33', border: `2px solid ${TEAM_COLORS[ti]}88` }}>
-                            {players[pi]?.isBot
-                              ? <span>🤖</span>
-                              : safeAvatarUrl(players[pi]?.avatar_url)
-                                ? <img src={safeAvatarUrl(players[pi].avatar_url)} alt="" className="w-full h-full object-cover" />
-                                : <span>{players[pi]?.name?.[0]?.toUpperCase() || '?'}</span>}
-                          </div>
-                          <p className="text-xs text-white/60 text-center mt-1 w-full truncate">{players[pi]?.name}</p>
-                          <p className="text-sm font-bold text-amber-400">{playerTotals[pi]?.toLocaleString()}</p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                  {ti < teamList.length - 1 && (
-                    <div className="flex-shrink-0 text-white/20 font-black text-lg">VS</div>
-                  )}
-                </React.Fragment>
-              );
-            })}
-          </div>
-
-          <div className="flex justify-center mt-5">
-            <Button onClick={onClose} className="bg-gradient-to-r from-violet-600 to-indigo-600 rounded-xl px-12 h-11">
-              Done
-            </Button>
-          </div>
-        </motion.div>
-      )}
-
-      {/* ── Countdown ── */}
-      <AnimatePresence>
-        {phase === 'countdown' && (
-          <motion.div key="cd" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="fixed inset-0 z-40 flex flex-col items-center justify-center bg-black/85 gap-8">
-            <div className="flex gap-4 flex-wrap justify-center">
-              {allPlayerIndices.map((pi, idx) => {
-                const color = PLAYER_COLORS[idx % PLAYER_COLORS.length];
-                return (
-                  <motion.div key={pi}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: idx * 0.1 }}
-                    className="flex flex-col items-center gap-2">
-                    <div className="w-14 h-14 rounded-full overflow-hidden flex items-center justify-center text-lg font-black"
-                      style={{ background: color + '33', border: `3px solid ${color}`, color }}>
-                      {players[pi]?.isBot
-                        ? <span>🤖</span>
-                        : safeAvatarUrl(players[pi]?.avatar_url)
-                          ? <img src={safeAvatarUrl(players[pi].avatar_url)} alt="" className="w-full h-full object-cover" />
-                          : <span>{players[pi]?.name?.[0]?.toUpperCase() || '?'}</span>}
-                    </div>
-                    <span className="text-xs font-bold text-white/80">{players[pi]?.name}</span>
-                    <div className="w-10 h-2 rounded-full" style={{ background: color }} />
-                  </motion.div>
-                );
-              })}
+            <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+              <div style={{ width:3, height:18, borderRadius:2, background:'linear-gradient(to bottom,#fbbf24,#a855f7)' }} />
+              <span style={{ fontSize:14, fontWeight:900, color:'#fff' }}>{modeLabel||'1v1'}</span>
             </div>
-            <motion.div key={countdown}
-              initial={{ scale: 0.2, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 1.8, opacity: 0 }}
-              transition={{ duration: 0.35 }}
-              className="text-[9rem] font-black text-white drop-shadow-2xl select-none leading-none">
-              {countdown === 0 ? '🎲' : countdown}
-            </motion.div>
+
+            {/* Cost */}
+            <div style={{ display:'flex', alignItems:'center', gap:5 }}>
+              <span style={{ fontSize:11, color:'rgba(255,255,255,.3)', fontWeight:700 }}>Pot:</span>
+              <span style={{ fontSize:14, fontWeight:900, color:'#fbbf24' }}>{totalPot.toLocaleString()}</span>
+              <span style={{ fontSize:9, color:'rgba(251,191,36,.5)', fontWeight:700 }}>coins</span>
+            </div>
+
+            {/* Mode badges */}
+            {activeModes.map(m => (
+              <span key={m.label} style={{
+                fontSize:9, fontWeight:800, padding:'2px 8px', borderRadius:20,
+                background:`${m.color}18`, color:m.color, border:`1px solid ${m.color}35`,
+                letterSpacing:'.1em', textTransform:'uppercase',
+              }}>{m.icon} {m.label}</span>
+            ))}
+
+            {/* Round pips */}
+            <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:4 }}>
+              {selectedCases.map((_,i) => (
+                <div key={i} className={i===currentRound&&!done ? 'ba-pip-active' : ''}
+                  style={{
+                    height:6, borderRadius:4, transition:'all .3s',
+                    width: i===currentRound ? 20 : i<currentRound ? 18 : 8,
+                    background: i<currentRound ? '#a855f7' : i===currentRound ? '#fbbf24' : 'rgba(255,255,255,.1)',
+                  }} />
+              ))}
+              <span style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,.4)', marginLeft:4 }}>
+                {done ? totalRounds : currentRound+1}/{totalRounds}
+              </span>
+            </div>
+          </div>
+
+          {/* Bottom accent */}
+          <div style={{
+            position:'absolute', bottom:0, left:0, right:0, height:2,
+            background:'linear-gradient(90deg,transparent,rgba(251,191,36,.4),rgba(168,85,247,.4),transparent)',
+          }} />
+        </div>
+
+        {/* ── Mode Notices ── */}
+        {isTerminal && !done && <ModeNotice icon="⚡" label="Terminal" color="#fbbf24">Terminal mode — only the <strong>last round</strong> determines the winner.</ModeNotice>}
+        {isCrazy    && !done && <ModeNotice icon="🎭" label="Crazy"    color="#f472b6">Crazy mode — player with the <strong>lowest</strong> total wins!</ModeNotice>}
+        {isGroup    && !done && <ModeNotice icon="🔄" label="Group"    color="#34d399">Group mode — all profit is split equally among all players.</ModeNotice>}
+
+        {/* ── Jackpot Wheel ── */}
+        {jackpotPhase && (
+          <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }}>
+            <JackpotWheel
+              teamList={teamList} players={players}
+              playerTotals={players.map((_,pi)=>getPlayerTotal(pi))}
+              onWinner={(wTi)=>setTimeout(()=>finishBattle(wTi),800)}
+            />
           </motion.div>
         )}
-      </AnimatePresence>
 
-      {/* ── Player Grid ── */}
-      <div className="w-full flex gap-2 items-start justify-between">
-        {teamList.map((mi, ti) => (
-          <React.Fragment key={ti}>
-            <div className="flex-1 space-y-2">
-              {teamList.length > 1 && (
-                <div className="text-center">
-                  <span className="text-xs font-bold px-3 py-0.5 rounded-full"
-                    style={{ background: TEAM_COLORS[ti] + '33', color: TEAM_COLORS[ti] }}>
-                    Team {ti + 1}{done ? ` · ${teamTotals[ti]?.toLocaleString()}` : ''}
-                  </span>
-                </div>
+        {/* ── Winner Banner ── */}
+        {done && (
+          <div className="ba-winner-banner" style={{
+            position:'relative', overflow:'hidden', borderRadius:18,
+            background:'linear-gradient(145deg,#0e0800,#140c00,#0a0400)',
+            border:'1px solid rgba(251,191,36,.35)',
+            boxShadow:'0 0 0 1px rgba(251,191,36,.1), 0 0 80px rgba(251,191,36,.15)',
+            padding:'28px 24px',
+            textAlign:'center',
+          }}>
+            <div className="ba-hex" />
+            <Particles accent="#fbbf24" count={12} />
+            <Particles accent="#a855f7" count={8} />
+            <div style={{
+              position:'absolute', inset:0, pointerEvents:'none',
+              background:'radial-gradient(ellipse 60% 50% at 50% 0%,rgba(251,191,36,.15) 0%,transparent 70%)',
+            }} />
+            <div style={{ position:'absolute', top:0, left:0, right:0, height:2,
+              background:'linear-gradient(90deg,transparent,#fbbf24,#f59e0b,transparent)' }} />
+
+            <div style={{ position:'relative', zIndex:2 }}>
+              <p style={{ fontSize:28, fontWeight:900, color:'#fff', marginBottom:6 }}>🏆 Battle Over!</p>
+              {payoutLabel && (
+                <p style={{ fontSize:13, color:'#34d399', fontWeight:800, marginBottom:20 }}>{payoutLabel}</p>
               )}
-              <div className="flex gap-2 items-stretch">
-                {mi.map(pi => {
-                  const round = currentRoundRef.current;
-                  const rolled = allRolled.current?.[round]?.[pi];
+
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:24, overflowX:'auto', flexWrap:'wrap' }}>
+                {teamList.map((mi, ti) => {
+                  const isW = isGroup || ti===winnerTeamIdx;
+                  const pal = TEAM_PALETTE[ti%TEAM_PALETTE.length];
                   return (
-                    <PlayerColumn
-                      key={pi}
-                      player={players[pi]}
-                      playerColor={playerColorMap[pi]}
-                      isWinner={done && (isGroup || ti === winnerTeamIdx)}
-                      wonItems={playerItems[pi] || []}
-                      spinPhase={playerPhases[pi]}
-                      caseItems={caseItems}
-                      spinnerKey={`${currentRound}-${pi}`}
-                      spinnerItem={rolled?.item}
-                      magicItem={rolled?.isMagic ? rolled.item : null}
-                      onSpinDone={() => handleNormalSpinDone(pi)}
-                      onMagicSpinDone={() => handleMagicSpinDone(pi)}
-                      fast={isFastMode}
-                      pct={grandPlayerTotal > 0 ? (playerTotals[pi] || 0) / grandPlayerTotal : 0}
-                      grandTotal={grandPlayerTotal}
-                      showPct={isJackpot}
-                    />
+                    <React.Fragment key={ti}>
+                      <div style={{ opacity: isW ? 1 : 0.3, display:'flex', flexDirection:'column', alignItems:'center', gap:10 }}>
+                        {teamList.length>1 && (
+                          <span style={{ fontSize:11, fontWeight:900, color:pal.color, textTransform:'uppercase', letterSpacing:'.1em' }}>
+                            Team {ti+1} · {teamTotals[ti]?.toLocaleString()}
+                          </span>
+                        )}
+                        <div style={{ display:'flex', gap:16, justifyContent:'center' }}>
+                          {mi.map(pi => (
+                            <div key={pi} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6, width:64 }}>
+                              <div style={{ height:24, display:'flex', alignItems:'center', justifyContent:'center' }}>
+                                {isW && <span style={{ fontSize:18 }}>{isGroup ? '🎁' : '👑'}</span>}
+                              </div>
+                              <div style={{
+                                width:48, height:48, borderRadius:'50%', overflow:'hidden',
+                                background:`linear-gradient(135deg,${pal.color}33,${pal.color}18)`,
+                                border:`2px solid ${pal.color}66`,
+                                display:'flex', alignItems:'center', justifyContent:'center',
+                                boxShadow: isW ? `0 0 24px ${pal.glow}` : 'none',
+                                fontSize:20,
+                              }}>
+                                {players[pi]?.isBot
+                                  ? <span>🤖</span>
+                                  : safeAvatarUrl(players[pi]?.avatar_url)
+                                    ? <img src={safeAvatarUrl(players[pi].avatar_url)} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                                    : <span>{players[pi]?.name?.[0]?.toUpperCase()||'?'}</span>}
+                              </div>
+                              <p style={{ fontSize:11, color:'rgba(255,255,255,.55)', textAlign:'center', width:'100%', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{players[pi]?.name}</p>
+                              <p style={{ fontSize:14, fontWeight:900, color: isW ? '#fbbf24' : 'rgba(255,255,255,.4)' }}>{playerTotals[pi]?.toLocaleString()}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      {ti < teamList.length-1 && (
+                        <div style={{ fontSize:16, fontWeight:900, color:'rgba(255,255,255,.15)', flexShrink:0 }}>VS</div>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </div>
-            </div>
-            {ti < teamList.length - 1 && (
-              <div className="flex items-start justify-center pt-10 px-1">
-                <span className="text-white/20 font-black text-sm">VS</span>
+
+              <div style={{ marginTop:24 }}>
+                <button
+                  onClick={onClose}
+                  style={{
+                    padding:'12px 44px', borderRadius:12, border:'none', cursor:'pointer',
+                    background:'linear-gradient(135deg,#fbbf24,#f59e0b)',
+                    color:'#000', fontSize:14, fontWeight:900, fontFamily:'Nunito,sans-serif',
+                    boxShadow:'0 0 36px rgba(251,191,36,.5)',
+                    transition:'all .2s',
+                  }}
+                  onMouseEnter={e=>{ e.currentTarget.style.transform='translateY(-2px) scale(1.04)'; }}
+                  onMouseLeave={e=>{ e.currentTarget.style.transform='translateY(0) scale(1)'; }}>
+                  Done
+                </button>
               </div>
-            )}
-          </React.Fragment>
-        ))}
+            </div>
+          </div>
+        )}
+
+        {/* ── Countdown Overlay ── */}
+        <AnimatePresence>
+          {phase==='countdown' && (
+            <motion.div key="cd"
+              initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+              style={{
+                position:'fixed', inset:0, zIndex:9000,
+                display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center',
+                background:'rgba(4,0,10,.92)', gap:32,
+                backdropFilter:'blur(4px)',
+              }}>
+              {/* Hex bg */}
+              <div className="ba-hex" style={{ opacity:1 }} />
+              <Particles accent="#fbbf24" count={14} />
+              <Particles accent="#a855f7" count={10} />
+
+              {/* Players row */}
+              <div style={{ display:'flex', gap:20, flexWrap:'wrap', justifyContent:'center', position:'relative', zIndex:2 }}>
+                {allPlayerIndices.map((pi, idx) => {
+                  const color = PLAYER_COLORS[idx%PLAYER_COLORS.length];
+                  return (
+                    <motion.div key={pi}
+                      initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }}
+                      transition={{ delay:idx*0.1 }}
+                      style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
+                      <div style={{
+                        width:52, height:52, borderRadius:'50%', overflow:'hidden',
+                        background:`linear-gradient(135deg,${color}33,${color}18)`,
+                        border:`3px solid ${color}`,
+                        display:'flex', alignItems:'center', justifyContent:'center',
+                        boxShadow:`0 0 20px ${color}55`,
+                        fontSize:22,
+                      }}>
+                        {players[pi]?.isBot
+                          ? <span>🤖</span>
+                          : safeAvatarUrl(players[pi]?.avatar_url)
+                            ? <img src={safeAvatarUrl(players[pi].avatar_url)} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                            : <span style={{ color, fontWeight:900 }}>{players[pi]?.name?.[0]?.toUpperCase()||'?'}</span>}
+                      </div>
+                      <span style={{ fontSize:12, fontWeight:800, color:'rgba(255,255,255,.8)' }}>{players[pi]?.name}</span>
+                      <div style={{ width:36, height:3, borderRadius:2, background:color, boxShadow:`0 0 8px ${color}` }} />
+                    </motion.div>
+                  );
+                })}
+              </div>
+
+              {/* Countdown number */}
+              <motion.div key={countdown}
+                initial={{ scale:0.1, opacity:0 }}
+                animate={{ scale:1, opacity:1 }}
+                exit={{ scale:1.8, opacity:0 }}
+                transition={{ duration:.35, ease:[.34,1.56,.64,1] }}
+                style={{
+                  position:'relative', zIndex:2,
+                  fontSize:'9rem', fontWeight:900, color:'#fff',
+                  lineHeight:1, textShadow:'0 0 60px rgba(251,191,36,.5)',
+                  fontFamily:'Nunito,sans-serif',
+                }}>
+                {countdown===0 ? '🎲' : countdown}
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Player Grid ── */}
+        <div style={{ display:'flex', gap:8, alignItems:'stretch', width:'100%' }}>
+          {teamList.map((mi, ti) => {
+            const pal = TEAM_PALETTE[ti%TEAM_PALETTE.length];
+            return (
+              <React.Fragment key={ti}>
+                <div style={{ flex:1, display:'flex', flexDirection:'column', gap:8, minWidth:0 }}>
+                  {teamList.length>1 && (
+                    <div style={{ textAlign:'center' }}>
+                      <span style={{
+                        fontSize:10, fontWeight:900, padding:'2px 12px', borderRadius:20,
+                        background:pal.bg, color:pal.color, border:`1px solid ${pal.border}`,
+                        textTransform:'uppercase', letterSpacing:'.1em',
+                      }}>
+                        Team {ti+1}{done ? ` · ${teamTotals[ti]?.toLocaleString()}` : ''}
+                      </span>
+                    </div>
+                  )}
+                  <div style={{ display:'flex', gap:8, alignItems:'stretch' }}>
+                    {mi.map(pi => {
+                      const round  = currentRoundRef.current;
+                      const rolled = allRolled.current?.[round]?.[pi];
+                      return (
+                        <PlayerColumn
+                          key={pi}
+                          player={players[pi]}
+                          playerColor={playerColorMap[pi]}
+                          isWinner={done && (isGroup || ti===winnerTeamIdx)}
+                          wonItems={playerItems[pi]||[]}
+                          spinPhase={playerPhases[pi]}
+                          caseItems={caseItems}
+                          spinnerKey={`${currentRound}-${pi}`}
+                          spinnerItem={rolled?.item}
+                          magicItem={rolled?.isMagic ? rolled.item : null}
+                          onSpinDone={()=>handleNormalSpinDone(pi)}
+                          onMagicSpinDone={()=>handleMagicSpinDone(pi)}
+                          fast={isFastMode}
+                          pct={grandPlayerTotal>0 ? (playerTotals[pi]||0)/grandPlayerTotal : 0}
+                          grandTotal={grandPlayerTotal}
+                          showPct={isJackpot}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+                {ti < teamList.length-1 && <VsDivider />}
+              </React.Fragment>
+            );
+          })}
+        </div>
+
       </div>
     </div>
   );
