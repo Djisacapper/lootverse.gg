@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion } from 'framer-motion';
-import { Shield, Search, DollarSign, Ban, Trash2, Activity, AlertCircle, CheckCircle2, Loader2, Box, Plus, X } from 'lucide-react';
+import { Shield, Search, DollarSign, Ban, Trash2, Activity, AlertCircle, CheckCircle2, Loader2, Box, Plus, X, Trophy, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -26,6 +26,9 @@ export default function Admin() {
   const [itemValue, setItemValue] = useState('');
   const [itemDropRate, setItemDropRate] = useState('');
   const [itemImages, setItemImages] = useState([]);
+  const [syncLoading, setSyncLoading] = useState(false);
+  const [syncMessage, setSyncMessage] = useState('');
+
 
   useEffect(() => {
     checkAdminAccess();
@@ -156,7 +159,6 @@ export default function Admin() {
       setMessage('Please fill in all required fields and add at least one item');
       return;
     }
-
     setLoading(true);
     try {
       let imageUrl = null;
@@ -164,12 +166,9 @@ export default function Admin() {
         const uploadRes = await base44.integrations.Core.UploadFile({ file: caseImage });
         imageUrl = uploadRes.file_url;
       }
-
-      // Upload item images and build final items array
       const itemsWithImages = await Promise.all(items.map(async (item) => {
         let image = null;
         if (item.image_files && item.image_files.length > 0) {
-          // Use first image as the primary
           const uploadRes = await base44.integrations.Core.UploadFile({ file: item.image_files[0] });
           image = uploadRes.file_url;
         }
@@ -181,7 +180,6 @@ export default function Admin() {
           image: image
         };
       }));
-
       await base44.entities.CaseTemplate.create({
         name: caseName,
         description: caseDescription,
@@ -191,7 +189,6 @@ export default function Admin() {
         items: itemsWithImages,
         is_active: true
       });
-
       addActivityLog(`Created new case: ${caseName}`);
       setMessage('Case created successfully!');
       setCaseName('');
@@ -205,6 +202,22 @@ export default function Admin() {
       console.error(err);
     }
     setLoading(false);
+  };
+
+  // ── Leaderboard Sync ──────────────────────────────────────────────
+  const handleSyncLeaderboard = async () => {
+    setSyncLoading(true);
+    setSyncMessage('');
+    try {
+      const result = await base44.functions.syncLeaderboard();
+      addActivityLog(`Synced leaderboard — ${result.synced} entries updated`);
+      setSyncMessage(`✅ Leaderboard synced! ${result.synced} players updated.`);
+      setTimeout(() => setSyncMessage(''), 5000);
+    } catch (err) {
+      console.error('Sync error:', err);
+      setSyncMessage('❌ Sync failed. Check console for details.');
+    }
+    setSyncLoading(false);
   };
 
   if (user?.role !== 'admin') {
@@ -233,18 +246,15 @@ export default function Admin() {
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
           className={`p-3 rounded-lg border flex items-center gap-2 ${
-            message.includes('Error') 
-              ? 'bg-red-500/10 border-red-500/30 text-red-400' 
+            message.includes('Error')
+              ? 'bg-red-500/10 border-red-500/30 text-red-400'
               : 'bg-green-500/10 border-green-500/30 text-green-400'
           }`}
         >
-          {message.includes('Error') ? (
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-          ) : (
-            <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
-          )}
+          {message.includes('Error')
+            ? <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            : <CheckCircle2 className="w-4 h-4 flex-shrink-0" />}
           <span className="text-sm font-medium">{message}</span>
         </motion.div>
       )}
@@ -257,11 +267,15 @@ export default function Admin() {
           <TabsTrigger value="cases" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 rounded-lg">
             <Box className="w-3.5 h-3.5 mr-1.5" /> Create Cases
           </TabsTrigger>
+          <TabsTrigger value="leaderboard" className="data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-300 rounded-lg">
+            <Trophy className="w-3.5 h-3.5 mr-1.5" /> Leaderboard
+          </TabsTrigger>
           <TabsTrigger value="activity" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 rounded-lg">
             <Activity className="w-3.5 h-3.5 mr-1.5" /> Activity Log
           </TabsTrigger>
         </TabsList>
 
+        {/* ── USER MANAGEMENT TAB ── */}
         <TabsContent value="users" className="space-y-4">
           <div className="glass rounded-xl p-4 border border-white/5">
             <div className="relative">
@@ -276,7 +290,6 @@ export default function Admin() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-            {/* User List */}
             <div className="lg:col-span-1 space-y-2 max-h-[600px] overflow-y-auto">
               {filteredUsers.length === 0 ? (
                 <div className="text-center py-8 text-white/40">No users found</div>
@@ -303,16 +316,13 @@ export default function Admin() {
                         <p className="text-sm font-semibold text-white truncate">{u.full_name}</p>
                         <p className="text-[10px] text-white/40 truncate">{u.email}</p>
                       </div>
-                      {u.is_banned && (
-                        <Ban className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
-                      )}
+                      {u.is_banned && <Ban className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />}
                     </div>
                   </motion.button>
                 ))
               )}
             </div>
 
-            {/* User Details & Actions */}
             {selectedUser ? (
               <motion.div
                 initial={{ opacity: 0, y: 10 }}
@@ -320,7 +330,6 @@ export default function Admin() {
                 className="lg:col-span-2 space-y-4"
               >
                 <div className="glass rounded-xl p-6 border border-white/5 space-y-4">
-                  {/* User Info */}
                   <div className="flex items-center gap-4 pb-4 border-b border-white/10">
                     <div className="w-16 h-16 rounded-full bg-gradient-to-br from-violet-500 to-indigo-500 flex items-center justify-center text-2xl font-bold text-white overflow-hidden flex-shrink-0">
                       {selectedUser.avatar_url && selectedUser.avatar_url !== 'null'
@@ -332,9 +341,7 @@ export default function Admin() {
                       <p className="text-sm text-white/60">{selectedUser.email}</p>
                       <div className="flex items-center gap-2 mt-2">
                         <span className={`text-[10px] font-semibold px-2 py-1 rounded ${
-                          selectedUser.is_banned
-                            ? 'bg-red-500/20 text-red-400'
-                            : 'bg-green-500/20 text-green-400'
+                          selectedUser.is_banned ? 'bg-red-500/20 text-red-400' : 'bg-green-500/20 text-green-400'
                         }`}>
                           {selectedUser.is_banned ? 'BANNED' : 'ACTIVE'}
                         </span>
@@ -344,8 +351,6 @@ export default function Admin() {
                       </div>
                     </div>
                   </div>
-
-                  {/* Stats */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-white/[0.02] rounded-lg p-3">
                       <p className="text-[10px] text-white/50 uppercase tracking-wider">Balance</p>
@@ -356,8 +361,6 @@ export default function Admin() {
                       <p className="text-lg font-bold text-violet-400 mt-1">{selectedUser.level || 1}</p>
                     </div>
                   </div>
-
-                  {/* Balance Adjustment */}
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-white/80">Adjust Balance</label>
                     <div className="flex gap-2">
@@ -377,74 +380,40 @@ export default function Admin() {
                       </Button>
                     </div>
                   </div>
-
-                  {/* Role Management */}
                   <div className="space-y-2">
                     <label className="text-sm font-semibold text-white/80">Role Management</label>
                     <div className="grid grid-cols-3 gap-2">
-                      <Button
-                        onClick={() => handleChangeRole('user')}
-                        disabled={loading}
-                        className={`text-xs ${
-                          selectedUser.role === 'user'
-                            ? 'bg-blue-500 hover:bg-blue-600'
-                            : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300'
-                        }`}
-                      >
-                        User
-                      </Button>
-                      <Button
-                        onClick={() => handleChangeRole('mod')}
-                        disabled={loading}
-                        className={`text-xs ${
-                          selectedUser.role === 'mod'
-                            ? 'bg-purple-500 hover:bg-purple-600'
-                            : 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300'
-                        }`}
-                      >
-                        Mod
-                      </Button>
-                      <Button
-                        onClick={() => handleChangeRole('admin')}
-                        disabled={loading}
-                        className={`text-xs ${
-                          selectedUser.role === 'admin'
-                            ? 'bg-red-500 hover:bg-red-600'
-                            : 'bg-red-500/20 hover:bg-red-500/30 text-red-300'
-                        }`}
-                      >
-                        Admin
-                      </Button>
+                      {['user', 'mod', 'admin'].map((role) => (
+                        <Button
+                          key={role}
+                          onClick={() => handleChangeRole(role)}
+                          disabled={loading}
+                          className={`text-xs ${
+                            selectedUser.role === role
+                              ? role === 'admin' ? 'bg-red-500 hover:bg-red-600'
+                                : role === 'mod' ? 'bg-purple-500 hover:bg-purple-600'
+                                : 'bg-blue-500 hover:bg-blue-600'
+                              : role === 'admin' ? 'bg-red-500/20 hover:bg-red-500/30 text-red-300'
+                                : role === 'mod' ? 'bg-purple-500/20 hover:bg-purple-500/30 text-purple-300'
+                                : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-300'
+                          }`}
+                        >
+                          {role.charAt(0).toUpperCase() + role.slice(1)}
+                        </Button>
+                      ))}
                     </div>
                   </div>
-
-                  {/* Action Buttons */}
                   <div className="flex gap-2 pt-2">
                     <Button
                       onClick={handleBanUser}
                       disabled={loading}
-                      className={selectedUser.is_banned
-                        ? 'bg-green-500 hover:bg-green-600 flex-1'
-                        : 'bg-red-500 hover:bg-red-600 flex-1'
-                      }
+                      className={selectedUser.is_banned ? 'bg-green-500 hover:bg-green-600 flex-1' : 'bg-red-500 hover:bg-red-600 flex-1'}
                     >
-                      {loading ? (
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      ) : (
-                        <Ban className="w-4 h-4 mr-2" />
-                      )}
+                      {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Ban className="w-4 h-4 mr-2" />}
                       {selectedUser.is_banned ? 'Unban User' : 'Ban User'}
                     </Button>
-                    <Button
-                      onClick={handleDeleteUser}
-                      disabled={loading}
-                      className="bg-destructive hover:bg-destructive/90 flex-1"
-                    >
-                      {loading ? (
-                        <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                      ) : (
-                        <Trash2 className="w-4 h-4 mr-2" />
-                      )}
+                    <Button onClick={handleDeleteUser} disabled={loading} className="bg-destructive hover:bg-destructive/90 flex-1">
+                      {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
                       Delete
                     </Button>
                   </div>
@@ -461,144 +430,57 @@ export default function Admin() {
           </div>
         </TabsContent>
 
+        {/* ── CASES TAB ── */}
         <TabsContent value="cases" className="space-y-4">
           <div className="glass rounded-xl p-6 border border-white/5 space-y-6">
             <div>
               <h2 className="text-xl font-bold text-cyan-400 mb-4">Create New Case</h2>
-              
-              {/* Case Info */}
               <div className="space-y-4 mb-6">
                 <div>
                   <label className="text-sm font-semibold text-white/80 block mb-2">Case Name</label>
-                  <Input
-                    placeholder="e.g. Celestial Case"
-                    value={caseName}
-                    onChange={(e) => setCaseName(e.target.value)}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
-                  />
+                  <Input placeholder="e.g. Celestial Case" value={caseName} onChange={(e) => setCaseName(e.target.value)} className="bg-white/5 border-white/10 text-white placeholder:text-white/40" />
                 </div>
-
                 <div>
                   <label className="text-sm font-semibold text-white/80 block mb-2">Description</label>
-                  <Input
-                    placeholder="Short description"
-                    value={caseDescription}
-                    onChange={(e) => setCaseDescription(e.target.value)}
-                    className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
-                  />
+                  <Input placeholder="Short description" value={caseDescription} onChange={(e) => setCaseDescription(e.target.value)} className="bg-white/5 border-white/10 text-white placeholder:text-white/40" />
                 </div>
-
                 <div className="grid grid-cols-3 gap-3">
                   <div>
                     <label className="text-sm font-semibold text-white/80 block mb-2">Price</label>
-                    <Input
-                      type="number"
-                      placeholder="100"
-                      value={casePrice}
-                      onChange={(e) => setCasePrice(e.target.value)}
-                      className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
-                    />
+                    <Input type="number" placeholder="100" value={casePrice} onChange={(e) => setCasePrice(e.target.value)} className="bg-white/5 border-white/10 text-white placeholder:text-white/40" />
                   </div>
-
                   <div>
                     <label className="text-sm font-semibold text-white/80 block mb-2">Category</label>
-                    <select
-                      value={caseCategory}
-                      onChange={(e) => setCaseCategory(e.target.value)}
-                      className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-sm"
-                    >
-                      <option value="budget">Budget</option>
-                      <option value="standard">Standard</option>
-                      <option value="premium">Premium</option>
-                      <option value="legendary">Legendary</option>
-                      <option value="event">Event</option>
+                    <select value={caseCategory} onChange={(e) => setCaseCategory(e.target.value)} className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-sm">
+                      {['budget', 'standard', 'premium', 'legendary', 'event'].map(c => <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>)}
                     </select>
                   </div>
-
                   <div>
                     <label className="text-sm font-semibold text-white/80 block mb-2">Case Image</label>
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => setCaseImage(e.target.files?.[0] || null)}
-                      className="bg-white/5 border-white/10 text-white/60 text-xs"
-                    />
+                    <Input type="file" accept="image/*" onChange={(e) => setCaseImage(e.target.files?.[0] || null)} className="bg-white/5 border-white/10 text-white/60 text-xs" />
                   </div>
                 </div>
               </div>
-
-              {/* Items */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-white">Items</h3>
-
-                {/* Add Item Form */}
                 <div className="bg-white/[0.02] rounded-lg p-4 space-y-3">
                   <div className="grid grid-cols-5 gap-2">
-                    <Input
-                      placeholder="Item name"
-                      value={itemName}
-                      onChange={(e) => setItemName(e.target.value)}
-                      className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
-                    />
-                    <select
-                      value={itemRarity}
-                      onChange={(e) => setItemRarity(e.target.value)}
-                      className="bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-sm"
-                    >
-                      <option value="common">Common</option>
-                      <option value="uncommon">Uncommon</option>
-                      <option value="rare">Rare</option>
-                      <option value="epic">Epic</option>
-                      <option value="legendary">Legendary</option>
+                    <Input placeholder="Item name" value={itemName} onChange={(e) => setItemName(e.target.value)} className="bg-white/5 border-white/10 text-white placeholder:text-white/40" />
+                    <select value={itemRarity} onChange={(e) => setItemRarity(e.target.value)} className="bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-sm">
+                      {['common', 'uncommon', 'rare', 'epic', 'legendary'].map(r => <option key={r} value={r}>{r.charAt(0).toUpperCase() + r.slice(1)}</option>)}
                     </select>
-                    <Input
-                      type="number"
-                      placeholder="Value"
-                      value={itemValue}
-                      onChange={(e) => setItemValue(e.target.value)}
-                      className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
-                    />
-                    <Input
-                      type="number"
-                      placeholder="Drop %"
-                      value={itemDropRate}
-                      onChange={(e) => setItemDropRate(e.target.value)}
-                      className="bg-white/5 border-white/10 text-white placeholder:text-white/40"
-                    />
-                    <Input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      onChange={(e) => {
-                        if (e.target.files) {
-                          Array.from(e.target.files).forEach(file => handleAddItemImage(file));
-                        }
-                      }}
-                      className="bg-white/5 border-white/10 text-white/60 text-xs"
-                    />
+                    <Input type="number" placeholder="Value" value={itemValue} onChange={(e) => setItemValue(e.target.value)} className="bg-white/5 border-white/10 text-white placeholder:text-white/40" />
+                    <Input type="number" placeholder="Drop %" value={itemDropRate} onChange={(e) => setItemDropRate(e.target.value)} className="bg-white/5 border-white/10 text-white placeholder:text-white/40" />
+                    <Input type="file" accept="image/*" multiple onChange={(e) => { if (e.target.files) Array.from(e.target.files).forEach(file => handleAddItemImage(file)); }} className="bg-white/5 border-white/10 text-white/60 text-xs" />
                   </div>
-
-                  {/* Item Images Preview */}
                   {itemImages.length > 0 && (
                     <div>
                       <p className="text-xs text-white/60 mb-2">{itemImages.length} image(s) added</p>
                       <div className="flex gap-2 flex-wrap">
                         {itemImages.map((img, idx) => (
-                          <motion.div
-                            key={idx}
-                            initial={{ opacity: 0, scale: 0.8 }}
-                            animate={{ opacity: 1, scale: 1 }}
-                            className="relative"
-                          >
-                            <img
-                              src={URL.createObjectURL(img)}
-                              alt={`preview-${idx}`}
-                              className="w-16 h-16 rounded-lg object-cover border border-white/10"
-                            />
-                            <button
-                              onClick={() => handleRemoveItemImage(idx)}
-                              className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 hover:bg-red-600"
-                            >
+                          <motion.div key={idx} initial={{ opacity: 0, scale: 0.8 }} animate={{ opacity: 1, scale: 1 }} className="relative">
+                            <img src={URL.createObjectURL(img)} alt={`preview-${idx}`} className="w-16 h-16 rounded-lg object-cover border border-white/10" />
+                            <button onClick={() => handleRemoveItemImage(idx)} className="absolute -top-2 -right-2 bg-red-500 rounded-full p-1 hover:bg-red-600">
                               <X className="w-3 h-3 text-white" />
                             </button>
                           </motion.div>
@@ -606,48 +488,27 @@ export default function Admin() {
                       </div>
                     </div>
                   )}
-
-                  <Button
-                    onClick={handleAddItem}
-                    disabled={!itemName || !itemValue || !itemDropRate}
-                    className="w-full bg-cyan-500 hover:bg-cyan-600 text-white"
-                  >
+                  <Button onClick={handleAddItem} disabled={!itemName || !itemValue || !itemDropRate} className="w-full bg-cyan-500 hover:bg-cyan-600 text-white">
                     <Plus className="w-4 h-4 mr-2" /> Add Item
                   </Button>
                 </div>
-
-                {/* Items List */}
                 {items.length > 0 && (
                   <div className="space-y-2">
                     {items.map((item, idx) => (
-                      <motion.div
-                        key={idx}
-                        initial={{ opacity: 0, x: -10 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        className="bg-white/5 rounded-lg p-3 border border-white/10"
-                      >
+                      <motion.div key={idx} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} className="bg-white/5 rounded-lg p-3 border border-white/10">
                         <div className="flex items-center justify-between mb-2">
                           <div>
                             <p className="text-sm font-semibold text-white">{item.name}</p>
                             <p className="text-xs text-white/50">{item.rarity} • ${item.value} • {item.drop_rate}%</p>
                           </div>
-                          <Button
-                            onClick={() => handleRemoveItem(idx)}
-                            size="sm"
-                            className="bg-red-500/20 hover:bg-red-500/30 text-red-400"
-                          >
+                          <Button onClick={() => handleRemoveItem(idx)} size="sm" className="bg-red-500/20 hover:bg-red-500/30 text-red-400">
                             <X className="w-3 h-3" />
                           </Button>
                         </div>
-                        {item.image_files && item.image_files.length > 0 && (
+                        {item.image_files?.length > 0 && (
                           <div className="flex gap-2">
                             {item.image_files.map((img, imgIdx) => (
-                              <img
-                                key={imgIdx}
-                                src={URL.createObjectURL(img)}
-                                alt={`${item.name}-${imgIdx}`}
-                                className="w-10 h-10 rounded object-cover border border-white/10"
-                              />
+                              <img key={imgIdx} src={URL.createObjectURL(img)} alt={`${item.name}-${imgIdx}`} className="w-10 h-10 rounded object-cover border border-white/10" />
                             ))}
                           </div>
                         )}
@@ -657,32 +518,66 @@ export default function Admin() {
                 )}
               </div>
             </div>
-
-            {/* Create Button */}
-            <Button
-              onClick={handleCreateCase}
-              disabled={loading || !caseName || !casePrice || items.length === 0}
-              className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3"
-            >
-              {loading ? (
-                <Loader2 className="w-4 h-4 animate-spin mr-2" />
-              ) : (
-                <Box className="w-4 h-4 mr-2" />
-              )}
+            <Button onClick={handleCreateCase} disabled={loading || !caseName || !casePrice || items.length === 0} className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-bold py-3">
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Box className="w-4 h-4 mr-2" />}
               Create Case
             </Button>
           </div>
         </TabsContent>
 
+        {/* ── LEADERBOARD SYNC TAB ── */}
+        <TabsContent value="leaderboard" className="space-y-4">
+          <div className="glass rounded-xl p-6 border border-white/5 space-y-6">
+            <div>
+              <h2 className="text-xl font-bold text-yellow-400 mb-1">Sync Leaderboard</h2>
+              <p className="text-white/40 text-sm">
+                This reads all user + transaction data (admin only) and writes the top 10 into the public
+                <span className="text-yellow-300 font-mono text-xs mx-1">LeaderboardEntry</span>
+                entity so regular users can see it.
+              </p>
+            </div>
+
+            {syncMessage && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`p-3 rounded-lg border text-sm font-medium ${
+                  syncMessage.startsWith('✅')
+                    ? 'bg-green-500/10 border-green-500/30 text-green-400'
+                    : 'bg-red-500/10 border-red-500/30 text-red-400'
+                }`}
+              >
+                {syncMessage}
+              </motion.div>
+            )}
+
+            <Button
+              onClick={handleSyncLeaderboard}
+              disabled={syncLoading}
+              className="w-full bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-black font-bold py-3"
+            >
+              {syncLoading
+                ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Syncing...</>
+                : <><RefreshCw className="w-4 h-4 mr-2" /> Sync Leaderboard Now</>
+              }
+            </Button>
+
+            <div className="bg-white/[0.02] rounded-lg p-4 border border-white/5">
+              <p className="text-xs text-white/40 leading-relaxed">
+                💡 <strong className="text-white/60">Tip:</strong> Run this sync periodically (daily or weekly) to keep the leaderboard fresh.
+                In the future you can automate this with a scheduled base44 function if it becomes available on your plan.
+              </p>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* ── ACTIVITY TAB ── */}
         <TabsContent value="activity" className="space-y-4">
           <div className="glass rounded-xl p-4 border border-white/5">
             <p className="text-white/60 text-sm">
-              {activityLog.length === 0
-                ? 'No admin actions yet'
-                : `Showing ${activityLog.length} recent actions`}
+              {activityLog.length === 0 ? 'No admin actions yet' : `Showing ${activityLog.length} recent actions`}
             </p>
           </div>
-
           <div className="space-y-2">
             {activityLog.length === 0 ? (
               <div className="text-center py-12 text-white/40">
