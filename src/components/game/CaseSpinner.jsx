@@ -53,8 +53,8 @@ export default function CaseSpinner({ items, result, spinning, onComplete }) {
     return shadows[rarity] || shadows.common;
   };
 
-  if (spinItems.length === 0) {
-    return <div className="h-32 glass rounded-2xl animate-pulse" />;
+if (!spinItems || spinItems.length === 0) {
+      return <div className="h-32 glass rounded-2xl animate-pulse" />;
   }
 
   return (
