@@ -671,27 +671,7 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Featured Cases — full section below */}
-        {featuredCases.length > 0 && (
-          <section>
-            <SectionHead
-              label="Featured Cases"
-              icon={Star}
-              accent="#ec4899"
-              right={
-                <Link to={createPageUrl('Cases')}>
-                  <motion.span whileHover={{ x: 4 }}
-                    style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'rgba(255,255,255,.3)', fontWeight: 600 }}>
-                    View all <ChevronRight style={{ width: 13, height: 13 }} />
-                  </motion.span>
-                </Link>
-              }
-            />
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12 }}>
-              {featuredCases.map((c, i) => <FeaturedCard key={c.id} c={c} i={i} />)}
-            </div>
-          </section>
-        )}
+
       </div>
     </div>
   );
