@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, X, ChevronDown, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import CasePickerModal from './CasePickerModal';
-import { getRarityColor } from './useWallet';
+import { getRarityColor, getRarityGlow } from './useWallet';
 
 // Parse mode to get teams array: "2v2" -> [2,2], "1v1v1" -> [1,1,1]
 export function parseMode(modeLabel) {
@@ -42,8 +42,6 @@ export default function CreateBattle({ cases, balance, user, onBack, onCreate })
   const teamSizes = parseMode(modeLabel);
   const totalPlayers = teamSizes.reduce((a, b) => a + b, 0);
 
-  // Slot state: array of length totalPlayers. slot 0 is always the user.
-  // Each slot: null (empty) or { name, email, isBot }
   const safeAvatar = (url) => (url && url !== 'null' && url !== 'undefined') ? url : null;
   const makeUserSlot = (u) => u ? { name: u.username || u.full_name || 'You', email: u.email, avatar_url: safeAvatar(u.avatar_url), isBot: false } : null;
 
@@ -53,7 +51,6 @@ export default function CreateBattle({ cases, balance, user, onBack, onCreate })
     return s;
   });
 
-  // Seed slot 0 with the current user whenever user loads
   useEffect(() => {
     if (!user) return;
     setSlots(prev => {
@@ -63,7 +60,6 @@ export default function CreateBattle({ cases, balance, user, onBack, onCreate })
     });
   }, [user?.email, user?.avatar_url, user?.username, user?.full_name]);
 
-  // When mode changes rebuild slots
   const handleModeChange = (label) => {
     setModeLabel(label);
     const sizes = label.split('v').map(Number);
@@ -86,13 +82,12 @@ export default function CreateBattle({ cases, balance, user, onBack, onCreate })
   };
 
   const removeSlot = (i) => {
-    if (i === 0) return; // can't remove self
+    if (i === 0) return;
     setSlots(prev => { const n = [...prev]; n[i] = null; return n; });
   };
 
   const toggleBattleMode = (key) => setBattleModes(prev => ({ ...prev, [key]: !prev[key] }));
 
-  // Build teams array for arena: [[0,1],[2,3]] for 2v2
   const buildTeams = () => {
     const teams = [];
     let idx = 0;
@@ -116,23 +111,12 @@ export default function CreateBattle({ cases, balance, user, onBack, onCreate })
 
   const handleCreate = () => {
     if (selectedCases.length === 0 || totalCost > balance) return;
-    // Only pass slots that are actually filled — empty slots stay empty (waiting for real players)
     const players = slots.map(s => s ? s : null).filter(Boolean);
     onCreate({ selectedCases, modeLabel, teams: buildTeams(), players, battleModes, totalPlayers });
   };
 
   const allFilled = slots.every(s => s !== null);
   const canCreate = selectedCases.length > 0 && totalCost <= balance && slots[0] !== null;
-
-  // Get team index for a slot index
-  const getTeamIdx = (slotIdx) => {
-    let idx = 0;
-    for (let ti = 0; ti < teamSizes.length; ti++) {
-      if (slotIdx < idx + teamSizes[ti]) return ti;
-      idx += teamSizes[ti];
-    }
-    return 0;
-  };
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
@@ -149,7 +133,6 @@ export default function CreateBattle({ cases, balance, user, onBack, onCreate })
           </div>
           <span>Battle cost</span>
           <span className="text-amber-400 font-bold">{totalCost.toLocaleString()}</span>
-          {/* Active mode icons */}
           {Object.entries(battleModes).filter(([,v]) => v).map(([key]) => {
             const MODE_META = { crazy: '🎭', terminal: '⚡', jackpot: '👑', group: '🔄', magic_spin: '✨', fast_mode: '💨' };
             return MODE_META[key] ? (
@@ -202,7 +185,7 @@ export default function CreateBattle({ cases, balance, user, onBack, onCreate })
             return (
               <div key={i} className="relative group">
                 <div className="bg-white/[0.04] border border-white/10 rounded-xl p-3 flex flex-col items-center gap-2 w-[100px]">
-                  <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${getRarityColor(rarity)} flex items-center justify-center overflow-hidden`}>
+                  <div className={`w-14 h-14 rounded-xl flex items-center justify-center overflow-hidden ${getRarityGlow(rarity)}`}>
                     {c.image_url ? <img src={c.image_url} alt={c.name} className="w-full h-full object-cover" /> : <span className="text-2xl">📦</span>}
                   </div>
                   <p className="text-[10px] text-white/60 text-center leading-tight truncate w-full">{c.name}</p>
