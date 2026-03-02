@@ -17,27 +17,10 @@ export default function Leaderboard() {
     setLoading(true);
     setError(null);
     try {
-      const entries = await base44.entities.LeaderboardEntry.list('-total_wagered', 10);
-setTop10(entries);
-      setUsers(allUsers.slice(0, 10));
-      setTop10(allUsers.slice(0, 10));
-      // Weekly leaderboard is same as level-based (you can modify to use timestamp if needed)
-      setWeeklyUsers(allUsers.slice(0, 10));
-
-      // Fetch wager data for each user
-      const wagers = {};
-      for (const u of allUsers.slice(0, 10)) {
-        const transactions = await base44.entities.Transaction.filter({ user_email: u.email }, '', 100);
-        const totalWagered = transactions.reduce((sum, t) => {
-          if (['case_purchase', 'battle_entry', 'coinflip_bet', 'crash_bet'].includes(t.type)) {
-            return sum + Math.abs(t.amount);
-          }
-          return sum;
-        }, 0);
-        wagers[u.id] = totalWagered;
-      }
-      setUserWagers(wagers);
-      setLoading(false);
+      // Call the syncLeaderboard function which runs with service role (no 403)
+      const result = await base44.functions.syncLeaderboard();
+      // result.entries is the top 10 array returned by the function
+      setTop10(result.entries || []);
     } catch (err) {
       console.error('Error loading leaderboard:', err);
       setError('Failed to load leaderboard. Please try again.');
@@ -167,7 +150,7 @@ setTop10(entries);
             </h3>
             {top10.slice(3).map((u, i) => (
               <motion.div
-                key={u.id}
+                key={u.user_email || i}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: (i + 3) * 0.05 }}
@@ -212,7 +195,7 @@ setTop10(entries);
             </h3>
             {top10.slice(3).map((u, i) => (
               <motion.div
-                key={u.id}
+                key={u.user_email || i}
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: (i + 3) * 0.05 }}
