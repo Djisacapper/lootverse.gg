@@ -3,627 +3,654 @@ import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { useWallet } from '../components/game/useWallet';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Gift, ChevronRight, Trophy, Star, Sparkles, Box, Swords, TrendingUp } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { Trophy, ChevronRight, Swords, Box, RotateCcw, TrendingUp, Zap, Star, Gift } from 'lucide-react';
 
 const irishImg = new URL('../assets/Luck Of The Irish.png', import.meta.url).href;
-const roseImg = new URL('../assets/Rose Love.png', import.meta.url).href;
-const vtechImg = new URL('../assets/V-Tech.png', import.meta.url).href;
+const roseImg  = new URL('../assets/Rose Love.png',        import.meta.url).href;
+const vtechImg = new URL('../assets/V-Tech.png',           import.meta.url).href;
 
+/* ─── CSS ─────────────────────────────────────────────────── */
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
 
-*, *::before, *::after { box-sizing: border-box; }
+.lv { font-family: 'Nunito', sans-serif; }
 
-.lv { font-family: 'Outfit', sans-serif; }
-.lv-h { font-family: 'Bebas Neue', sans-serif; letter-spacing: 0.06em; }
+/* ── Float animations for hero cases ── */
+@keyframes float-hero-a {
+  0%,100% { transform: translateY(0px)   rotate(-4deg); }
+  50%     { transform: translateY(-18px) rotate(-1deg); }
+}
+@keyframes float-hero-b {
+  0%,100% { transform: translateY(0px)   rotate(3deg); }
+  50%     { transform: translateY(-22px) rotate(6deg); }
+}
+@keyframes float-hero-c {
+  0%,100% { transform: translateY(0px)   rotate(2deg); }
+  40%     { transform: translateY(-14px) rotate(-2deg); }
+}
+.fha { animation: float-hero-a  6s ease-in-out infinite; }
+.fhb { animation: float-hero-b  8s ease-in-out infinite .8s; }
+.fhc { animation: float-hero-c  7s ease-in-out infinite 1.4s; }
 
-/* ── Orb Animations ── */
-@keyframes orb1 {
-  0%,100% { transform: translate(0,0) scale(1); }
-  40%      { transform: translate(60px,-40px) scale(1.15); }
-  70%      { transform: translate(-30px,30px) scale(0.9); }
+/* ── Particle rise ── */
+@keyframes p-rise {
+  0%   { transform: translateY(0) translateX(0); opacity: 0; }
+  8%   { opacity: 1; }
+  90%  { opacity: .6; }
+  100% { transform: translateY(-100px) translateX(var(--dx)); opacity: 0; }
 }
-@keyframes orb2 {
-  0%,100% { transform: translate(0,0) scale(1); }
-  35%     { transform: translate(-40px,35px) scale(1.1); }
-  65%     { transform: translate(35px,-25px) scale(0.92); }
+.pt {
+  position: absolute; border-radius: 50%; pointer-events: none;
+  animation: p-rise var(--d) ease-out infinite var(--dl);
 }
-@keyframes orb3 {
-  0%,100% { transform: translate(0,0) scale(1); }
-  50%     { transform: translate(25px,40px) scale(1.08); }
-}
-.o1 { animation: orb1 18s ease-in-out infinite; }
-.o2 { animation: orb2 22s ease-in-out infinite; }
-.o3 { animation: orb3 26s ease-in-out infinite reverse; }
-.o4 { animation: orb1 14s ease-in-out infinite reverse; }
 
-/* ── Float Animations ── */
-@keyframes float-a {
-  0%,100% { transform: translateY(0px) rotate(-2deg); }
-  30%     { transform: translateY(-22px) rotate(3deg); }
-  70%     { transform: translateY(-10px) rotate(-1deg); }
+/* ── Live dot ── */
+@keyframes live { 0%{transform:scale(1);opacity:.8} 100%{transform:scale(3);opacity:0} }
+.live-ring { animation: live 1.8s ease-out infinite; }
+
+/* ── Shimmer ── */
+@keyframes shim {
+  0%  { transform: translateX(-120%) skewX(-15deg); }
+  100%{ transform: translateX(350%)  skewX(-15deg); }
 }
-@keyframes float-b {
-  0%,100% { transform: translateY(0px) rotate(2deg); }
-  40%     { transform: translateY(-16px) rotate(-3deg); }
-  80%     { transform: translateY(-28px) rotate(1deg); }
+.shim::after {
+  content:''; position:absolute; top:0; left:0; width:25%; height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.07),transparent);
+  animation:shim 5s ease-in-out infinite; pointer-events:none; border-radius:inherit;
 }
-@keyframes float-c {
-  0%,100% { transform: translateY(0px) rotate(-1deg); }
-  25%     { transform: translateY(-26px) rotate(2.5deg); }
-  60%     { transform: translateY(-12px) rotate(-2deg); }
+
+/* ── Card hover lift ── */
+.card-lift {
+  transition: transform .28s cubic-bezier(.34,1.56,.64,1), box-shadow .28s ease;
 }
-@keyframes float-d {
-  0%,100% { transform: translateY(0px) rotate(3deg); }
-  45%     { transform: translateY(-18px) rotate(-2deg); }
-  75%     { transform: translateY(-30px) rotate(1.5deg); }
-}
-@keyframes float-e {
-  0%,100% { transform: translateY(0px) rotate(-2deg); }
-  55%     { transform: translateY(-14px) rotate(2deg); }
-  85%     { transform: translateY(-22px) rotate(-1.5deg); }
-}
-.fa { animation: float-a 7s ease-in-out infinite; }
-.fb { animation: float-b 9s ease-in-out infinite; }
-.fc { animation: float-c 8s ease-in-out infinite; }
-.fd { animation: float-d 11s ease-in-out infinite; }
-.fe { animation: float-e 10s ease-in-out infinite; }
+.card-lift:hover { transform: translateY(-5px) scale(1.01); }
 
 /* ── Scan line ── */
 @keyframes scan {
-  0%   { top: -2px; opacity: 0; }
-  5%   { opacity: 1; }
-  95%  { opacity: 1; }
-  100% { top: 100%; opacity: 0; }
+  0%  { top:-1px; opacity:0; }
+  5%  { opacity:.8; }
+  95% { opacity:.8; }
+  100%{ top:100%; opacity:0; }
 }
 .scan {
-  position: absolute; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(56,189,248,.6), transparent);
-  animation: scan 5s ease-in-out infinite;
-  pointer-events: none; z-index: 5;
-}
-
-/* ── Title glow ── */
-@keyframes title-breathe {
-  0%,100% { text-shadow: 0 0 0px rgba(16,185,129,0); }
-  50%     { text-shadow: 0 0 100px rgba(16,185,129,.5), 0 0 200px rgba(16,185,129,.2); }
-}
-.title-em { color: #10b981; animation: title-breathe 3.5s ease-in-out infinite; }
-
-/* ── Border pulse ── */
-@keyframes border-pulse { 0%,100% { opacity:.25; } 50% { opacity:.9; } }
-.bp { animation: border-pulse 2.5s ease-in-out infinite; }
-
-/* ── Shimmer ── */
-@keyframes shimmer-move {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(250%); }
-}
-.card-shimmer { position: relative; }
-.card-shimmer::after {
-  content: '';
-  position: absolute; top: 0; left: 0; width: 35%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.055), transparent);
-  animation: shimmer-move 4.5s ease-in-out infinite;
-  pointer-events: none; border-radius: inherit;
-}
-
-/* ── Dot glow ── */
-@keyframes dot-glow { 0%,100%{opacity:.3} 50%{opacity:1} }
-.dg { animation: dot-glow 2s ease-in-out infinite; }
-
-/* ── Pulse ring ── */
-@keyframes pulse-ring {
-  0%   { transform: scale(1); opacity: 0.6; }
-  100% { transform: scale(2.2); opacity: 0; }
-}
-.pulse-ring {
-  animation: pulse-ring 2s ease-out infinite;
+  position:absolute; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);
+  animation:scan 7s linear infinite; pointer-events:none;
 }
 
 /* ── Glass ── */
 .glass {
-  backdrop-filter: blur(28px) saturate(140%);
-  -webkit-backdrop-filter: blur(28px) saturate(140%);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
 }
 
-/* ── Border radius variants ── */
-.ra { border-radius: 20px 6px 20px 6px; }
-.rb { border-radius: 6px 20px 6px 20px; }
-.rp { border-radius: 28px; }
-.rs { border-radius: 14px; }
-
-/* ── Texture ── */
-.tex {
-  background-image: repeating-linear-gradient(
-    -52deg, transparent, transparent 22px,
-    rgba(255,255,255,.012) 22px, rgba(255,255,255,.012) 23px
-  );
-}
-
-/* ── Dot grid ── */
-.dotgrid {
-  background-image: radial-gradient(rgba(255,255,255,.06) 1px, transparent 1px);
-  background-size: 30px 30px;
-}
-
-/* ── Card hover ── */
-.ct { transition: box-shadow .35s ease, transform .35s cubic-bezier(.34,1.46,.64,1), border-color .35s ease; }
-.hv-em:hover { box-shadow: 0 0 0 1px rgba(16,185,129,.6), 0 24px 70px rgba(16,185,129,.2); transform: translateY(-6px); }
-.hv-ro:hover { box-shadow: 0 0 0 1px rgba(244,63,94,.6), 0 24px 70px rgba(244,63,94,.2); transform: translateY(-6px); }
-.hv-am:hover { box-shadow: 0 0 0 1px rgba(245,158,11,.6), 0 24px 70px rgba(245,158,11,.2); transform: translateY(-6px); }
-.hv-sk:hover { box-shadow: 0 0 0 1px rgba(56,189,248,.6), 0 24px 70px rgba(56,189,248,.2); transform: translateY(-6px); }
-.hv-vi:hover { box-shadow: 0 0 0 1px rgba(139,92,246,.6), 0 24px 70px rgba(139,92,246,.2); transform: translateY(-6px); }
-
-/* ── Case drop shadow ── */
-.case-shadow { filter: drop-shadow(0 16px 40px rgba(0,0,0,.85)) drop-shadow(0 4px 12px rgba(0,0,0,.6)); }
-
-/* ── Floating case glow ── */
-.case-glow-green { filter: drop-shadow(0 0 20px rgba(16,185,129,.45)) drop-shadow(0 16px 40px rgba(0,0,0,.8)); }
-.case-glow-rose  { filter: drop-shadow(0 0 20px rgba(244,63,94,.4)) drop-shadow(0 16px 40px rgba(0,0,0,.8)); }
-.case-glow-amber { filter: drop-shadow(0 0 20px rgba(245,158,11,.4)) drop-shadow(0 16px 40px rgba(0,0,0,.8)); }
-.case-glow-sky   { filter: drop-shadow(0 0 20px rgba(56,189,248,.35)) drop-shadow(0 16px 40px rgba(0,0,0,.8)); }
-.case-glow-vi    { filter: drop-shadow(0 0 20px rgba(139,92,246,.4)) drop-shadow(0 16px 40px rgba(0,0,0,.8)); }
-
-/* ── Gradient text ── */
-.grad-text-em { background: linear-gradient(135deg,#10b981,#34d399); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-.grad-text-sk { background: linear-gradient(135deg,#38bdf8,#818cf8); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text; }
-
-/* ── No scrollbar on body ── */
-.lv::-webkit-scrollbar { display: none; }
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-thumb { background:#1e2235; border-radius:4px; }
 `;
 
-/* ── Data ── */
-const CARDS = [
-  { name:'Battles', desc:'PvP case battles — highest value wins', page:'Battles', size:'lg', accent:'#10b981', hv:'hv-em', caseImg: vtechImg, caseGlow:'case-glow-green', video:'/assets/battles-DoAezb8E.mp4' },
-  { name:'Cases', desc:'Unbox premium items, discover rare loot', page:'Cases', size:'lg', accent:'#f43f5e', hv:'hv-ro', caseImg: roseImg, caseGlow:'case-glow-rose' },
-  { name:'Coinflip', desc:'1v1 — winner takes all', page:'Coinflip', size:'sm', accent:'#f59e0b', hv:'hv-am', caseImg: irishImg, caseGlow:'case-glow-amber' },
-  { name:'Upgrade', desc:'Risk items for better loot', page:'Upgrade', size:'sm', accent:'#38bdf8', hv:'hv-sk', caseImg: vtechImg, caseGlow:'case-glow-sky' },
-  { name:'Crash', desc:'Cash out before it crashes', page:'Crash', size:'sm', accent:'#8b5cf6', hv:'hv-vi', caseImg: roseImg, caseGlow:'case-glow-vi' },
+/* ─── Game cards data ──────────────────────────────────────── */
+const GAMES = [
+  {
+    name: 'Battles',
+    page: 'Battles',
+    icon: Swords,
+    size: 'lg',
+    // Deep purple/blue arena feel
+    bg: 'linear-gradient(135deg,#1a0a3d 0%,#2d1060 40%,#0d1a4a 100%)',
+    accent: '#a78bfa',
+    glowColor: 'rgba(167,139,250,.35)',
+    caseImg: vtechImg,
+    caseGlow: 'drop-shadow(0 0 30px rgba(167,139,250,.8)) drop-shadow(0 12px 40px rgba(0,0,0,.9))',
+    // decorative 3d objects via CSS shapes + gradients
+    deco: [
+      { w:110, h:110, right:'48%', top:'10%', bg:'radial-gradient(circle at 35% 35%,#60a5fa,#1e40af)', br:'18px', rotate:'-15deg', glow:'rgba(96,165,250,.5)' },
+      { w:70,  h:70,  right:'38%', top:'45%', bg:'radial-gradient(circle at 40% 30%,#c084fc,#7c3aed)', br:'12px', rotate:'20deg',  glow:'rgba(192,132,252,.4)' },
+    ],
+    tag: 'HOT',
+    tagColor: '#f97316',
+  },
+  {
+    name: 'Cases',
+    page: 'Cases',
+    icon: Box,
+    size: 'lg',
+    // Hot pink/magenta
+    bg: 'linear-gradient(135deg,#3d0a2e 0%,#7b1060 40%,#2d0a4a 100%)',
+    accent: '#f472b6',
+    glowColor: 'rgba(244,114,182,.35)',
+    caseImg: roseImg,
+    caseGlow: 'drop-shadow(0 0 30px rgba(244,114,182,.85)) drop-shadow(0 12px 40px rgba(0,0,0,.9))',
+    deco: [
+      { w:100, h:100, right:'46%', top:'8%',  bg:'radial-gradient(circle at 35% 35%,#fb7185,#be185d)', br:'50%',  rotate:'0deg',   glow:'rgba(251,113,133,.5)' },
+      { w:65,  h:65,  right:'34%', top:'50%', bg:'radial-gradient(circle at 40% 30%,#fbbf24,#b45309)', br:'14px', rotate:'30deg',  glow:'rgba(251,191,36,.4)' },
+    ],
+    tag: 'NEW',
+    tagColor: '#10b981',
+  },
+  {
+    name: 'Coinflip',
+    page: 'Coinflip',
+    icon: RotateCcw,
+    size: 'sm',
+    bg: 'linear-gradient(135deg,#1a1a00 0%,#3d2e00 50%,#1a0d00 100%)',
+    accent: '#fbbf24',
+    glowColor: 'rgba(251,191,36,.35)',
+    caseImg: irishImg,
+    caseGlow: 'drop-shadow(0 0 24px rgba(251,191,36,.8)) drop-shadow(0 10px 32px rgba(0,0,0,.9))',
+    deco: [
+      { w:80, h:80, right:'30%', top:'5%', bg:'radial-gradient(circle at 35% 35%,#fde68a,#d97706)', br:'50%', rotate:'0deg', glow:'rgba(253,230,138,.5)' },
+    ],
+  },
+  {
+    name: 'Upgrade',
+    page: 'Upgrade',
+    icon: TrendingUp,
+    size: 'sm',
+    bg: 'linear-gradient(135deg,#001a0a 0%,#003d1a 50%,#001a00 100%)',
+    accent: '#34d399',
+    glowColor: 'rgba(52,211,153,.35)',
+    caseImg: vtechImg,
+    caseGlow: 'drop-shadow(0 0 24px rgba(52,211,153,.8)) drop-shadow(0 10px 32px rgba(0,0,0,.9))',
+    deco: [
+      { w:72, h:72, right:'28%', top:'8%', bg:'radial-gradient(circle at 40% 35%,#6ee7b7,#059669)', br:'16px', rotate:'15deg', glow:'rgba(110,231,183,.5)' },
+    ],
+  },
+  {
+    name: 'Crash',
+    page: 'Crash',
+    icon: Zap,
+    size: 'sm',
+    bg: 'linear-gradient(135deg,#1a0000 0%,#3d0a0a 50%,#1a001a 100%)',
+    accent: '#f87171',
+    glowColor: 'rgba(248,113,113,.35)',
+    caseImg: roseImg,
+    caseGlow: 'drop-shadow(0 0 24px rgba(248,113,113,.8)) drop-shadow(0 10px 32px rgba(0,0,0,.9))',
+    deco: [
+      { w:76, h:76, right:'26%', top:'6%', bg:'radial-gradient(circle at 35% 35%,#fca5a5,#dc2626)', br:'50%', rotate:'0deg', glow:'rgba(252,165,165,.5)' },
+    ],
+    tag: 'LIVE',
+    tagColor: '#ef4444',
+  },
 ];
 
-const FLOAT_CASES = [
-  { src: vtechImg, cls:'fa', glow:'case-glow-green', w: 160, right:'4%',  top:'4%',  opacity: 1,   zIndex:4 },
-  { src: roseImg,  cls:'fb', glow:'case-glow-rose',  w: 130, right:'22%', top:'48%', opacity: 0.95, zIndex:3 },
-  { src: irishImg, cls:'fc', glow:'case-glow-amber', w: 118, right:'6%',  top:'58%', opacity: 0.9,  zIndex:4 },
-  { src: vtechImg, cls:'fd', glow:'case-glow-sky',   w: 90,  right:'32%', top:'6%',  opacity: 0.8,  zIndex:2 },
-  { src: irishImg, cls:'fe', glow:'case-glow-amber', w: 100, right:'36%', top:'64%', opacity: 0.75, zIndex:2 },
-];
-
-/* ── Tilt Card ── */
-function TiltCard({ children }) {
-  const ref = useRef(null);
-  const [t, setT] = useState({ rx:0, ry:0 });
-  const move = e => {
-    if (!ref.current) return;
-    const r = ref.current.getBoundingClientRect();
-    setT({ rx: -((e.clientY-r.top)/r.height-.5)*12, ry: ((e.clientX-r.left)/r.width-.5)*12 });
-  };
+/* ─── Particles ─────────────────────────────────────────────── */
+function Particles({ accent, count = 14 }) {
+  const pts = useRef(
+    Array.from({ length: count }, (_, i) => ({
+      id: i,
+      left: `${8 + Math.random() * 84}%`,
+      bottom: `${Math.random() * 20}%`,
+      size: 1.5 + Math.random() * 2.5,
+      d: `${3 + Math.random() * 5}s`,
+      dl: `${-Math.random() * 6}s`,
+      dx: `${(Math.random() - .5) * 40}px`,
+    }))
+  ).current;
   return (
-    <motion.div ref={ref} onMouseMove={move} onMouseLeave={()=>setT({rx:0,ry:0})}
-      animate={{ rotateX:t.rx, rotateY:t.ry }}
-      transition={{ type:'spring', stiffness:200, damping:22 }}
-      style={{ transformStyle:'preserve-3d', perspective:1000 }}>
-      {children}
-    </motion.div>
-  );
-}
-
-/* ── Hero Background ── */
-function HeroBG() {
-  return (
-    <div className="absolute inset-0 overflow-hidden pointer-events-none">
-      <div className="o1 absolute -top-40 -left-32 w-[600px] h-[600px] rounded-full"
-        style={{background:'radial-gradient(circle, rgba(16,185,129,.18) 0%, rgba(16,185,129,.06) 40%, transparent 70%)'}}/>
-      <div className="o2 absolute -top-20 right-0 w-[480px] h-[480px] rounded-full"
-        style={{background:'radial-gradient(circle, rgba(56,189,248,.14) 0%, rgba(56,189,248,.04) 40%, transparent 70%)'}}/>
-      <div className="o3 absolute bottom-0 left-1/4 w-[400px] h-[400px] rounded-full"
-        style={{background:'radial-gradient(circle, rgba(139,92,246,.1) 0%, transparent 70%)'}}/>
-      <div className="o4 absolute bottom-0 right-1/4 w-[300px] h-[300px] rounded-full"
-        style={{background:'radial-gradient(circle, rgba(244,63,94,.08) 0%, transparent 70%)'}}/>
-      <div className="absolute inset-0 dotgrid"/>
-      <div className="absolute inset-0" style={{
-        backgroundImage:'repeating-linear-gradient(-45deg,transparent,transparent 48px,rgba(255,255,255,.006) 48px,rgba(255,255,255,.006) 49px)'
-      }}/>
-    </div>
-  );
-}
-
-/* ── Floating Cases ── */
-function FloatingCases() {
-  return (
-    <div className="absolute inset-0 pointer-events-none overflow-hidden">
-      {/* Stronger gradient fade so cases are fully visible on right */}
-      <div className="absolute inset-0" style={{
-        background:'linear-gradient(to right, rgba(8,10,18,1) 0%, rgba(8,10,18,.85) 28%, rgba(8,10,18,.3) 48%, transparent 62%)'
-      }}/>
-      {FLOAT_CASES.map((c,i) => (
-        <img
-          key={i}
-          src={c.src}
-          alt=""
-          className={`absolute select-none ${c.cls} ${c.glow}`}
-          style={{
-            width: c.w,
-            right: c.right,
-            top: c.top,
-            opacity: c.opacity,
-            zIndex: c.zIndex,
-          }}
-        />
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+      {pts.map(p => (
+        <div key={p.id} className="pt" style={{
+          left: p.left, bottom: p.bottom,
+          width: p.size, height: p.size,
+          background: accent,
+          boxShadow: `0 0 ${p.size * 4}px ${accent}`,
+          '--d': p.d, '--dl': p.dl, '--dx': p.dx,
+        }} />
       ))}
     </div>
   );
 }
 
-/* ── Large Game Card ── */
-function LgCard({ card, i }) {
-  const [hov, setHov] = useState(false);
-  const vRef = useRef(null);
-  const onIn = () => { setHov(true); vRef.current?.play().catch(()=>{}); };
-  const onOut = () => { setHov(false); if(vRef.current){vRef.current.pause();vRef.current.currentTime=0;} };
-  const a = card.accent;
-
+/* ─── 3-D deco object ────────────────────────────────────────── */
+function DecoObj({ d, hov }) {
   return (
     <motion.div
-      initial={{opacity:0,y:40}}
-      animate={{opacity:1,y:0}}
-      transition={{delay:i*.14,duration:.8,ease:[.22,1,.36,1]}}>
-      <TiltCard>
-        <Link to={createPageUrl(card.page)}>
-          <div
-            className={`card-shimmer relative overflow-hidden ra glass tex ct cursor-pointer ${card.hv}`}
-            style={{
-              height: 260,
-              background: `
-                radial-gradient(ellipse at 75% 10%, ${a}25 0%, transparent 55%),
-                radial-gradient(ellipse at 10% 95%, ${a}12 0%, transparent 50%),
-                linear-gradient(160deg, rgba(12,16,28,.96) 0%, rgba(7,9,18,.98) 100%)
-              `,
-              border: `1px solid ${a}35`,
-              boxShadow: `0 0 0 1px ${a}18, 0 12px 50px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.04)`,
-            }}
-            onMouseEnter={onIn}
-            onMouseLeave={onOut}>
+      animate={{ y: hov ? -6 : 0, rotate: hov ? `calc(${d.rotate} + 8deg)` : d.rotate }}
+      transition={{ type: 'spring', stiffness: 160, damping: 16 }}
+      style={{
+        position: 'absolute',
+        right: d.right, top: d.top,
+        width: d.w, height: d.h,
+        background: d.bg,
+        borderRadius: d.br,
+        transform: `rotate(${d.rotate})`,
+        boxShadow: `0 8px 32px ${d.glow}, 0 2px 8px rgba(0,0,0,.6)`,
+        pointerEvents: 'none',
+      }}
+    />
+  );
+}
 
-            <div className="scan"/>
+/* ─── Hero Banner ────────────────────────────────────────────── */
+function HeroBanner() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: .7, ease: [.22, 1, .36, 1] }}
+      style={{
+        position: 'relative', overflow: 'hidden', borderRadius: 16,
+        background: 'linear-gradient(120deg,#0d0a2e 0%,#1a0a4a 35%,#2d1060 65%,#1a0a3d 100%)',
+        minHeight: 240,
+        boxShadow: '0 0 0 1px rgba(255,255,255,.06), 0 32px 80px rgba(0,0,0,.7)',
+      }}>
 
-            {/* Video overlay */}
-            {card.video && (
-              <video ref={vRef} muted playsInline preload="auto" src={card.video}
-                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-700"
-                style={{opacity: hov ? .28 : 0}}/>
-            )}
+      <div className="scan" />
 
-            {/* Colour glow blob */}
-            <div className="absolute -top-20 -right-20 w-80 h-80 rounded-full pointer-events-none transition-opacity duration-500"
-              style={{background:`radial-gradient(circle, ${a}40 0%, transparent 65%)`, opacity: hov ? 1 : .35}}/>
+      {/* Ambient blobs */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        background: 'radial-gradient(ellipse 60% 80% at 75% 50%,rgba(139,92,246,.18) 0%,transparent 60%), radial-gradient(ellipse 40% 60% at 90% 20%,rgba(236,72,153,.12) 0%,transparent 55%)',
+      }} />
 
-            {/* Corner SVG accents */}
-            <svg className="absolute top-0 right-0 w-16 h-16 bp">
-              <line x1="100%" y1="0" x2="50%" y2="0" stroke={a} strokeWidth="1.5" strokeLinecap="round"/>
-              <line x1="100%" y1="0" x2="100%" y2="50%" stroke={a} strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
-            <svg className="absolute bottom-0 left-0 w-16 h-16 bp" style={{animationDelay:'.9s'}}>
-              <line x1="0" y1="100%" x2="50%" y2="100%" stroke={a} strokeWidth="1.5" strokeLinecap="round"/>
-              <line x1="0" y1="100%" x2="0" y2="50%" stroke={a} strokeWidth="1.5" strokeLinecap="round"/>
-            </svg>
+      {/* Dot grid */}
+      <div style={{
+        position: 'absolute', inset: 0, pointerEvents: 'none',
+        backgroundImage: 'radial-gradient(rgba(255,255,255,.055) 1px,transparent 1px)',
+        backgroundSize: '28px 28px',
+      }} />
 
-            {/* Case image — large, visible, with glow */}
-            <motion.img
-              src={card.caseImg}
-              alt={card.name}
-              className={`absolute select-none pointer-events-none ${card.caseGlow}`}
-              style={{
-                width: 160,
-                right: 24,
-                top: '50%',
-                marginTop: -80,
-              }}
-              animate={{
-                scale: hov ? 1.14 : 1,
-                y: hov ? -12 : 0,
-                rotate: hov ? 6 : 0,
-                filter: hov
-                  ? `drop-shadow(0 0 40px ${a}90) drop-shadow(0 20px 50px rgba(0,0,0,.9))`
-                  : `drop-shadow(0 0 20px ${a}55) drop-shadow(0 16px 40px rgba(0,0,0,.85))`,
-              }}
-              transition={{type:'spring',stiffness:200,damping:18}}
-            />
+      {/* + decorative crosses */}
+      {[[24, 18], [68, 14], [44, 62], [82, 55], [58, 80]].map(([l, t], i) => (
+        <div key={i} style={{
+          position: 'absolute', left: `${l}%`, top: `${t}%`,
+          color: 'rgba(255,255,255,.14)', fontSize: 18, pointerEvents: 'none',
+          fontWeight: 300, lineHeight: 1,
+        }}>+</div>
+      ))}
 
-            {/* Content */}
-            <div className="absolute bottom-0 left-0 right-0 p-6"
-              style={{background:`linear-gradient(to top, rgba(5,7,16,.98) 0%, rgba(5,7,16,.75) 55%, transparent 100%)`}}>
+      {/* Floating case images */}
+      <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+        <Particles accent="#a78bfa" count={18} />
+        <img src={vtechImg} alt="" className="fha"
+          style={{
+            position: 'absolute', right: '28%', top: '5%', width: 130,
+            filter: 'drop-shadow(0 0 30px rgba(139,92,246,.8)) drop-shadow(0 16px 50px rgba(0,0,0,.95))',
+          }} />
+        <img src={roseImg} alt="" className="fhb"
+          style={{
+            position: 'absolute', right: '8%', top: '12%', width: 148,
+            filter: 'drop-shadow(0 0 30px rgba(236,72,153,.75)) drop-shadow(0 16px 50px rgba(0,0,0,.95))',
+          }} />
+        <img src={irishImg} alt="" className="fhc"
+          style={{
+            position: 'absolute', right: '18%', bottom: '8%', width: 110,
+            filter: 'drop-shadow(0 0 24px rgba(251,191,36,.7)) drop-shadow(0 14px 40px rgba(0,0,0,.95))',
+          }} />
+        {/* Gemstone crystal deco */}
+        <div style={{
+          position: 'absolute', right: '46%', top: '8%', width: 52, height: 52,
+          background: 'radial-gradient(circle at 35% 35%,#c4b5fd,#7c3aed)',
+          clipPath: 'polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%)',
+          filter: 'drop-shadow(0 0 18px rgba(139,92,246,.9))',
+          animation: 'float-hero-b 7s ease-in-out infinite .4s',
+        }} />
+        {/* Coin stack deco */}
+        <div style={{
+          position: 'absolute', right: '52%', bottom: '15%', width: 44, height: 44,
+          background: 'radial-gradient(circle at 35% 30%,#fde68a,#d97706)',
+          borderRadius: '50%',
+          filter: 'drop-shadow(0 0 14px rgba(251,191,36,.8))',
+          animation: 'float-hero-c 9s ease-in-out infinite 1s',
+        }} />
+      </div>
 
-              <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 mb-2 text-[10px] font-bold uppercase tracking-widest"
-                style={{background:`${a}20`, color:a, border:`1px solid ${a}45`}}>
-                <span className="dg w-1.5 h-1.5 rounded-full" style={{background:a, boxShadow:`0 0 8px ${a}`}}/>
-                {card.name}
-              </div>
-
-              <p className="text-[#4a6070] text-xs font-light leading-relaxed">{card.desc}</p>
-
-              <motion.div
-                animate={{opacity: hov ? 1 : 0, x: hov ? 0 : -12}}
-                transition={{duration:.22}}
-                className="mt-2.5 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider"
-                style={{color:a}}>
-                Play Now <ChevronRight className="w-3.5 h-3.5"/>
-              </motion.div>
-            </div>
+      {/* Text block */}
+      <div style={{ position: 'relative', zIndex: 10, padding: '44px 44px' }}>
+        {/* Live badge */}
+        <motion.div
+          initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: .2 }}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8, marginBottom: 16,
+            background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.12)',
+            borderRadius: 100, padding: '4px 12px',
+          }}>
+          <div style={{ position: 'relative', width: 7, height: 7 }}>
+            <div className="live-ring" style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(16,185,129,.45)' }} />
+            <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: '#10b981', boxShadow: '0 0 8px #10b981' }} />
           </div>
-        </Link>
-      </TiltCard>
+          <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.18em', color: 'rgba(255,255,255,.6)', textTransform: 'uppercase' }}>Live Now</span>
+        </motion.div>
+
+        <motion.h1
+          initial={{ opacity: 0, y: 22 }} animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: .26, duration: .85, ease: [.22, 1, .36, 1] }}
+          style={{ margin: 0, lineHeight: 1.1, marginBottom: 10 }}>
+          <span style={{ display: 'block', fontSize: 'clamp(30px,4vw,46px)', fontWeight: 900, color: '#fff' }}>
+            Welcome To
+          </span>
+          <span style={{
+            display: 'block', fontSize: 'clamp(34px,4.5vw,52px)', fontWeight: 900,
+            background: 'linear-gradient(90deg,#a78bfa,#ec4899)',
+            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+          }}>
+            Lootverse!
+          </span>
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: .42 }}
+          style={{ fontSize: 13, color: 'rgba(255,255,255,.45)', lineHeight: 1.65, marginBottom: 28, maxWidth: 320, fontWeight: 400 }}>
+          Step into a world of magic, luck, and excitement where every unbox and battle brings you closer to{' '}
+          <span style={{ color: '#a78bfa', fontWeight: 700 }}>amazing rewards.</span>
+        </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .54 }}
+          style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+          <Link to={createPageUrl('Leaderboard')}>
+            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: .96 }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 7,
+                padding: '11px 22px', borderRadius: 10, border: 'none', cursor: 'pointer',
+                fontSize: 14, fontWeight: 800, color: '#fff', fontFamily: 'Nunito,sans-serif',
+                background: 'linear-gradient(135deg,#8b5cf6 0%,#ec4899 100%)',
+                boxShadow: '0 0 40px rgba(139,92,246,.45), 0 4px 20px rgba(0,0,0,.5)',
+              }}>
+              <Trophy style={{ width: 15, height: 15 }} />
+              View Leaderboard
+            </motion.button>
+          </Link>
+          <Link to={createPageUrl('Cases')}>
+            <motion.button whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: .96 }}
+              style={{
+                display: 'flex', alignItems: 'center', gap: 7,
+                padding: '11px 22px', borderRadius: 10, cursor: 'pointer',
+                fontSize: 14, fontWeight: 800, color: 'rgba(255,255,255,.7)', fontFamily: 'Nunito,sans-serif',
+                background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.14)',
+              }}>
+              Open Cases <ChevronRight style={{ width: 15, height: 15 }} />
+            </motion.button>
+          </Link>
+        </motion.div>
+      </div>
+
+      {/* Right edge vignette */}
+      <div style={{
+        position: 'absolute', top: 0, right: 0, bottom: 0, width: '45%',
+        background: 'linear-gradient(to left,transparent,rgba(13,10,46,.3))',
+        pointerEvents: 'none',
+      }} />
     </motion.div>
   );
 }
 
-/* ── Small Game Card ── */
-function SmCard({ card, i }) {
+/* ─── Large Game Card ────────────────────────────────────────── */
+function LgGameCard({ g, i }) {
   const [hov, setHov] = useState(false);
-  const a = card.accent;
+  const a = g.accent;
 
   return (
     <motion.div
-      initial={{opacity:0,y:28}}
-      animate={{opacity:1,y:0}}
-      transition={{delay:.28+i*.1,duration:.7,ease:[.22,1,.36,1]}}>
-      <TiltCard>
-        <Link to={createPageUrl(card.page)}>
-          <div
-            className={`card-shimmer relative overflow-hidden rb glass tex ct cursor-pointer ${card.hv}`}
+      initial={{ opacity: 0, y: 28, scale: .97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ delay: .12 + i * .1, duration: .7, ease: [.22, 1, .36, 1] }}>
+      <Link to={createPageUrl(g.page)}>
+        <div className="shim card-lift"
+          style={{
+            position: 'relative', overflow: 'hidden', borderRadius: 14, cursor: 'pointer',
+            height: 210,
+            background: g.bg,
+            boxShadow: `0 0 0 1px rgba(255,255,255,.07), 0 16px 50px rgba(0,0,0,.65), 0 0 60px ${g.glowColor}`,
+          }}
+          onMouseEnter={() => setHov(true)}
+          onMouseLeave={() => setHov(false)}>
+
+          <div className="scan" />
+          {hov && <Particles accent={a} count={12} />}
+
+          {/* Ambient glow */}
+          <div style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none',
+            background: `radial-gradient(ellipse 80% 70% at 75% 40%,${a}28 0%,transparent 60%)`,
+            opacity: hov ? 1 : .5, transition: 'opacity .5s',
+          }} />
+
+          {/* 3D deco objects */}
+          {g.deco.map((d, di) => <DecoObj key={di} d={d} hov={hov} />)}
+
+          {/* Case image — large, dominant */}
+          <motion.img src={g.caseImg} alt={g.name}
             style={{
-              height: 170,
-              background: `
-                radial-gradient(ellipse at 80% 10%, ${a}20 0%, transparent 55%),
-                linear-gradient(160deg, rgba(12,16,28,.96) 0%, rgba(7,9,18,.98) 100%)
-              `,
-              border: `1px solid ${a}28`,
-              boxShadow: `0 0 0 1px ${a}14, 0 8px 32px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.03)`,
+              position: 'absolute', right: 16, top: '50%', marginTop: -75,
+              width: 150, pointerEvents: 'none', userSelect: 'none',
+              filter: g.caseGlow,
             }}
-            onMouseEnter={()=>setHov(true)}
-            onMouseLeave={()=>setHov(false)}>
+            animate={{ scale: hov ? 1.12 : 1, y: hov ? -10 : 0, rotate: hov ? 5 : 0 }}
+            transition={{ type: 'spring', stiffness: 200, damping: 18 }}
+          />
 
-            {/* Glow */}
-            <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full pointer-events-none transition-opacity duration-500"
-              style={{background:`radial-gradient(circle, ${a}35 0%, transparent 65%)`, opacity: hov ? 1 : .4}}/>
-
-            {/* Case image — large enough to be clearly visible */}
-            <motion.img
-              src={card.caseImg}
-              alt={card.name}
-              className={`absolute select-none pointer-events-none ${card.caseGlow}`}
-              style={{
-                width: 106,
-                right: 10,
-                top: 8,
-              }}
-              animate={{
-                scale: hov ? 1.2 : 1,
-                y: hov ? -8 : 0,
-                rotate: hov ? 5 : 0,
-              }}
-              transition={{type:'spring',stiffness:260,damping:20}}
-            />
-
-            <div className="absolute bottom-0 left-0 right-0 p-4"
-              style={{background:`linear-gradient(to top, rgba(5,7,16,.98) 0%, rgba(5,7,16,.6) 60%, transparent 100%)`}}>
-              <div className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 mb-1.5 text-[9px] font-bold uppercase tracking-wider"
-                style={{background:`${a}22`, color:a, border:`1px solid ${a}40`}}>
-                <span className="dg w-1 h-1 rounded-full" style={{background:a}}/>
-                {card.name}
-              </div>
-              <p className="text-[#3d5060] text-[10px] leading-snug">{card.desc}</p>
+          {/* Bottom label bar — like RBXMagic */}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            background: 'linear-gradient(to top,rgba(0,0,0,.85) 0%,rgba(0,0,0,.5) 55%,transparent 100%)',
+            padding: '20px 18px 14px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <g.icon style={{ width: 16, height: 16, color: a }} />
+              <span style={{ fontSize: 16, fontWeight: 800, color: '#fff' }}>{g.name}</span>
+              {g.tag && (
+                <span style={{
+                  fontSize: 9, fontWeight: 800, letterSpacing: '.16em', textTransform: 'uppercase',
+                  color: '#fff', background: g.tagColor, borderRadius: 6, padding: '2px 7px',
+                }}>{g.tag}</span>
+              )}
             </div>
           </div>
-        </Link>
-      </TiltCard>
-    </motion.div>
-  );
-}
 
-/* ── Section Header ── */
-function SectionHeader({ label, gradFrom, gradTo, icon: Icon, iconColor, right }) {
-  return (
-    <motion.div
-      initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{delay:.32}}
-      className="flex items-center justify-between mb-6">
-      <div className="flex items-center gap-3">
-        <div className="w-0.5 h-7 rounded-full" style={{background:`linear-gradient(to bottom,${gradFrom},${gradTo})`}}/>
-        <div className="w-7 h-7 rounded-lg flex items-center justify-center"
-          style={{background:`${gradFrom}18`, border:`1px solid ${gradFrom}30`}}>
-          <Icon className="w-3.5 h-3.5" style={{color:iconColor}}/>
+          {/* Hover: subtle top line */}
+          <motion.div
+            animate={{ opacity: hov ? 1 : 0 }}
+            style={{
+              position: 'absolute', top: 0, left: 0, right: 0, height: 2,
+              background: `linear-gradient(90deg,transparent,${a},transparent)`,
+            }} />
         </div>
-        <h2 className="lv-h text-base text-white tracking-widest">{label}</h2>
+      </Link>
+    </motion.div>
+  );
+}
+
+/* ─── Small Game Card ────────────────────────────────────────── */
+function SmGameCard({ g, i }) {
+  const [hov, setHov] = useState(false);
+  const a = g.accent;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 24, scale: .96 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ delay: .28 + i * .09, duration: .65, ease: [.22, 1, .36, 1] }}>
+      <Link to={createPageUrl(g.page)}>
+        <div className="shim card-lift"
+          style={{
+            position: 'relative', overflow: 'hidden', borderRadius: 14, cursor: 'pointer',
+            height: 160,
+            background: g.bg,
+            boxShadow: `0 0 0 1px rgba(255,255,255,.07), 0 12px 40px rgba(0,0,0,.65), 0 0 50px ${g.glowColor}`,
+          }}
+          onMouseEnter={() => setHov(true)}
+          onMouseLeave={() => setHov(false)}>
+
+          <div className="scan" />
+          {hov && <Particles accent={a} count={9} />}
+
+          {/* Ambient glow */}
+          <div style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none',
+            background: `radial-gradient(ellipse 80% 70% at 80% 35%,${a}25 0%,transparent 58%)`,
+            opacity: hov ? 1 : .5, transition: 'opacity .5s',
+          }} />
+
+          {/* Deco objects */}
+          {g.deco?.map((d, di) => <DecoObj key={di} d={d} hov={hov} />)}
+
+          {/* Case image */}
+          <motion.img src={g.caseImg} alt={g.name}
+            style={{
+              position: 'absolute', right: 10, top: 6, width: 116,
+              pointerEvents: 'none', userSelect: 'none',
+              filter: g.caseGlow,
+            }}
+            animate={{ scale: hov ? 1.18 : 1, y: hov ? -8 : 0, rotate: hov ? 6 : 0 }}
+            transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+          />
+
+          {/* Label */}
+          <div style={{
+            position: 'absolute', bottom: 0, left: 0, right: 0,
+            background: 'linear-gradient(to top,rgba(0,0,0,.88) 0%,rgba(0,0,0,.5) 55%,transparent 100%)',
+            padding: '18px 16px 12px',
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+              <g.icon style={{ width: 14, height: 14, color: a }} />
+              <span style={{ fontSize: 15, fontWeight: 800, color: '#fff' }}>{g.name}</span>
+              {g.tag && (
+                <span style={{
+                  fontSize: 9, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase',
+                  color: '#fff', background: g.tagColor, borderRadius: 5, padding: '2px 6px',
+                }}>{g.tag}</span>
+              )}
+            </div>
+          </div>
+
+          <motion.div
+            animate={{ opacity: hov ? 1 : 0 }}
+            style={{
+              position: 'absolute', top: 0, left: 0, right: 0, height: 2,
+              background: `linear-gradient(90deg,transparent,${a},transparent)`,
+            }} />
+        </div>
+      </Link>
+    </motion.div>
+  );
+}
+
+/* ─── Featured Case Card ─────────────────────────────────────── */
+function FeaturedCard({ c, i }) {
+  const [hov, setHov] = useState(false);
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: .5 + i * .08 }}>
+      <Link to={`${createPageUrl('CaseOpen')}?id=${c.id}`}>
+        <div className="shim card-lift"
+          style={{
+            position: 'relative', overflow: 'hidden', borderRadius: 12, cursor: 'pointer',
+            padding: '18px 14px', textAlign: 'center',
+            background: 'linear-gradient(145deg,#0f1225,#131930)',
+            border: '1px solid rgba(255,255,255,.08)',
+            boxShadow: '0 8px 32px rgba(0,0,0,.6)',
+          }}
+          onMouseEnter={() => setHov(true)}
+          onMouseLeave={() => setHov(false)}>
+          <motion.div
+            animate={{ scale: hov ? 1.08 : 1 }} transition={{ type: 'spring', stiffness: 220, damping: 18 }}
+            style={{
+              width: 50, height: 50, margin: '0 auto 10px', borderRadius: 12,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: 'linear-gradient(135deg,rgba(139,92,246,.2),rgba(236,72,153,.15))',
+              border: '1px solid rgba(139,92,246,.3)',
+              boxShadow: '0 4px 20px rgba(139,92,246,.2)',
+            }}>
+            <Gift style={{ width: 22, height: 22, color: '#a78bfa' }} />
+          </motion.div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#fff', marginBottom: 4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.name}</div>
+          <div style={{ fontSize: 12, fontWeight: 800, color: '#ec4899' }}>{c.price?.toLocaleString()} coins</div>
+        </div>
+      </Link>
+    </motion.div>
+  );
+}
+
+/* ─── Section header ─────────────────────────────────────────── */
+function SectionHead({ label, icon: Icon, accent = '#a78bfa', right }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: .3 }}
+      style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Icon style={{ width: 16, height: 16, color: accent }} />
+        <span style={{ fontSize: 16, fontWeight: 900, color: '#fff', letterSpacing: '.01em' }}>{label}</span>
       </div>
       {right}
     </motion.div>
   );
 }
 
-/* ── Main ── */
+/* ─── Main ───────────────────────────────────────────────────── */
 export default function Home() {
   const { loading } = useWallet();
   const [featuredCases, setFeaturedCases] = useState([]);
 
   useEffect(() => {
-    base44.entities.CaseTemplate.filter({is_active:true},'-created_date',4)
-      .then(setFeaturedCases).catch(()=>setFeaturedCases([]));
+    base44.entities.CaseTemplate.filter({ is_active: true }, '-created_date', 4)
+      .then(setFeaturedCases).catch(() => setFeaturedCases([]));
   }, []);
 
   if (loading) return (
-    <div className="flex items-center justify-center min-h-[60vh]" style={{background:'#07080f'}}>
-      <div className="relative w-14 h-14">
-        <div className="absolute inset-0 rounded-full border border-[#10b981]/10"/>
-        <div className="absolute inset-0 rounded-full border-t-2 border-[#10b981] animate-spin"/>
-        <div className="absolute inset-1 rounded-full border-b-2 border-[#f43f5e] animate-spin" style={{animationDuration:'.75s',animationDirection:'reverse'}}/>
-        <div className="absolute inset-2.5 rounded-full border-l border-[#8b5cf6] animate-spin" style={{animationDuration:'1.5s'}}/>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#10b981]" style={{boxShadow:'0 0 12px #10b981'}}/>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: '#0b0d1a' }}>
+      <div style={{ position: 'relative', width: 52, height: 52 }}>
+        <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '2px solid #8b5cf6', animation: 'spin 1s linear infinite' }} />
+        <div style={{ position: 'absolute', inset: 7, borderRadius: '50%', border: '2px solid #ec4899', animation: 'spin .72s linear infinite reverse' }} />
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#a78bfa', boxShadow: '0 0 16px #a78bfa' }} />
         </div>
       </div>
     </div>
   );
 
-  const lgCards = CARDS.filter(c=>c.size==='lg');
-  const smCards = CARDS.filter(c=>c.size==='sm');
+  const lgGames = GAMES.filter(g => g.size === 'lg');
+  const smGames = GAMES.filter(g => g.size === 'sm');
 
   return (
-    <div className="lv space-y-10 pb-20" style={{background:'#07080f', minHeight:'100vh'}}>
+    <div className="lv" style={{ background: '#0b0d1a', minHeight: '100vh', padding: '20px 0 80px' }}>
       <style>{CSS}</style>
 
-      {/* ══════════ HERO ══════════════════════════════════ */}
-      <motion.section
-        initial={{opacity:0,y:24}}
-        animate={{opacity:1,y:0}}
-        transition={{duration:.95,ease:[.22,1,.36,1]}}
-        className="relative overflow-hidden rp"
-        style={{
-          minHeight: 380,
-          background: 'linear-gradient(155deg, #0c1525 0%, #0e1e35 38%, #090b14 100%)',
-          boxShadow: '0 0 0 1px rgba(255,255,255,.045), 0 60px 120px rgba(0,0,0,.65)',
-        }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
 
-        <HeroBG/>
-        <FloatingCases/>
+        {/* Hero */}
+        <HeroBanner />
 
-        {/* Text block */}
-        <div className="relative z-10 p-8 md:p-14 max-w-[560px]">
-
-          {/* Live badge */}
-          <motion.div
-            initial={{opacity:0,x:-14}} animate={{opacity:1,x:0}} transition={{delay:.2}}
-            className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 mb-7"
-            style={{background:'rgba(16,185,129,.12)', border:'1px solid rgba(16,185,129,.28)'}}>
-            <Sparkles className="w-3 h-3" style={{color:'#10b981'}}/>
-            <span className="text-[10px] font-bold uppercase tracking-[.25em]" style={{color:'#10b981'}}>Lootverse</span>
-            <div className="relative flex items-center justify-center">
-              <div className="w-1.5 h-1.5 rounded-full bg-[#10b981] dg" style={{boxShadow:'0 0 8px #10b981'}}/>
-              <div className="absolute w-1.5 h-1.5 rounded-full bg-[#10b981] pulse-ring"/>
-            </div>
-            <span className="text-[10px] font-medium" style={{color:'rgba(16,185,129,.5)'}}>LIVE</span>
-          </motion.div>
-
-          {/* Headline */}
-          <motion.h1
-            initial={{opacity:0,y:22}} animate={{opacity:1,y:0}}
-            transition={{delay:.3,duration:.9}}
-            className="lv-h text-white leading-none mb-5"
-            style={{fontSize:'clamp(52px,7.5vw,90px)'}}>
-            OPEN CASES.<br/>
-            <span className="title-em">WIN BIG.</span><br/>
-            <span style={{color:'rgba(255,255,255,.18)', fontSize:'.55em', letterSpacing:'.1em'}}>EVERY TIME.</span>
-          </motion.h1>
-
-          <motion.p
-            initial={{opacity:0}} animate={{opacity:1}} transition={{delay:.5}}
-            className="text-sm leading-relaxed mb-9 font-light"
-            style={{color:'#3a5568', maxWidth:300}}>
-            Premium loot. Real battles.<br/>Every unbox could change everything.
-          </motion.p>
-
-          {/* CTAs */}
-          <motion.div
-            initial={{opacity:0,y:12}} animate={{opacity:1,y:0}} transition={{delay:.62}}
-            className="flex flex-wrap gap-3">
-            <Link to={createPageUrl('Leaderboard')}>
-              <motion.button whileHover={{scale:1.05,y:-2}} whileTap={{scale:.97}}
-                className="lv-h flex items-center gap-2 px-8 py-3.5 text-white rs"
-                style={{
-                  fontSize: 15,
-                  background: 'linear-gradient(135deg, #10b981 0%, #059669 60%, #047857 100%)',
-                  boxShadow: '0 0 50px rgba(16,185,129,.4), 0 4px 24px rgba(0,0,0,.5)',
-                }}>
-                <Trophy className="w-4 h-4"/>
-                LEADERBOARD
-              </motion.button>
-            </Link>
-            <Link to={createPageUrl('Cases')}>
-              <motion.button whileHover={{scale:1.05,y:-2}} whileTap={{scale:.97}}
-                className="lv-h flex items-center gap-2 px-8 py-3.5 rs"
-                style={{
-                  fontSize: 15,
-                  background: 'rgba(16,185,129,.08)',
-                  color: '#10b981',
-                  border: '1px solid rgba(16,185,129,.32)',
-                  backdropFilter: 'blur(20px)',
-                }}>
-                OPEN CASES
-                <ChevronRight className="w-4 h-4"/>
-              </motion.button>
-            </Link>
-          </motion.div>
-        </div>
-
-        {/* Bottom fade */}
-        <div className="absolute bottom-0 inset-x-0 h-24 pointer-events-none"
-          style={{background:'linear-gradient(to top, rgba(7,8,15,.9), transparent)'}}/>
-      </motion.section>
-
-      {/* ══════════ GAME MODES ════════════════════════════ */}
-      <section className="px-0">
-        <SectionHeader
-          label="GAME MODES"
-          gradFrom="#10b981" gradTo="#38bdf8"
-          icon={Zap} iconColor="#f59e0b"
-        />
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
-          {lgCards.map((c,i)=><LgCard key={c.name} card={c} i={i}/>)}
-        </div>
-        <div className="grid grid-cols-3 gap-5">
-          {smCards.map((c,i)=><SmCard key={c.name} card={c} i={i}/>)}
-        </div>
-      </section>
-
-      {/* ══════════ FEATURED CASES ════════════════════════ */}
-      {featuredCases.length > 0 && (
+        {/* Game Modes */}
         <section>
-          <SectionHeader
-            label="FEATURED CASES"
-            gradFrom="#f43f5e" gradTo="#8b5cf6"
-            icon={Star} iconColor="#f59e0b"
-            right={
-              <Link to={createPageUrl('Cases')}>
-                <motion.span whileHover={{x:5}}
-                  className="flex items-center gap-1.5 text-xs font-medium"
-                  style={{color:'#2a3d4e'}}>
-                  View all <ChevronRight className="w-3.5 h-3.5"/>
-                </motion.span>
-              </Link>
-            }
-          />
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {featuredCases.map((c,i) => (
-              <motion.div key={c.id}
-                initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}
-                transition={{delay:.5+i*.1}}>
-                <TiltCard>
-                  <Link to={`${createPageUrl('CaseOpen')}?id=${c.id}`}>
-                    <div className="card-shimmer relative overflow-hidden ra glass tex ct hv-sk cursor-pointer p-5 text-center"
-                      style={{
-                        background: 'radial-gradient(ellipse at 50% 0%, rgba(56,189,248,.12), transparent 65%), linear-gradient(160deg,rgba(12,16,28,.96),rgba(7,9,18,.98))',
-                        border: '1px solid rgba(56,189,248,.2)',
-                        boxShadow: '0 0 0 1px rgba(56,189,248,.1), 0 8px 32px rgba(0,0,0,.5)',
-                      }}>
-                      <div className="w-14 h-14 rs mx-auto mb-3 flex items-center justify-center"
-                        style={{
-                          background: 'linear-gradient(135deg,rgba(56,189,248,.16),rgba(139,92,246,.12))',
-                          border: '1px solid rgba(56,189,248,.25)',
-                          boxShadow: '0 4px 24px rgba(56,189,248,.14)',
-                        }}>
-                        <Box className="w-7 h-7" style={{color:'#38bdf8'}}/>
-                      </div>
-                      <h3 className="text-xs font-semibold text-white mb-1 truncate">{c.name}</h3>
-                      <p className="text-[11px] font-bold" style={{color:'#f43f5e'}}>{c.price?.toLocaleString()} coins</p>
-                    </div>
-                  </Link>
-                </TiltCard>
-              </motion.div>
-            ))}
+          <SectionHead label="Magic Games" icon={Zap} accent="#a78bfa" />
+
+          {/* 2-col large */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 14 }}>
+            {lgGames.map((g, i) => <LgGameCard key={g.name} g={g} i={i} />)}
+          </div>
+
+          {/* 3-col small */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 14 }}>
+            {smGames.map((g, i) => <SmGameCard key={g.name} g={g} i={i} />)}
           </div>
         </section>
-      )}
+
+        {/* Featured Cases */}
+        {featuredCases.length > 0 && (
+          <section>
+            <SectionHead
+              label="Featured Cases"
+              icon={Star}
+              accent="#ec4899"
+              right={
+                <Link to={createPageUrl('Cases')}>
+                  <motion.span whileHover={{ x: 4 }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'rgba(255,255,255,.3)', fontWeight: 600 }}>
+                    View all <ChevronRight style={{ width: 13, height: 13 }} />
+                  </motion.span>
+                </Link>
+              }
+            />
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 12 }}>
+              {featuredCases.map((c, i) => <FeaturedCard key={c.id} c={c} i={i} />)}
+            </div>
+          </section>
+        )}
+      </div>
     </div>
   );
 }
