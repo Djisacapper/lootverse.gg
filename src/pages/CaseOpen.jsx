@@ -1,93 +1,157 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { rollItem, getRarityColor, getRarityGlow } from '../components/game/useWallet';
 import CaseSpinner from '../components/game/CaseSpinner';
 import { normalizeItems } from '../components/game/normalizeItem';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Box, ArrowLeft, RefreshCw, Sparkles, Percent, Coins } from 'lucide-react';
+import { Box, ArrowLeft, RefreshCw, Sparkles, Percent, Play, Eye, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
-/* ─── CSS ─────────────────────────────────────────────────── */
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
 .co { font-family: 'Nunito', sans-serif; }
 
+@keyframes spin-loader { to { transform: rotate(360deg); } }
+
 @keyframes scan {
   0%  { top:-1px; opacity:0; }
-  5%  { opacity:1; }
-  95% { opacity:1; }
+  5%  { opacity:1; } 95% { opacity:1; }
   100%{ top:100%; opacity:0; }
 }
 .scan {
   position:absolute; left:0; right:0; height:1px; z-index:2;
-  background:linear-gradient(90deg,transparent,rgba(255,220,0,.18),transparent);
-  animation:scan 6s linear infinite; pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(255,220,0,.2),transparent);
+  animation:scan 5s linear infinite; pointer-events:none;
 }
 
-@keyframes shim {
-  0%  { transform: translateX(-120%) skewX(-15deg); }
-  100%{ transform: translateX(380%)  skewX(-15deg); }
+@keyframes float-slow {
+  0%,100% { transform: translateY(0px) rotate(-2deg); }
+  50%     { transform: translateY(-12px) rotate(2deg); }
 }
-.shim::after {
-  content:''; position:absolute; top:0; left:0; width:20%; height:100%;
-  background:linear-gradient(90deg,transparent,rgba(255,220,0,.05),transparent);
-  animation:shim 6s ease-in-out infinite; pointer-events:none; border-radius:inherit;
+.float-slow { animation: float-slow 4s ease-in-out infinite; }
+
+@keyframes shimmer-bg {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.shimmer-text {
+  background: linear-gradient(90deg, #fbbf24, #f59e0b, #fde68a, #fbbf24);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmer-bg 3s linear infinite;
 }
 
-@keyframes gold-pulse {
-  0%,100%{ box-shadow: 0 0 0 1px rgba(251,191,36,.1), 0 8px 32px rgba(0,0,0,.7); }
-  50%    { box-shadow: 0 0 0 1px rgba(251,191,36,.28), 0 8px 32px rgba(0,0,0,.7), 0 0 40px rgba(251,191,36,.14); }
+@keyframes pulse-ring {
+  0%  { transform: scale(1);   opacity:.6; }
+  100%{ transform: scale(1.8); opacity:0;  }
 }
-.gold-glow { animation: gold-pulse 3s ease-in-out infinite; }
+.pulse-ring {
+  position:absolute; inset:0; border-radius:inherit;
+  border:2px solid currentColor;
+  animation: pulse-ring 1.8s ease-out infinite;
+  pointer-events:none;
+}
 
-@keyframes result-pop {
-  0%  { transform: scale(.85); opacity:0; }
-  60% { transform: scale(1.04); }
-  100%{ transform: scale(1);   opacity:1; }
+@keyframes win-burst {
+  0%  { transform:scale(.7); opacity:0; }
+  55% { transform:scale(1.06); opacity:1; }
+  100%{ transform:scale(1); opacity:1; }
 }
-.result-pop { animation: result-pop .55s cubic-bezier(.34,1.56,.64,1) forwards; }
+.win-burst { animation: win-burst .55s cubic-bezier(.34,1.56,.64,1) forwards; }
 
-@keyframes coin-spin {
-  0%  { transform: rotateY(0deg); }
-  100%{ transform: rotateY(360deg); }
+@keyframes particle-rise {
+  0%  { transform:translateY(0) scale(1); opacity:1; }
+  100%{ transform:translateY(-80px) scale(0); opacity:0; }
 }
-.coin-spin { animation: coin-spin 2s linear infinite; }
 
-@keyframes float-item {
-  0%,100%{ transform: translateY(0); }
-  50%    { transform: translateY(-8px); }
+@keyframes demo-badge {
+  0%,100% { box-shadow: 0 0 0 0 rgba(168,85,247,.4); }
+  50%     { box-shadow: 0 0 0 8px rgba(168,85,247,0); }
 }
-.float-item { animation: float-item 3s ease-in-out infinite; }
+.demo-badge-pulse { animation: demo-badge 2s ease-in-out infinite; }
 
-@keyframes win-glow {
-  0%,100%{ box-shadow: 0 0 30px rgba(251,191,36,.3), 0 0 60px rgba(251,191,36,.1); }
-  50%    { box-shadow: 0 0 50px rgba(251,191,36,.6), 0 0 100px rgba(251,191,36,.2); }
+@keyframes card-enter {
+  0%  { opacity:0; transform:translateY(20px) scale(.95); }
+  100%{ opacity:1; transform:translateY(0) scale(1); }
 }
-.win-glow { animation: win-glow 2s ease-in-out infinite; }
 
-.card-lift {
-  transition: transform .24s cubic-bezier(.34,1.56,.64,1), box-shadow .24s ease;
+.item-card {
+  transition: transform .24s cubic-bezier(.34,1.56,.64,1), border-color .24s, box-shadow .24s;
 }
-.card-lift:hover { transform: translateY(-3px) scale(1.02); }
+.item-card:hover { transform: translateY(-4px) scale(1.03); }
+
+.open-btn {
+  position: relative; overflow: hidden;
+  transition: transform .22s cubic-bezier(.34,1.56,.64,1), box-shadow .22s;
+}
+.open-btn:hover:not(:disabled) { transform: translateY(-3px) scale(1.03); }
+.open-btn:active:not(:disabled) { transform: scale(.97); }
+.open-btn::after {
+  content:''; position:absolute; top:0; left:-60%; width:40%; height:100%;
+  background: linear-gradient(90deg,transparent,rgba(255,255,255,.15),transparent);
+  transform: skewX(-15deg);
+  transition: left .5s;
+}
+.open-btn:hover::after { left:120%; }
 
 ::-webkit-scrollbar { width:4px; }
 ::-webkit-scrollbar-thumb { background:#1a1200; border-radius:4px; }
 `;
 
-/* ─── Rarity config ───────────────────────────────────────── */
-const RARITY_STYLES = {
-  common:    { color: '#9ca3af', glow: 'rgba(156,163,175,.4)', bg: 'linear-gradient(135deg,#1f2937,#374151)' },
-  uncommon:  { color: '#34d399', glow: 'rgba(52,211,153,.4)',  bg: 'linear-gradient(135deg,#064e3b,#065f46)' },
-  rare:      { color: '#60a5fa', glow: 'rgba(96,165,250,.45)', bg: 'linear-gradient(135deg,#1e3a5f,#1d4ed8)' },
-  epic:      { color: '#c084fc', glow: 'rgba(192,132,252,.5)', bg: 'linear-gradient(135deg,#3b0764,#7c3aed)' },
-  legendary: { color: '#fbbf24', glow: 'rgba(251,191,36,.6)',  bg: 'linear-gradient(135deg,#78350f,#f59e0b)' },
+const RARITY = {
+  common:    { color:'#9ca3af', glow:'rgba(156,163,175,.35)', bg:'linear-gradient(135deg,#1f2937,#374151)', label:'Common' },
+  uncommon:  { color:'#34d399', glow:'rgba(52,211,153,.4)',   bg:'linear-gradient(135deg,#064e3b,#065f46)', label:'Uncommon' },
+  rare:      { color:'#60a5fa', glow:'rgba(96,165,250,.45)',  bg:'linear-gradient(135deg,#1e3a5f,#1d4ed8)', label:'Rare' },
+  epic:      { color:'#c084fc', glow:'rgba(192,132,252,.5)',  bg:'linear-gradient(135deg,#3b0764,#7c3aed)', label:'Epic' },
+  legendary: { color:'#fbbf24', glow:'rgba(251,191,36,.6)',   bg:'linear-gradient(135deg,#78350f,#f59e0b)', label:'Legendary' },
 };
-const getRarity = r => RARITY_STYLES[r?.toLowerCase()] || RARITY_STYLES.common;
+const rs = r => RARITY[r?.toLowerCase()] || RARITY.common;
+
+/* ── Particle burst ── */
+function Particles({ color, count = 16 }) {
+  const pts = Array.from({ length: count }, (_, i) => ({
+    id: i,
+    angle: (360 / count) * i,
+    dist: 60 + Math.random() * 60,
+    size: 3 + Math.random() * 4,
+    delay: Math.random() * .4,
+    dur: .8 + Math.random() * .6,
+  }));
+  return (
+    <div style={{ position:'absolute', inset:0, pointerEvents:'none', overflow:'visible', zIndex:10 }}>
+      {pts.map(p => {
+        const rad = (p.angle * Math.PI) / 180;
+        const tx = Math.cos(rad) * p.dist;
+        const ty = Math.sin(rad) * p.dist;
+        return (
+          <div key={p.id} style={{
+            position:'absolute',
+            left:'50%', top:'50%',
+            width: p.size, height: p.size,
+            borderRadius:'50%',
+            background: color,
+            boxShadow:`0 0 ${p.size*2}px ${color}`,
+            animation:`particle-burst ${p.dur}s ease-out ${p.delay}s forwards`,
+            '--tx': `${tx}px`, '--ty': `${ty}px`,
+          }} />
+        );
+      })}
+      <style>{`
+        @keyframes particle-burst {
+          0%  { transform:translate(-50%,-50%) translate(0,0) scale(1); opacity:1; }
+          100%{ transform:translate(-50%,-50%) translate(var(--tx),var(--ty)) scale(0); opacity:0; }
+        }
+      `}</style>
+    </div>
+  );
+}
 
 export default function CaseOpen() {
-  const params   = new URLSearchParams(window.location.search);
-  const caseId   = params.get('id');
+  const params = new URLSearchParams(window.location.search);
+  const caseId = params.get('id');
+
   const [caseData,    setCaseData]    = useState(null);
   const [loading,     setLoading]     = useState(true);
   const [spinning,    setSpinning]    = useState(false);
@@ -95,33 +159,40 @@ export default function CaseOpen() {
   const [showResult,  setShowResult]  = useState(false);
   const [user,        setUser]        = useState(null);
   const [userLoading, setUserLoading] = useState(true);
+  const [isDemo,      setIsDemo]      = useState(false);
+  const [showParticles, setShowParticles] = useState(false);
   const [hovItem,     setHovItem]     = useState(null);
+  const [activeTab,   setActiveTab]   = useState('contents'); // 'contents' | 'odds'
 
   useEffect(() => {
     base44.auth.me().then(me => { setUser(me); setUserLoading(false); }).catch(() => setUserLoading(false));
   }, []);
 
   useEffect(() => {
-    if (caseId) {
-      setLoading(true);
-      base44.entities.CaseTemplate.list().then(all => {
-        const found = all.find(c => c.id === caseId);
-        if (found) found.items = normalizeItems(found.items);
-        setCaseData(found || null);
-        setLoading(false);
-      }).catch(() => setLoading(false));
-    }
+    if (!caseId) return;
+    setLoading(true);
+    base44.entities.CaseTemplate.list().then(all => {
+      const found = all.find(c => c.id === caseId);
+      if (found) found.items = normalizeItems(found.items);
+      setCaseData(found || null);
+      setLoading(false);
+    }).catch(() => setLoading(false));
   }, [caseId]);
+
+  const doSpin = (wonItem) => {
+    setResult(wonItem);
+    setShowResult(false);
+    setShowParticles(false);
+    setSpinning(true);
+  };
 
   const handleOpen = async () => {
     if (!caseData || spinning || !user) return;
     if ((user.balance || 0) < caseData.price) return;
     const wonItem = rollItem(caseData.items || []);
-    setResult(wonItem);
     const costDeducted = (user.balance || 0) - caseData.price;
     await base44.auth.updateMe({ balance: costDeducted });
     setUser({ ...user, balance: costDeducted });
-    const { addRakeback } = await import('../components/game/useWallet');
     const me = await base44.auth.me();
     await base44.auth.updateMe({
       rakeback_instant: Math.floor((me.rakeback_instant || 0) + caseData.price * 0.005),
@@ -129,20 +200,30 @@ export default function CaseOpen() {
       rakeback_weekly:  Math.floor((me.rakeback_weekly  || 0) + caseData.price * 0.002),
       rakeback_monthly: Math.floor((me.rakeback_monthly || 0) + caseData.price * 0.001),
     });
-    setSpinning(true);
-    setShowResult(false);
+    setIsDemo(false);
+    doSpin(wonItem);
+  };
+
+  const handleDemo = () => {
+    if (spinning || !caseData) return;
+    const wonItem = rollItem(caseData.items || []);
+    setIsDemo(true);
+    doSpin(wonItem);
   };
 
   const handleSpinComplete = async () => {
     setSpinning(false);
     setShowResult(true);
-    if (result && user) {
+    setShowParticles(true);
+    setTimeout(() => setShowParticles(false), 1800);
+
+    if (!isDemo && result && user) {
       const newBalance = (user.balance || 0) + result.value;
-      const xpGain = Math.floor(caseData.price / 10);
-      const newXp = (user.xp || 0) + xpGain;
-      const newLevel = Math.floor(newXp / 500) + 1;
+      const xpGain     = Math.floor(caseData.price / 10);
+      const newXp      = (user.xp || 0) + xpGain;
+      const newLevel   = Math.floor(newXp / 500) + 1;
       await base44.auth.updateMe({ balance: newBalance, xp: newXp, level: newLevel });
-      setUser({ ...user, balance: newBalance, xp: newXp, level: newLevel });
+      setUser({ ...user, balance: newBalance });
       base44.entities.Transaction.create({
         user_email: user.email, type: 'case_win',
         amount: result.value - caseData.price,
@@ -159,382 +240,466 @@ export default function CaseOpen() {
   };
 
   const handleTryAgain = async () => {
-    setResult(null);
-    setShowResult(false);
+    if (isDemo) { handleDemo(); return; }
+    setResult(null); setShowResult(false);
     const me = await base44.auth.me();
     setUser(me);
     if (!caseData || !me || (me.balance || 0) < caseData.price) return;
     const wonItem = rollItem(caseData.items || []);
-    setResult(wonItem);
     const costDeducted = (me.balance || 0) - caseData.price;
     await base44.auth.updateMe({ balance: costDeducted });
     setUser({ ...me, balance: costDeducted });
-    setSpinning(true);
+    setIsDemo(false);
+    doSpin(wonItem);
   };
 
   /* ── Loading ── */
   if (loading || userLoading) return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', background: '#04000a' }}>
-      <div style={{ position: 'relative', width: 48, height: 48 }}>
-        <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '2px solid #fbbf24', animation: 'spin 1s linear infinite' }} />
-        <div style={{ position: 'absolute', inset: 7, borderRadius: '50%', border: '2px solid #a855f7', animation: 'spin .72s linear infinite reverse' }} />
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fbbf24', boxShadow: '0 0 12px #fbbf24' }} />
+    <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'60vh', background:'#04000a' }}>
+      <div style={{ position:'relative', width:48, height:48 }}>
+        <div style={{ position:'absolute', inset:0, borderRadius:'50%', border:'2px solid #fbbf24', animation:'spin-loader 1s linear infinite' }} />
+        <div style={{ position:'absolute', inset:7, borderRadius:'50%', border:'2px solid #a855f7', animation:'spin-loader .7s linear infinite reverse' }} />
+        <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div style={{ width:6, height:6, borderRadius:'50%', background:'#fbbf24', boxShadow:'0 0 12px #fbbf24' }} />
         </div>
       </div>
     </div>
   );
 
-  /* ── Not found ── */
   if (!caseData) return (
-    <div className="co" style={{ textAlign: 'center', paddingTop: 80, background: '#04000a', minHeight: '60vh' }}>
+    <div className="co" style={{ textAlign:'center', paddingTop:80, background:'#04000a', minHeight:'60vh' }}>
       <style>{CSS}</style>
-      <div style={{
-        width: 64, height: 64, borderRadius: 16, margin: '0 auto 16px',
-        background: 'rgba(251,191,36,.06)', border: '1px solid rgba(251,191,36,.1)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <Box style={{ width: 28, height: 28, color: 'rgba(251,191,36,.3)' }} />
-      </div>
-      <p style={{ color: 'rgba(251,191,36,.4)', fontWeight: 700, marginBottom: 16 }}>Case not found</p>
+      <Box style={{ width:40, height:40, color:'rgba(251,191,36,.2)', margin:'0 auto 12px' }} />
+      <p style={{ color:'rgba(251,191,36,.4)', fontWeight:700, marginBottom:16 }}>Case not found</p>
       <Link to={createPageUrl('Cases')}>
         <button style={{
-          display: 'inline-flex', alignItems: 'center', gap: 8,
-          padding: '10px 20px', borderRadius: 10, cursor: 'pointer',
-          background: 'rgba(251,191,36,.08)', border: '1px solid rgba(251,191,36,.2)',
-          color: 'rgba(251,191,36,.8)', fontWeight: 800, fontFamily: 'Nunito,sans-serif',
-        }}>
-          <ArrowLeft style={{ width: 15, height: 15 }} /> Back to Cases
-        </button>
+          display:'inline-flex', alignItems:'center', gap:8, padding:'10px 20px', borderRadius:10,
+          cursor:'pointer', background:'rgba(251,191,36,.08)', border:'1px solid rgba(251,191,36,.2)',
+          color:'rgba(251,191,36,.8)', fontWeight:800, fontFamily:'Nunito,sans-serif',
+        }}><ArrowLeft style={{ width:14, height:14 }} /> Back to Cases</button>
       </Link>
     </div>
   );
 
-  const canAfford = (user?.balance || 0) >= caseData.price;
+  const canAfford = (user?.balance || 0) >= (caseData?.price || 0);
+  const resultRs  = result ? rs(result.rarity) : null;
+  const items     = caseData.items || [];
 
   return (
     <div className="co" style={{
-      background: '#04000a', minHeight: '100vh',
-      marginLeft: -24, marginRight: -24,
-      padding: '28px 24px 80px',
+      background:'#04000a', minHeight:'100vh',
+      marginLeft:-24, marginRight:-24,
+      padding:'0 0 80px',
     }}>
       <style>{CSS}</style>
 
-      {/* ── Header ── */}
-      <motion.div
-        initial={{ opacity: 0, y: -14 }} animate={{ opacity: 1, y: 0 }}
-        style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 28 }}>
-        <Link to={createPageUrl('Cases')}>
-          <motion.button
-            whileHover={{ scale: 1.08 }} whileTap={{ scale: .94 }}
-            style={{
-              width: 38, height: 38, borderRadius: 10, border: 'none', cursor: 'pointer',
-              background: 'rgba(251,191,36,.08)', border: '1px solid rgba(251,191,36,.15)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              color: 'rgba(251,191,36,.7)',
-            }}>
-            <ArrowLeft style={{ width: 16, height: 16 }} />
-          </motion.button>
-        </Link>
+      {/* ══ HERO TOP SECTION ══ */}
+      <div style={{
+        position:'relative', overflow:'hidden',
+        background:'linear-gradient(180deg,#0e0020 0%,#07000f 100%)',
+        borderBottom:'1px solid rgba(251,191,36,.1)',
+        padding:'24px 24px 0',
+        marginBottom:0,
+      }}>
+        {/* Ambient */}
+        <div style={{
+          position:'absolute', inset:0, pointerEvents:'none',
+          background:'radial-gradient(ellipse 70% 60% at 50% -10%,rgba(168,85,247,.15) 0%,transparent 70%)',
+        }} />
+        <div style={{
+          position:'absolute', top:0, left:0, right:0, height:1,
+          background:'linear-gradient(90deg,transparent,#fbbf24,#a855f7,transparent)',
+        }} />
 
-        <div style={{ flex: 1 }}>
-          <h1 style={{
-            margin: 0, fontSize: 24, fontWeight: 900, lineHeight: 1.1,
-            background: 'linear-gradient(90deg,#fbbf24,#f59e0b 40%,#c084fc 75%,#a855f7)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-          }}>{caseData.name}</h1>
-          {caseData.description && (
-            <p style={{ margin: '3px 0 0', fontSize: 12, color: 'rgba(255,255,255,.3)', fontWeight: 600 }}>
-              {caseData.description}
-            </p>
+        {/* Back + title row */}
+        <div style={{ position:'relative', display:'flex', alignItems:'flex-start', gap:14, marginBottom:20 }}>
+          <Link to={createPageUrl('Cases')}>
+            <motion.button whileHover={{ scale:1.08, x:-2 }} whileTap={{ scale:.94 }} style={{
+              marginTop:3, width:34, height:34, borderRadius:9, border:'none', cursor:'pointer',
+              background:'rgba(251,191,36,.08)', border:'1px solid rgba(251,191,36,.15)',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              color:'rgba(251,191,36,.6)',
+            }}>
+              <ArrowLeft style={{ width:15, height:15 }} />
+            </motion.button>
+          </Link>
+
+          <div style={{ flex:1 }}>
+            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:3 }}>
+              {isDemo && (
+                <span style={{
+                  fontSize:9, fontWeight:800, letterSpacing:'.14em', textTransform:'uppercase',
+                  padding:'2px 8px', borderRadius:100,
+                  background:'rgba(168,85,247,.15)', border:'1px solid rgba(168,85,247,.3)',
+                  color:'#c084fc',
+                }}>DEMO MODE</span>
+              )}
+            </div>
+            <h1 className="shimmer-text" style={{ margin:0, fontSize:26, fontWeight:900, lineHeight:1.1 }}>
+              {caseData.name}
+            </h1>
+            {caseData.description && (
+              <p style={{ margin:'4px 0 0', fontSize:11, color:'rgba(255,255,255,.25)', fontWeight:600 }}>
+                {caseData.description}
+              </p>
+            )}
+          </div>
+
+          {/* Case image floating */}
+          {caseData.image_url && (
+            <div className="float-slow" style={{
+              width:70, height:70, flexShrink:0,
+              filter:'drop-shadow(0 0 20px rgba(251,191,36,.5)) drop-shadow(0 8px 24px rgba(0,0,0,.9))',
+            }}>
+              <img src={caseData.image_url} alt="" style={{ width:'100%', height:'100%', objectFit:'contain' }} />
+            </div>
           )}
         </div>
 
-        {/* Balance chip */}
+        {/* Price strip */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 7,
-          background: 'rgba(251,191,36,.08)', border: '1px solid rgba(251,191,36,.18)',
-          borderRadius: 10, padding: '7px 14px',
+          display:'flex', alignItems:'center', gap:16, paddingBottom:20,
         }}>
           <div style={{
-            width: 18, height: 18, borderRadius: '50%',
-            background: 'linear-gradient(135deg,#fbbf24,#f59e0b)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 10px rgba(251,191,36,.5)', flexShrink: 0,
+            display:'flex', alignItems:'center', gap:7,
+            background:'rgba(251,191,36,.08)', border:'1px solid rgba(251,191,36,.18)',
+            borderRadius:10, padding:'6px 14px',
           }}>
-            <span style={{ fontSize: 9, fontWeight: 900, color: '#000' }}>$</span>
+            <div style={{
+              width:18, height:18, borderRadius:'50%', flexShrink:0,
+              background:'linear-gradient(135deg,#fbbf24,#f59e0b)',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              boxShadow:'0 0 10px rgba(251,191,36,.5)',
+            }}>
+              <span style={{ fontSize:9, fontWeight:900, color:'#000' }}>$</span>
+            </div>
+            <span style={{ fontSize:14, fontWeight:900, color:'#fbbf24' }}>
+              {caseData.price?.toLocaleString()} coins
+            </span>
           </div>
-          <span style={{ fontSize: 13, fontWeight: 900, color: '#fbbf24' }}>
-            {(user?.balance || 0).toLocaleString()}
+          <span style={{ fontSize:11, color:'rgba(255,255,255,.2)', fontWeight:600 }}>
+            {caseData.total_opened ? `${caseData.total_opened.toLocaleString()} opened` : `${items.length} items inside`}
           </span>
         </div>
-      </motion.div>
+      </div>
 
-      {/* Gold accent line */}
-      <div style={{
-        height: 2, borderRadius: 2, marginBottom: 28,
-        background: 'linear-gradient(90deg,#fbbf24,#a855f7,transparent)',
-        width: 200,
-      }} />
+      <div style={{ padding:'0 24px' }}>
 
-      {/* ── Spinner ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .1 }}
-        style={{
-          position: 'relative', overflow: 'hidden', borderRadius: 16,
-          background: 'linear-gradient(145deg,#07000f,#100020)',
-          border: '1px solid rgba(251,191,36,.12)',
-          boxShadow: '0 0 0 1px rgba(251,191,36,.06), 0 16px 50px rgba(0,0,0,.7), 0 0 60px rgba(168,85,247,.1)',
-          marginBottom: 20,
+        {/* ══ SPINNER PANEL ══ */}
+        <div style={{
+          position:'relative', overflow:'hidden',
+          borderRadius:'0 0 16px 16px',
+          background:'linear-gradient(180deg,#0a0018 0%,#060010 100%)',
+          border:'1px solid rgba(251,191,36,.08)',
+          borderTop:'none',
+          marginBottom:20,
+          boxShadow:'0 16px 50px rgba(0,0,0,.6), 0 0 80px rgba(168,85,247,.06)',
         }}>
-        <div className="scan" />
-        <div style={{ padding: '4px 0' }}>
+          <div className="scan" />
           <CaseSpinner
-            items={caseData.items || []}
+            items={items}
             result={result}
             spinning={spinning}
             onComplete={handleSpinComplete}
           />
         </div>
-      </motion.div>
 
-      {/* ── Result card ── */}
-      <AnimatePresence>
-        {showResult && result && (() => {
-          const rs = getRarity(result.rarity);
-          return (
+        {/* ══ RESULT ══ */}
+        <AnimatePresence>
+          {showResult && result && resultRs && (
             <motion.div
               key="result"
-              initial={{ opacity: 0, scale: .88, y: 20 }}
-              animate={{ opacity: 1, scale: 1,  y: 0 }}
-              exit={{ opacity: 0, scale: .9, y: -10 }}
-              transition={{ type: 'spring', stiffness: 240, damping: 20 }}
+              initial={{ opacity:0, y:16, scale:.92 }}
+              animate={{ opacity:1, y:0, scale:1 }}
+              exit={{ opacity:0, y:-12, scale:.94 }}
+              transition={{ type:'spring', stiffness:260, damping:22 }}
               style={{
-                position: 'relative', overflow: 'hidden',
-                borderRadius: 16, marginBottom: 20,
-                background: 'linear-gradient(145deg,#07000f,#110022)',
-                border: `1px solid ${rs.color}40`,
-                boxShadow: `0 0 40px ${rs.glow}, 0 16px 50px rgba(0,0,0,.7)`,
-                padding: '32px 24px',
-                textAlign: 'center',
+                position:'relative', overflow:'hidden',
+                borderRadius:16, marginBottom:20,
+                background:`linear-gradient(145deg,#08001a,#110028)`,
+                border:`1px solid ${resultRs.color}35`,
+                boxShadow:`0 0 50px ${resultRs.glow}, 0 12px 40px rgba(0,0,0,.6)`,
+                padding:'28px 20px 24px',
               }}>
               <div className="scan" />
 
-              {/* Glow bg */}
+              {/* Glow blob */}
               <div style={{
-                position: 'absolute', inset: 0, pointerEvents: 'none',
-                background: `radial-gradient(ellipse 60% 50% at 50% 0%,${rs.glow.replace('.6',',.15')} 0%,transparent 70%)`,
+                position:'absolute', top:-40, left:'50%', transform:'translateX(-50%)',
+                width:200, height:200, borderRadius:'50%', pointerEvents:'none',
+                background:`radial-gradient(circle,${resultRs.glow.replace('.6','.18').replace('.5','.15').replace('.45','.13').replace('.4','.12').replace('.35','.1')} 0%,transparent 70%)`,
               }} />
 
-              {/* Item image */}
-              <div className="float-item" style={{ position: 'relative', zIndex: 2, marginBottom: 16 }}>
+              {/* Demo watermark */}
+              {isDemo && (
                 <div style={{
-                  width: 100, height: 100, borderRadius: 20, margin: '0 auto',
-                  background: rs.bg,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: `0 0 30px ${rs.glow}, 0 8px 32px rgba(0,0,0,.6)`,
-                  border: `1px solid ${rs.color}50`,
-                }}>
-                  {result.image
-                    ? <img src={result.image} alt="" style={{ width: 80, height: 80, objectFit: 'contain' }} />
-                    : <Sparkles style={{ width: 40, height: 40, color: rs.color }} />
-                  }
+                  position:'absolute', top:10, right:12,
+                  fontSize:9, fontWeight:800, letterSpacing:'.14em', textTransform:'uppercase',
+                  color:'rgba(192,132,252,.5)', border:'1px solid rgba(192,132,252,.2)',
+                  borderRadius:6, padding:'2px 7px',
+                }}>DEMO</div>
+              )}
+
+              {/* Particles */}
+              {showParticles && <Particles color={resultRs.color} count={20} />}
+
+              <div className="win-burst" style={{ position:'relative', zIndex:2, textAlign:'center' }}>
+                {/* Big item display */}
+                <div style={{ position:'relative', width:110, height:110, margin:'0 auto 16px' }}>
+                  <div style={{ position:'relative', color: resultRs.color }}>
+                    <div className="pulse-ring" />
+                  </div>
+                  <div style={{
+                    width:110, height:110, borderRadius:22,
+                    background: resultRs.bg,
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    boxShadow:`0 0 40px ${resultRs.glow}, 0 8px 30px rgba(0,0,0,.6)`,
+                    border:`1px solid ${resultRs.color}50`,
+                  }}>
+                    {result.image
+                      ? <img src={result.image} alt="" style={{ width:85, height:85, objectFit:'contain' }} />
+                      : <Sparkles style={{ width:44, height:44, color:resultRs.color }} />
+                    }
+                  </div>
                 </div>
-              </div>
 
-              {/* Rarity badge */}
-              <div style={{
-                display: 'inline-block', marginBottom: 10,
-                padding: '3px 12px', borderRadius: 100,
-                background: rs.bg, border: `1px solid ${rs.color}60`,
-                fontSize: 10, fontWeight: 800, letterSpacing: '.14em',
-                textTransform: 'uppercase', color: rs.color,
-              }}>{result.rarity}</div>
-
-              <h2 style={{ margin: '0 0 10px', fontSize: 22, fontWeight: 900, color: '#fff' }}>{result.name}</h2>
-
-              {/* Winnings */}
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: 8,
-                background: 'rgba(251,191,36,.1)', border: '1px solid rgba(251,191,36,.25)',
-                borderRadius: 12, padding: '10px 20px',
-              }}>
+                {/* Rarity */}
                 <div style={{
-                  width: 22, height: 22, borderRadius: '50%',
-                  background: 'linear-gradient(135deg,#fbbf24,#f59e0b)',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: '0 0 10px rgba(251,191,36,.5)',
+                  display:'inline-flex', alignItems:'center', gap:6, marginBottom:8,
+                  padding:'3px 12px', borderRadius:100,
+                  background:resultRs.bg, border:`1px solid ${resultRs.color}50`,
                 }}>
-                  <span style={{ fontSize: 10, fontWeight: 900, color: '#000' }}>$</span>
+                  <div style={{ width:6, height:6, borderRadius:'50%', background:resultRs.color, boxShadow:`0 0 6px ${resultRs.color}` }} />
+                  <span style={{ fontSize:10, fontWeight:800, letterSpacing:'.14em', textTransform:'uppercase', color:resultRs.color }}>
+                    {resultRs.label}
+                  </span>
                 </div>
-                <span style={{ fontSize: 18, fontWeight: 900, color: '#fbbf24' }}>
-                  +{result.value?.toLocaleString()} coins added
-                </span>
+
+                <h2 style={{ margin:'0 0 6px', fontSize:20, fontWeight:900, color:'#fff' }}>{result.name}</h2>
+                <p style={{ margin:0, fontSize:13, fontWeight:700, color:'rgba(255,255,255,.35)' }}>
+                  {isDemo ? 'Demo spin — no coins spent' : `Worth ${result.value?.toLocaleString()} coins`}
+                </p>
               </div>
             </motion.div>
-          );
-        })()}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>
 
-      {/* ── Action buttons ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .2 }}
-        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 28 }}>
+        {/* ══ ACTION BUTTONS ══ */}
+        <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:28 }}>
 
-        {showResult ? (
-          <motion.button
-            whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: .97 }}
-            onClick={handleTryAgain}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 9,
-              padding: '14px 32px', borderRadius: 12, border: 'none', cursor: 'pointer',
-              fontSize: 15, fontWeight: 900, fontFamily: 'Nunito,sans-serif', color: '#000',
-              background: 'linear-gradient(135deg,#fbbf24 0%,#f59e0b 50%,#fde68a 100%)',
-              boxShadow: '0 0 40px rgba(251,191,36,.45), 0 4px 20px rgba(0,0,0,.5)',
-            }}>
-            <RefreshCw style={{ width: 17, height: 17 }} />
-            Open Again — {caseData.price?.toLocaleString()} coins
-          </motion.button>
-        ) : (
-          <motion.button
-            whileHover={canAfford && !spinning ? { scale: 1.04, y: -2 } : {}}
-            whileTap={canAfford && !spinning ? { scale: .97 } : {}}
-            onClick={handleOpen}
-            disabled={spinning || !canAfford}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 9,
-              padding: '16px 36px', borderRadius: 12, border: 'none',
-              cursor: spinning || !canAfford ? 'not-allowed' : 'pointer',
-              fontSize: 16, fontWeight: 900, fontFamily: 'Nunito,sans-serif',
-              color: canAfford ? '#000' : 'rgba(255,255,255,.3)',
-              background: canAfford
-                ? 'linear-gradient(135deg,#fbbf24 0%,#f59e0b 50%,#fde68a 100%)'
-                : 'rgba(255,255,255,.06)',
-              boxShadow: canAfford ? '0 0 40px rgba(251,191,36,.45), 0 4px 20px rgba(0,0,0,.5)' : 'none',
-              border: canAfford ? 'none' : '1px solid rgba(255,255,255,.08)',
-              opacity: spinning ? .7 : 1,
-              transition: 'all .3s',
-            }}>
-            {spinning
-              ? <div style={{ width: 18, height: 18, borderRadius: '50%', border: '2px solid rgba(0,0,0,.3)', borderTopColor: '#000', animation: 'spin 1s linear infinite' }} />
-              : <Box style={{ width: 18, height: 18 }} />
-            }
-            {spinning ? 'Opening…' : `Open Case — ${caseData.price?.toLocaleString()} coins`}
-          </motion.button>
-        )}
-
-        {!canAfford && !spinning && !showResult && (
-          <motion.p initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-            style={{ fontSize: 12, color: 'rgba(239,68,68,.7)', fontWeight: 700, textAlign: 'center' }}>
-            Not enough coins.{' '}
-            <Link to={createPageUrl('Deposit')} style={{ color: '#c084fc', textDecoration: 'underline' }}>
-              Deposit more
-            </Link>
-          </motion.p>
-        )}
-      </motion.div>
-
-      {/* ── Case Contents ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: .3 }}>
-
-        {/* Section header */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-          <div style={{ width: 3, height: 20, borderRadius: 2, background: 'linear-gradient(to bottom,#fbbf24,#a855f7)' }} />
-          <Percent style={{ width: 15, height: 15, color: '#fbbf24' }} />
-          <span style={{ fontSize: 15, fontWeight: 900, color: '#fff' }}>Case Contents</span>
-          <span style={{ fontSize: 11, color: 'rgba(251,191,36,.4)', fontWeight: 700, marginLeft: 4 }}>
-            {(caseData.items || []).length} items
-          </span>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10 }}>
-          {(caseData.items || []).map((item, i) => {
-            const rs = getRarity(item.rarity);
-            const isWon = item.name === result?.name && showResult;
-            const isHov = hovItem === i;
-
-            return (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: .3 + i * .03 }}
-                onMouseEnter={() => setHovItem(i)}
-                onMouseLeave={() => setHovItem(null)}
-                className="card-lift shim"
+          {showResult ? (
+            <motion.button
+              className="open-btn"
+              whileTap={{ scale:.97 }}
+              onClick={handleTryAgain}
+              style={{
+                width:'100%', padding:'15px 0', borderRadius:13, border:'none', cursor:'pointer',
+                fontSize:15, fontWeight:900, fontFamily:'Nunito,sans-serif',
+                color: isDemo ? '#fff' : '#000',
+                background: isDemo
+                  ? 'linear-gradient(135deg,#4c1d95,#7c3aed)'
+                  : 'linear-gradient(135deg,#fbbf24,#f59e0b,#fde68a)',
+                boxShadow: isDemo
+                  ? '0 0 30px rgba(124,58,237,.4), 0 4px 16px rgba(0,0,0,.5)'
+                  : '0 0 40px rgba(251,191,36,.45), 0 4px 16px rgba(0,0,0,.5)',
+                display:'flex', alignItems:'center', justifyContent:'center', gap:9,
+              }}>
+              <RefreshCw style={{ width:16, height:16 }} />
+              {isDemo ? 'Spin Again (Demo)' : `Open Again — ${caseData.price?.toLocaleString()} coins`}
+            </motion.button>
+          ) : (
+            <>
+              {/* Real open */}
+              <motion.button
+                className="open-btn"
+                onClick={handleOpen}
+                disabled={spinning || !canAfford}
                 style={{
-                  position: 'relative', overflow: 'hidden',
-                  borderRadius: 12, padding: '14px 12px',
-                  background: isWon
-                    ? `linear-gradient(145deg,${rs.bg.split(',')[0].replace('linear-gradient(135deg,','').replace('(','').replace(')','')},#1a0d00)`
-                    : 'linear-gradient(145deg,#07000f,#0e001a)',
-                  border: `1px solid ${isWon ? rs.color + '60' : isHov ? 'rgba(251,191,36,.2)' : 'rgba(251,191,36,.06)'}`,
-                  boxShadow: isWon ? `0 0 20px ${rs.glow}` : undefined,
-                  textAlign: 'center',
-                  transition: 'border-color .25s',
-                  cursor: 'default',
+                  width:'100%', padding:'16px 0', borderRadius:13, border:'none',
+                  cursor: spinning || !canAfford ? 'not-allowed' : 'pointer',
+                  fontSize:16, fontWeight:900, fontFamily:'Nunito,sans-serif',
+                  color: canAfford ? '#000' : 'rgba(255,255,255,.25)',
+                  background: canAfford
+                    ? 'linear-gradient(135deg,#fbbf24,#f59e0b,#fde68a)'
+                    : 'rgba(255,255,255,.05)',
+                  border: canAfford ? 'none' : '1px solid rgba(255,255,255,.07)',
+                  boxShadow: canAfford ? '0 0 40px rgba(251,191,36,.4), 0 4px 20px rgba(0,0,0,.5)' : 'none',
+                  opacity: spinning ? .7 : 1,
+                  display:'flex', alignItems:'center', justifyContent:'center', gap:9,
+                  transition:'background .3s, box-shadow .3s, color .3s',
                 }}>
-                <div className="scan" />
+                {spinning && !isDemo
+                  ? <div style={{ width:17, height:17, borderRadius:'50%', border:'2.5px solid rgba(0,0,0,.25)', borderTopColor:'#000', animation:'spin-loader 1s linear infinite' }} />
+                  : <Zap style={{ width:17, height:17 }} />
+                }
+                {spinning && !isDemo ? 'Opening…' : `Open Case — ${caseData.price?.toLocaleString()} coins`}
+              </motion.button>
 
-                {/* Won badge */}
-                {isWon && (
-                  <div style={{
-                    position: 'absolute', top: 8, right: 8,
-                    fontSize: 8, fontWeight: 800, letterSpacing: '.12em',
-                    textTransform: 'uppercase', padding: '2px 7px', borderRadius: 5,
-                    background: 'linear-gradient(135deg,#fbbf24,#f59e0b)', color: '#000',
-                    boxShadow: '0 0 10px rgba(251,191,36,.5)', zIndex: 3,
-                  }}>WON</div>
-                )}
-
-                {/* Item image */}
-                <div style={{
-                  width: 52, height: 52, borderRadius: 12, margin: '0 auto 10px',
-                  background: rs.bg,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: isHov || isWon ? `0 0 18px ${rs.glow}` : `0 0 8px ${rs.glow.replace('.4',',.15').replace('.5',',.2').replace('.6',',.2')}`,
-                  border: `1px solid ${rs.color}30`,
-                  transition: 'box-shadow .25s',
+              {/* Demo spin */}
+              <motion.button
+                className="open-btn demo-badge-pulse"
+                onClick={handleDemo}
+                disabled={spinning}
+                style={{
+                  width:'100%', padding:'12px 0', borderRadius:13,
+                  cursor: spinning ? 'not-allowed' : 'pointer',
+                  fontSize:13, fontWeight:800, fontFamily:'Nunito,sans-serif',
+                  color:'rgba(192,132,252,.9)',
+                  background:'rgba(168,85,247,.08)',
+                  border:'1px solid rgba(168,85,247,.22)',
+                  opacity: spinning ? .5 : 1,
+                  display:'flex', alignItems:'center', justifyContent:'center', gap:8,
+                  transition:'opacity .2s',
                 }}>
-                  {item.image
-                    ? <img src={item.image} alt="" style={{ width: 40, height: 40, objectFit: 'contain' }} />
-                    : <Sparkles style={{ width: 20, height: 20, color: rs.color }} />
-                  }
-                </div>
+                <Eye style={{ width:15, height:15 }} />
+                Demo Spin — Free Preview
+              </motion.button>
+            </>
+          )}
 
-                {/* Rarity pip */}
-                <div style={{
-                  display: 'inline-block', marginBottom: 5,
-                  width: 8, height: 8, borderRadius: '50%',
-                  background: rs.color, boxShadow: `0 0 6px ${rs.color}`,
-                }} />
-
-                <p style={{
-                  margin: '0 0 4px', fontSize: 11, fontWeight: 800, color: '#fff',
-                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                }}>{item.name}</p>
-
-                <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 900, color: '#fbbf24' }}>
-                  {item.value?.toLocaleString()}
-                </p>
-
-                <p style={{ margin: 0, fontSize: 10, fontWeight: 700, color: 'rgba(255,255,255,.2)' }}>
-                  {item.drop_rate}% chance
-                </p>
-
-                {/* Hover top line */}
-                <motion.div
-                  animate={{ opacity: isHov || isWon ? 1 : 0 }}
-                  style={{
-                    position: 'absolute', top: 0, left: 0, right: 0, height: 2,
-                    background: `linear-gradient(90deg,transparent,${rs.color},transparent)`,
-                    pointerEvents: 'none',
-                  }} />
-              </motion.div>
-            );
-          })}
+          {!canAfford && !spinning && !showResult && (
+            <p style={{ textAlign:'center', fontSize:11, color:'rgba(239,68,68,.6)', fontWeight:700, margin:0 }}>
+              Not enough coins.{' '}
+              <Link to={createPageUrl('Deposit')} style={{ color:'#c084fc', textDecoration:'underline' }}>
+                Deposit more
+              </Link>
+            </p>
+          )}
         </div>
-      </motion.div>
+
+        {/* ══ CONTENTS / ODDS TABS ══ */}
+        <div>
+          {/* Tab bar */}
+          <div style={{ display:'flex', gap:0, marginBottom:16, background:'rgba(255,255,255,.03)', borderRadius:10, padding:3 }}>
+            {[['contents','Contents'], ['odds','Odds']].map(([id, label]) => (
+              <button key={id} onClick={() => setActiveTab(id)} style={{
+                flex:1, padding:'8px 0', borderRadius:8, border:'none', cursor:'pointer',
+                fontSize:12, fontWeight:800, fontFamily:'Nunito,sans-serif',
+                transition:'all .2s',
+                background: activeTab===id ? 'rgba(251,191,36,.12)' : 'transparent',
+                color: activeTab===id ? '#fbbf24' : 'rgba(255,255,255,.3)',
+                boxShadow: activeTab===id ? 'inset 0 0 0 1px rgba(251,191,36,.2)' : 'none',
+              }}>{label}</button>
+            ))}
+          </div>
+
+          {/* Section label */}
+          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:14 }}>
+            <div style={{ width:3, height:18, borderRadius:2, background:'linear-gradient(to bottom,#fbbf24,#a855f7)' }} />
+            <Percent style={{ width:13, height:13, color:'#fbbf24' }} />
+            <span style={{ fontSize:13, fontWeight:900, color:'rgba(255,255,255,.7)' }}>
+              {activeTab === 'contents' ? `${items.length} possible items` : 'Drop rates'}
+            </span>
+          </div>
+
+          {/* Grid */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:10 }}>
+            {items.map((item, i) => {
+              const itemRs  = rs(item.rarity);
+              const isWon   = item.name === result?.name && showResult;
+              const isHov   = hovItem === i;
+
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ opacity:0, y:12 }}
+                  animate={{ opacity:1, y:0 }}
+                  transition={{ delay: i * .025 }}
+                  className="item-card"
+                  onMouseEnter={() => setHovItem(i)}
+                  onMouseLeave={() => setHovItem(null)}
+                  style={{
+                    position:'relative', overflow:'hidden',
+                    borderRadius:12, padding:'14px 12px',
+                    background: isWon
+                      ? `linear-gradient(145deg,#0f0010,#180028)`
+                      : 'linear-gradient(145deg,#07000f,#0d0018)',
+                    border:`1px solid ${isWon ? itemRs.color+'55' : isHov ? 'rgba(251,191,36,.18)' : 'rgba(251,191,36,.06)'}`,
+                    boxShadow: isWon ? `0 0 22px ${itemRs.glow}` : undefined,
+                    textAlign:'center',
+                    cursor:'default',
+                    transition:'border-color .25s, box-shadow .25s',
+                  }}>
+                  <div className="scan" />
+
+                  {/* Won badge */}
+                  {isWon && (
+                    <div style={{
+                      position:'absolute', top:7, right:7,
+                      fontSize:8, fontWeight:800, letterSpacing:'.12em', textTransform:'uppercase',
+                      padding:'2px 6px', borderRadius:5,
+                      background:'linear-gradient(135deg,#fbbf24,#f59e0b)', color:'#000',
+                      boxShadow:'0 0 10px rgba(251,191,36,.5)', zIndex:3,
+                    }}>WON</div>
+                  )}
+
+                  {activeTab === 'contents' ? (
+                    <>
+                      {/* Icon */}
+                      <div style={{
+                        width:52, height:52, borderRadius:12, margin:'0 auto 10px',
+                        background: itemRs.bg,
+                        display:'flex', alignItems:'center', justifyContent:'center',
+                        boxShadow: isHov || isWon
+                          ? `0 0 20px ${itemRs.glow}`
+                          : `0 0 8px ${itemRs.glow.replace('.4','.12').replace('.5','.15').replace('.6','.15')}`,
+                        border:`1px solid ${itemRs.color}25`,
+                        transition:'box-shadow .25s',
+                      }}>
+                        {item.image
+                          ? <img src={item.image} alt="" style={{ width:38, height:38, objectFit:'contain' }} />
+                          : <Sparkles style={{ width:18, height:18, color:itemRs.color }} />
+                        }
+                      </div>
+                      <div style={{
+                        display:'inline-block', marginBottom:6,
+                        width:7, height:7, borderRadius:'50%',
+                        background: itemRs.color, boxShadow:`0 0 5px ${itemRs.color}`,
+                      }} />
+                      <p style={{ margin:'0 0 3px', fontSize:11, fontWeight:800, color:'rgba(255,255,255,.8)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {item.name}
+                      </p>
+                      <p style={{ margin:0, fontSize:12, fontWeight:900, color:'#fbbf24' }}>
+                        {item.value?.toLocaleString()}
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      {/* Odds view */}
+                      <div style={{ display:'flex', alignItems:'center', gap:8, textAlign:'left', padding:'2px 0' }}>
+                        <div style={{ width:8, height:8, borderRadius:'50%', flexShrink:0, background:itemRs.color, boxShadow:`0 0 5px ${itemRs.color}` }} />
+                        <span style={{ flex:1, fontSize:10, fontWeight:700, color:'rgba(255,255,255,.6)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                          {item.name}
+                        </span>
+                        <span style={{ fontSize:11, fontWeight:900, color: item.drop_rate > 20 ? '#34d399' : item.drop_rate > 5 ? '#fbbf24' : '#c084fc', flexShrink:0 }}>
+                          {item.drop_rate}%
+                        </span>
+                      </div>
+                      {/* Bar */}
+                      <div style={{ marginTop:8, height:3, background:'rgba(255,255,255,.05)', borderRadius:99, overflow:'hidden' }}>
+                        <div style={{
+                          height:'100%', width:`${Math.min(100, item.drop_rate * 2.5)}%`,
+                          background:`linear-gradient(90deg,${itemRs.color},${itemRs.color}99)`,
+                          borderRadius:99,
+                          boxShadow:`0 0 6px ${itemRs.color}`,
+                          transition:'width .5s ease',
+                        }} />
+                      </div>
+                    </>
+                  )}
+
+                  {/* Hover top line */}
+                  <motion.div animate={{ opacity: isHov || isWon ? 1 : 0 }} style={{
+                    position:'absolute', top:0, left:0, right:0, height:2,
+                    background:`linear-gradient(90deg,transparent,${itemRs.color},transparent)`,
+                    pointerEvents:'none',
+                  }} />
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
