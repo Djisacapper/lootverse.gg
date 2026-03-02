@@ -18,7 +18,7 @@ export default function Leaderboard() {
     setError(null);
     try {
       // Call the syncLeaderboard function which runs with service role (no 403)
-      const result = await base44.functions.syncLeaderboard();
+      const result = await base44.functions.invoke('syncLeaderboard', {});
       // result.entries is the top 10 array returned by the function
       setTop10(result.entries || []);
     } catch (err) {
