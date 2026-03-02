@@ -65,4 +65,3 @@ Deno.serve(async (req) => {
     console.error('Leaderboard sync error:', error);
     return Response.json({ error: error.message }, { status: 500 });
   }
-});
