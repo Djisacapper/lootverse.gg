@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Zap, Send, Crown, Shield, Smile, X, Sparkles } from 'lucide-react';
+import { MessageCircle, Zap, Send, Crown, Shield, Smile, X, Sparkles, Package } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
 import UserStatsModal from './UserStatsModal';
@@ -19,29 +19,16 @@ const CSS = `
   animation:scan 7s linear infinite; pointer-events:none;
 }
 
-@keyframes drop-in {
-  0%  { transform: translateX(16px); opacity:0; }
-  100%{ transform: translateX(0);    opacity:1; }
-}
-.drop-in { animation: drop-in .35s cubic-bezier(.22,1,.36,1) forwards; }
-
-@keyframes msg-in {
-  0%  { transform: translateY(8px); opacity:0; }
-  100%{ transform: translateY(0);   opacity:1; }
-}
-.msg-in { animation: msg-in .28s ease-out forwards; }
-
-@keyframes tab-glow {
-  0%,100%{ box-shadow: 0 0 0 0 rgba(251,191,36,0); }
-  50%    { box-shadow: 0 2px 12px rgba(251,191,36,.2); }
-}
-.tab-active-chat { animation: tab-glow 3s ease-in-out infinite; }
-
 @keyframes pulse-dot {
   0%,100%{ opacity:1; transform:scale(1); }
   50%    { opacity:.5; transform:scale(.7); }
 }
 .live-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
+
+@keyframes drop-slide {
+  0%  { transform: translateX(16px); opacity:0; }
+  100%{ transform: translateX(0);    opacity:1; }
+}
 
 .msg-input {
   background: rgba(251,191,36,.05);
@@ -71,7 +58,7 @@ const CSS = `
 .send-btn:active { transform: scale(.94); }
 .send-btn:disabled { opacity:.35; cursor:not-allowed; box-shadow:none; transform:none; }
 
-.emoji-grid button:hover { background: rgba(251,191,36,.1); border-radius: 6px; }
+.emoji-btn:hover { background: rgba(251,191,36,.1) !important; }
 
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-thumb { background: rgba(251,191,36,.12); border-radius: 3px; }
@@ -93,35 +80,43 @@ function EmojiPicker({ onPick }) {
   const ref = useRef(null);
 
   useEffect(() => {
-    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
   }, []);
 
   return (
     <div ref={ref} style={{ position:'relative', flexShrink:0 }}>
-      <button type="button" onClick={() => setOpen(v => !v)} style={{
-        width:28, height:28, borderRadius:8, border:'none', cursor:'pointer',
-        background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.07)',
-        display:'flex', alignItems:'center', justifyContent:'center',
-        color:'rgba(255,255,255,.3)', transition:'all .2s',
-      }}>
+      <button
+        type="button"
+        className="emoji-btn"
+        onClick={() => setOpen(v => !v)}
+        style={{
+          width:28, height:28, borderRadius:8, border:'1px solid rgba(255,255,255,.07)',
+          cursor:'pointer', background:'rgba(255,255,255,.04)',
+          display:'flex', alignItems:'center', justifyContent:'center',
+          color:'rgba(255,255,255,.3)', transition:'all .2s',
+        }}>
         <Smile style={{ width:13, height:13 }} />
       </button>
       <AnimatePresence>
         {open && (
-          <motion.div initial={{ opacity:0, scale:.88, y:4 }} animate={{ opacity:1, scale:1, y:0 }} exit={{ opacity:0, scale:.88 }}
-            className="emoji-grid" style={{
+          <motion.div
+            initial={{ opacity:0, scale:.88, y:4 }}
+            animate={{ opacity:1, scale:1, y:0 }}
+            exit={{ opacity:0, scale:.88 }}
+            style={{
               position:'absolute', bottom:'calc(100% + 8px)', right:0,
               background:'linear-gradient(145deg,#0e001a,#140025)',
               border:'1px solid rgba(251,191,36,.15)',
-              borderRadius:12, padding:10,
+              borderRadius:12, padding:10, zIndex:100,
               display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:3,
-              width:160, zIndex:100,
-              boxShadow:'0 8px 32px rgba(0,0,0,.7)',
+              width:160, boxShadow:'0 8px 32px rgba(0,0,0,.7)',
             }}>
             {EMOJIS.map(e => (
-              <button key={e} type="button" onClick={() => { onPick(e); setOpen(false); }}
+              <button
+                key={e} type="button"
+                onClick={() => { onPick(e); setOpen(false); }}
                 style={{ fontSize:16, padding:'4px 2px', border:'none', background:'transparent', cursor:'pointer', borderRadius:6, transition:'background .15s' }}>
                 {e}
               </button>
@@ -166,19 +161,26 @@ export default function LiveChat({ onClose }) {
       }
     });
 
-    base44.entities.UserInventory.list('-created_date', 10).then(d =>
-      setRecentDrops(d.filter(i => i.status === 'owned' && ['case_opening','battle_win'].includes(i.source)))
-    );
+    // Load recent drops — fetch full inventory items with item image data
+    base44.entities.UserInventory.list('-created_date', 20).then(data => {
+      const drops = data.filter(i =>
+        i.status === 'owned' && ['case_opening', 'battle_win'].includes(i.source)
+      );
+      setRecentDrops(drops);
+    });
 
     const unsubInv = base44.entities.UserInventory.subscribe(event => {
-      if (event.type === 'create' && ['case_opening','battle_win'].includes(event.data.source))
-        setRecentDrops(prev => [event.data, ...prev].slice(0, 20));
+      if (event.type === 'create' && ['case_opening', 'battle_win'].includes(event.data.source)) {
+        setRecentDrops(prev => [event.data, ...prev].slice(0, 30));
+      }
     });
 
     return () => { unsubChat(); unsubInv(); };
   }, []);
 
-  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages]);
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior:'smooth' });
+  }, [messages]);
 
   const handleSend = async e => {
     e.preventDefault();
@@ -206,43 +208,40 @@ export default function LiveChat({ onClose }) {
       <div className="lc-scan" />
 
       {selectedUser && (
-        <UserStatsModal userName={selectedUser.user} userEmail={selectedUser.user}
-          onClose={() => setSelectedUser(null)} currentUser={user} />
+        <UserStatsModal
+          userName={selectedUser.user}
+          userEmail={selectedUser.user}
+          onClose={() => setSelectedUser(null)}
+          currentUser={user}
+        />
       )}
 
-      {/* ── Header ── */}
-      <div style={{
-        position:'relative', zIndex:3,
-        borderBottom:'1px solid rgba(251,191,36,.08)',
-        background:'rgba(0,0,0,.2)',
-      }}>
-        {/* Top accent line */}
+      {/* ── Header tabs ── */}
+      <div style={{ position:'relative', zIndex:3, borderBottom:'1px solid rgba(251,191,36,.08)', background:'rgba(0,0,0,.2)' }}>
         <div style={{ height:2, background:'linear-gradient(90deg,transparent,#fbbf24,#a855f7,transparent)' }} />
-
         <div style={{ display:'flex', alignItems:'center', padding:'0 4px' }}>
-          {/* Chat tab */}
-          <button onClick={() => setTab('chat')} className={tab==='chat' ? 'tab-active-chat' : ''} style={{
+
+          <button onClick={() => setTab('chat')} style={{
             flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5,
             padding:'11px 0', border:'none', cursor:'pointer', background:'transparent',
             borderBottom: tab==='chat' ? '2px solid #fbbf24' : '2px solid transparent',
             color: tab==='chat' ? '#fbbf24' : 'rgba(255,255,255,.28)',
-            fontSize:11, fontWeight:800, fontFamily:'Nunito,sans-serif',
-            transition:'all .2s',
+            fontSize:11, fontWeight:800, fontFamily:'Nunito,sans-serif', transition:'all .2s',
           }}>
             <MessageCircle style={{ width:13, height:13 }} />
             Chat
           </button>
 
-          {/* Live Drops tab */}
           <button onClick={() => setTab('drops')} style={{
             flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5,
             padding:'11px 0', border:'none', cursor:'pointer', background:'transparent',
             borderBottom: tab==='drops' ? '2px solid #a855f7' : '2px solid transparent',
             color: tab==='drops' ? '#c084fc' : 'rgba(255,255,255,.28)',
-            fontSize:11, fontWeight:800, fontFamily:'Nunito,sans-serif',
-            transition:'all .2s',
+            fontSize:11, fontWeight:800, fontFamily:'Nunito,sans-serif', transition:'all .2s',
           }}>
-            {tab==='drops' && <div className="live-dot" style={{ width:5, height:5, borderRadius:'50%', background:'#a855f7', boxShadow:'0 0 6px #a855f7' }} />}
+            {tab==='drops' && (
+              <div className="live-dot" style={{ width:5, height:5, borderRadius:'50%', background:'#a855f7', boxShadow:'0 0 6px #a855f7' }} />
+            )}
             <Zap style={{ width:13, height:13 }} />
             Live Drops
           </button>
@@ -268,7 +267,10 @@ export default function LiveChat({ onClose }) {
               {messages.map(msg => {
                 const role = userRoles[msg.user];
                 return (
-                  <motion.div key={msg.id} initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }}
+                  <motion.div
+                    key={msg.id}
+                    initial={{ opacity:0, y:6 }}
+                    animate={{ opacity:1, y:0 }}
                     style={{ display:'flex', alignItems:'flex-start', gap:8 }}>
 
                     {/* Avatar */}
@@ -278,7 +280,6 @@ export default function LiveChat({ onClose }) {
                       overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center',
                       fontSize:10, fontWeight:900, color:'#000',
                       border:'1px solid rgba(251,191,36,.2)',
-                      boxShadow:'0 0 8px rgba(251,191,36,.15)',
                     }}>
                       {msg.avatar_url
                         ? <img src={msg.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
@@ -286,9 +287,7 @@ export default function LiveChat({ onClose }) {
                     </div>
 
                     <div style={{ flex:1, minWidth:0 }}>
-                      {/* Name row */}
                       <div style={{ display:'flex', alignItems:'center', gap:4, marginBottom:3 }}>
-                        {/* Level badge */}
                         <span style={{
                           fontSize:8, fontWeight:900, padding:'1px 4px', borderRadius:4,
                           background:'rgba(168,85,247,.2)', border:'1px solid rgba(168,85,247,.3)',
@@ -299,28 +298,25 @@ export default function LiveChat({ onClose }) {
                           fontSize:11, fontWeight:800, background:'none', border:'none', cursor:'pointer', padding:0,
                           color: msg.isMe ? '#fbbf24' : 'rgba(255,255,255,.65)',
                           overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
-                          maxWidth:110, fontFamily:'Nunito,sans-serif',
-                          transition:'color .15s',
+                          maxWidth:110, fontFamily:'Nunito,sans-serif', transition:'color .15s',
                         }}>{msg.user}</button>
 
-                        {role === 'owner' && <Crown style={{ width:10, height:10, color:'#fbbf24', flexShrink:0 }} title="Owner" />}
-                        {role === 'admin' && <Crown style={{ width:10, height:10, color:'#c084fc', flexShrink:0 }} title="Admin" />}
-                        {role === 'mod'   && <Shield style={{ width:10, height:10, color:'#60a5fa', flexShrink:0 }} title="Mod" />}
+                        {role === 'owner' && <Crown style={{ width:10, height:10, color:'#fbbf24', flexShrink:0 }} />}
+                        {role === 'admin' && <Crown style={{ width:10, height:10, color:'#c084fc', flexShrink:0 }} />}
+                        {role === 'mod'   && <Shield style={{ width:10, height:10, color:'#60a5fa', flexShrink:0 }} />}
 
                         <span style={{ marginLeft:'auto', fontSize:8, fontWeight:600, color:'rgba(255,255,255,.18)', flexShrink:0 }}>
                           {msg.time}
                         </span>
                       </div>
 
-                      {/* Message bubble */}
                       <div style={{
                         fontSize:11, fontWeight:600, lineHeight:1.5,
                         color:'rgba(255,255,255,.6)',
                         background:'rgba(255,255,255,.03)',
                         border:'1px solid rgba(255,255,255,.05)',
                         borderRadius:'0 8px 8px 8px',
-                        padding:'6px 9px',
-                        wordBreak:'break-word',
+                        padding:'6px 9px', wordBreak:'break-word',
                       }}>
                         {msg.text}
                       </div>
@@ -361,67 +357,95 @@ export default function LiveChat({ onClose }) {
             <div style={{ textAlign:'center', paddingTop:50 }}>
               <Sparkles style={{ width:28, height:28, color:'rgba(251,191,36,.15)', margin:'0 auto 10px', display:'block' }} />
               <p style={{ fontSize:11, color:'rgba(255,255,255,.15)', fontWeight:600 }}>No drops yet</p>
+              <p style={{ fontSize:10, color:'rgba(255,255,255,.1)', fontWeight:600 }}>Open cases to see drops here</p>
             </div>
           ) : (
             <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
               {recentDrops.map((drop, i) => {
                 const r = rs(drop.rarity);
+                // item_image_url is stored on UserInventory, fallback to item_image
+                const imgSrc = drop.item_image_url || drop.item_image || drop.image_url || drop.image || null;
+
                 return (
-                  <motion.div key={drop.id || i} className="drop-in"
-                    initial={{ opacity:0, x:14 }} animate={{ opacity:1, x:0 }}
+                  <motion.div
+                    key={drop.id || i}
+                    initial={{ opacity:0, x:14 }}
+                    animate={{ opacity:1, x:0 }}
                     transition={{ delay: i * .03 }}
                     style={{
                       display:'flex', alignItems:'center', gap:9,
                       padding:'9px 10px', borderRadius:11,
                       background:'linear-gradient(145deg,#07000f,#0e001a)',
                       border:`1px solid ${r.color}20`,
-                      boxShadow:`0 0 14px ${r.glow.replace('.3','.06').replace('.35','.06').replace('.4','.06').replace('.45','.06').replace('.5','.07')}`,
                       position:'relative', overflow:'hidden',
                     }}>
 
-                    {/* Left glow bar */}
+                    {/* Left rarity bar */}
                     <div style={{
                       position:'absolute', left:0, top:0, bottom:0, width:2, borderRadius:'2px 0 0 2px',
                       background:`linear-gradient(to bottom,${r.color},${r.color}44)`,
                       boxShadow:`0 0 6px ${r.color}`,
                     }} />
 
-                    {/* Rarity icon */}
+                    {/* Item image or fallback icon */}
                     <div style={{
-                      width:32, height:32, borderRadius:9, flexShrink:0,
+                      width:38, height:38, borderRadius:9, flexShrink:0,
                       background:`${r.color}15`, border:`1px solid ${r.color}30`,
                       display:'flex', alignItems:'center', justifyContent:'center',
-                      boxShadow:`0 0 10px ${r.glow.replace('.3','.2').replace('.35','.2').replace('.4','.2').replace('.45','.2').replace('.5','.2')}`,
+                      overflow:'hidden',
+                      boxShadow:`0 0 10px ${r.glow}`,
                     }}>
-                      <Zap style={{ width:14, height:14, color:r.color }} />
+                      {imgSrc ? (
+                        <img
+                          src={imgSrc}
+                          alt={drop.item_name || ''}
+                          style={{ width:'100%', height:'100%', objectFit:'contain' }}
+                          onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                        />
+                      ) : null}
+                      <div style={{
+                        width:'100%', height:'100%',
+                        display: imgSrc ? 'none' : 'flex',
+                        alignItems:'center', justifyContent:'center',
+                      }}>
+                        <Package style={{ width:16, height:16, color:r.color }} />
+                      </div>
                     </div>
 
                     <div style={{ flex:1, minWidth:0 }}>
-                      <p style={{ margin:0, fontSize:11, fontWeight:800, color:'rgba(255,255,255,.8)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      <p style={{ margin:0, fontSize:11, fontWeight:800, color:'rgba(255,255,255,.85)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                         {drop.item_name}
                       </p>
-                      <p style={{ margin:0, fontSize:9, fontWeight:600, color:'rgba(255,255,255,.25)' }}>
-                        {drop.source_case || 'case opening'}
-                      </p>
+                      <div style={{ display:'flex', alignItems:'center', gap:5, marginTop:2 }}>
+                        <span style={{ fontSize:9, fontWeight:700, color:r.color, textTransform:'uppercase', letterSpacing:'.08em' }}>
+                          {drop.rarity}
+                        </span>
+                        {drop.source_case && (
+                          <>
+                            <span style={{ fontSize:8, color:'rgba(255,255,255,.15)' }}>·</span>
+                            <span style={{ fontSize:9, fontWeight:600, color:'rgba(255,255,255,.25)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', maxWidth:80 }}>
+                              {drop.source_case}
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
 
+                    {/* Value */}
                     <div style={{ textAlign:'right', flexShrink:0 }}>
                       <div style={{ display:'flex', alignItems:'center', gap:3 }}>
                         <div style={{
                           width:11, height:11, borderRadius:'50%',
                           background:'linear-gradient(135deg,#fbbf24,#f59e0b)',
                           display:'flex', alignItems:'center', justifyContent:'center',
+                          boxShadow:'0 0 5px rgba(251,191,36,.4)',
                         }}>
                           <span style={{ fontSize:6, fontWeight:900, color:'#000' }}>$</span>
                         </div>
-                        <span style={{ fontSize:11, fontWeight:900, color:'#fbbf24' }}>
+                        <span style={{ fontSize:12, fontWeight:900, color:'#fbbf24' }}>
                           {drop.value?.toLocaleString()}
                         </span>
                       </div>
-                      <span style={{
-                        fontSize:8, fontWeight:800, textTransform:'uppercase', letterSpacing:'.1em',
-                        color:r.color,
-                      }}>{drop.rarity}</span>
                     </div>
                   </motion.div>
                 );
