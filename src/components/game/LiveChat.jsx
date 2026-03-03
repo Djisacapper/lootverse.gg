@@ -1,123 +1,186 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageCircle, Zap, Send, Crown, Shield, Badge, Smile, X } from 'lucide-react';
+import { MessageCircle, Zap, Send, Crown, Shield, Smile, X, Sparkles } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
 import UserStatsModal from './UserStatsModal';
 
-const EMOJIS = ['😀', '😂', '😍', '🔥', '💯', '👑', '🎉', '🎮', '⚡', '✨', '🌙', '💎', '🚀', '👻', '🤔', '😎', '🤖', '🎲', '💰', '🏆'];
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+.lc { font-family: 'Nunito', sans-serif; }
 
-const EmojiPicker = ({ onEmojiClick, className }) => {
+@keyframes scan {
+  0%  { top:-1px; opacity:0; }
+  5%  { opacity:1; } 95%{ opacity:1; }
+  100%{ top:100%; opacity:0; }
+}
+.lc-scan {
+  position:absolute; left:0; right:0; height:1px; z-index:2;
+  background:linear-gradient(90deg,transparent,rgba(255,220,0,.15),transparent);
+  animation:scan 7s linear infinite; pointer-events:none;
+}
+
+@keyframes drop-in {
+  0%  { transform: translateX(16px); opacity:0; }
+  100%{ transform: translateX(0);    opacity:1; }
+}
+.drop-in { animation: drop-in .35s cubic-bezier(.22,1,.36,1) forwards; }
+
+@keyframes msg-in {
+  0%  { transform: translateY(8px); opacity:0; }
+  100%{ transform: translateY(0);   opacity:1; }
+}
+.msg-in { animation: msg-in .28s ease-out forwards; }
+
+@keyframes tab-glow {
+  0%,100%{ box-shadow: 0 0 0 0 rgba(251,191,36,0); }
+  50%    { box-shadow: 0 2px 12px rgba(251,191,36,.2); }
+}
+.tab-active-chat { animation: tab-glow 3s ease-in-out infinite; }
+
+@keyframes pulse-dot {
+  0%,100%{ opacity:1; transform:scale(1); }
+  50%    { opacity:.5; transform:scale(.7); }
+}
+.live-dot { animation: pulse-dot 1.4s ease-in-out infinite; }
+
+.msg-input {
+  background: rgba(251,191,36,.05);
+  border: 1px solid rgba(251,191,36,.12);
+  border-radius: 10px;
+  outline: none;
+  width: 100%;
+  padding: 9px 12px;
+  font-family: 'Nunito', sans-serif;
+  font-size: 12px; font-weight: 600;
+  color: rgba(255,255,255,.8);
+  transition: border-color .2s;
+  box-sizing: border-box;
+}
+.msg-input:focus { border-color: rgba(251,191,36,.28); }
+.msg-input::placeholder { color: rgba(255,255,255,.2); }
+
+.send-btn {
+  width: 32px; height: 32px; border-radius: 9px; border: none; cursor: pointer;
+  background: linear-gradient(135deg,#fbbf24,#f59e0b);
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 14px rgba(251,191,36,.4);
+  transition: transform .18s cubic-bezier(.34,1.56,.64,1), box-shadow .18s;
+  flex-shrink: 0;
+}
+.send-btn:hover { transform: scale(1.1); box-shadow: 0 0 20px rgba(251,191,36,.55); }
+.send-btn:active { transform: scale(.94); }
+.send-btn:disabled { opacity:.35; cursor:not-allowed; box-shadow:none; transform:none; }
+
+.emoji-grid button:hover { background: rgba(251,191,36,.1); border-radius: 6px; }
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(251,191,36,.12); border-radius: 3px; }
+`;
+
+const EMOJIS = ['😀','😂','😍','🔥','💯','👑','🎉','🎮','⚡','✨','🌙','💎','🚀','👻','🤔','😎','🤖','🎲','💰','🏆'];
+
+const RARITY = {
+  common:    { color:'#9ca3af', glow:'rgba(156,163,175,.3)'  },
+  uncommon:  { color:'#34d399', glow:'rgba(52,211,153,.35)'  },
+  rare:      { color:'#60a5fa', glow:'rgba(96,165,250,.4)'   },
+  epic:      { color:'#c084fc', glow:'rgba(192,132,252,.45)' },
+  legendary: { color:'#fbbf24', glow:'rgba(251,191,36,.5)'   },
+};
+const rs = r => RARITY[r?.toLowerCase()] || RARITY.common;
+
+function EmojiPicker({ onPick }) {
   const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   return (
-    <div className="relative">
-    <button
-    type="button"
-    onClick={() => setOpen(!open)}
-    className={`text-[#a0a0b0]/50 hover:text-[#00d9ff] smooth-transition ${className}`}
-    >
-    <Smile className="w-3.5 h-3.5" />
-    </button>
-    {open && (
-    <motion.div
-    initial={{ opacity: 0, scale: 0.9 }}
-    animate={{ opacity: 1, scale: 1 }}
-    exit={{ opacity: 0, scale: 0.9 }}
-    className="absolute bottom-full right-0 mb-2 bg-[#1a1a2e] border border-[#00d9ff]/20 rounded-lg p-2 grid grid-cols-5 gap-1 w-40 shadow-lg"
-    >
-          {EMOJIS.map(emoji => (
-            <button
-              key={emoji}
-              type="button"
-              onClick={() => {
-                onEmojiClick(emoji);
-                setOpen(false);
-              }}
-              className="text-lg hover:bg-[#00d9ff]/10 rounded p-1 smooth-transition"
-            >
-              {emoji}
-            </button>
-          ))}
-        </motion.div>
-      )}
+    <div ref={ref} style={{ position:'relative', flexShrink:0 }}>
+      <button type="button" onClick={() => setOpen(v => !v)} style={{
+        width:28, height:28, borderRadius:8, border:'none', cursor:'pointer',
+        background:'rgba(255,255,255,.04)', border:'1px solid rgba(255,255,255,.07)',
+        display:'flex', alignItems:'center', justifyContent:'center',
+        color:'rgba(255,255,255,.3)', transition:'all .2s',
+      }}>
+        <Smile style={{ width:13, height:13 }} />
+      </button>
+      <AnimatePresence>
+        {open && (
+          <motion.div initial={{ opacity:0, scale:.88, y:4 }} animate={{ opacity:1, scale:1, y:0 }} exit={{ opacity:0, scale:.88 }}
+            className="emoji-grid" style={{
+              position:'absolute', bottom:'calc(100% + 8px)', right:0,
+              background:'linear-gradient(145deg,#0e001a,#140025)',
+              border:'1px solid rgba(251,191,36,.15)',
+              borderRadius:12, padding:10,
+              display:'grid', gridTemplateColumns:'repeat(5,1fr)', gap:3,
+              width:160, zIndex:100,
+              boxShadow:'0 8px 32px rgba(0,0,0,.7)',
+            }}>
+            {EMOJIS.map(e => (
+              <button key={e} type="button" onClick={() => { onPick(e); setOpen(false); }}
+                style={{ fontSize:16, padding:'4px 2px', border:'none', background:'transparent', cursor:'pointer', borderRadius:6, transition:'background .15s' }}>
+                {e}
+              </button>
+            ))}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
-};
-
-const MOCK_MESSAGES = [
-  { id: 1, user: 'ShadowKing', level: 9, text: 'just hit legendary on celestial!!', time: '2m' },
-  { id: 2, user: 'xXProGamerXx', level: 4, text: 'gn everyone 🌙', time: '3m' },
-  { id: 3, user: 'LuckyDrop', level: 12, text: 'anyone doing battles?', time: '4m' },
-  { id: 4, user: 'VoidSlayer', level: 7, text: 'this site is actually insane', time: '5m' },
-  { id: 5, user: 'NeonRacer', level: 2, text: 'free cases when?? 😂', time: '6m' },
-  { id: 6, user: 'CrystalBlade', level: 18, text: 'crash is rigged lol jk', time: '7m' },
-  { id: 7, user: 'StarForge', level: 5, text: 'just lost everything on upgrade rip', time: '8m' },
-];
+}
 
 export default function LiveChat({ onClose }) {
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState('');
-  const [user, setUser] = useState(null);
-  const [tab, setTab] = useState('chat'); // 'chat' | 'drops'
-  const [recentDrops, setRecentDrops] = useState([]);
+  const [messages,     setMessages]     = useState([]);
+  const [input,        setInput]        = useState('');
+  const [user,         setUser]         = useState(null);
+  const [tab,          setTab]          = useState('chat');
+  const [recentDrops,  setRecentDrops]  = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
-  const [userRoles, setUserRoles] = useState({});
+  const [userRoles,    setUserRoles]    = useState({});
   const bottomRef = useRef(null);
 
   useEffect(() => {
     base44.auth.me().then(u => {
       setUser(u);
-      // Fetch user roles via backend function
-      base44.functions.invoke('getAllUserRoles').then(res => {
-        setUserRoles(res.data || {});
-      }).catch(() => {});
+      base44.functions.invoke('getAllUserRoles').then(res => setUserRoles(res.data || {})).catch(() => {});
     }).catch(() => {});
-    
-    // Fetch initial messages
+
     base44.entities.ChatMessage.list('-created_date', 50).then(msgs => {
       setMessages(msgs.reverse().map(m => ({
-        id: m.id,
-        user: m.user_name,
-        avatar_url: m.avatar_url,
-        level: m.level,
-        text: m.text,
-        time: 'recent'
+        id: m.id, user: m.user_name, avatar_url: m.avatar_url,
+        level: m.level, text: m.text, time: 'recent',
       })));
     });
 
-    // Subscribe to new messages
-    const unsubChat = base44.entities.ChatMessage.subscribe((event) => {
+    const unsubChat = base44.entities.ChatMessage.subscribe(event => {
       if (event.type === 'create') {
         setMessages(prev => [...prev, {
-          id: event.data.id,
-          user: event.data.user_name,
-          avatar_url: event.data.avatar_url,
-          level: event.data.level,
-          text: event.data.text,
-          time: 'now'
+          id: event.data.id, user: event.data.user_name,
+          avatar_url: event.data.avatar_url, level: event.data.level,
+          text: event.data.text, time: 'now',
         }]);
       }
     });
-    
-    base44.entities.UserInventory.list('-created_date', 10).then(d => setRecentDrops(d.filter(i => i.status === 'owned' && ['case_opening', 'battle_win'].includes(i.source))));
 
-    const unsubInventory = base44.entities.UserInventory.subscribe((event) => {
-      if (event.type === 'create' && ['case_opening', 'battle_win'].includes(event.data.source)) {
-        setRecentDrops(prev => [event.data, ...prev].slice(0, 10));
-      }
+    base44.entities.UserInventory.list('-created_date', 10).then(d =>
+      setRecentDrops(d.filter(i => i.status === 'owned' && ['case_opening','battle_win'].includes(i.source)))
+    );
+
+    const unsubInv = base44.entities.UserInventory.subscribe(event => {
+      if (event.type === 'create' && ['case_opening','battle_win'].includes(event.data.source))
+        setRecentDrops(prev => [event.data, ...prev].slice(0, 20));
     });
-    
-    return () => {
-      unsubChat();
-      unsubInventory();
-    };
+
+    return () => { unsubChat(); unsubInv(); };
   }, []);
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  useEffect(() => { bottomRef.current?.scrollIntoView({ behavior:'smooth' }); }, [messages]);
 
-  const handleSend = async (e) => {
+  const handleSend = async e => {
     e.preventDefault();
     if (!input.trim() || !user) return;
     const displayName = user.is_anonymous
@@ -125,139 +188,245 @@ export default function LiveChat({ onClose }) {
       : (user.username || user.full_name || 'Player');
     try {
       await base44.entities.ChatMessage.create({
-        user_name: displayName,
-        user_email: user.email,
+        user_name: displayName, user_email: user.email,
         avatar_url: user.is_anonymous ? null : (user.avatar_url || null),
-        level: user.level || 1,
-        text: input.trim()
+        level: user.level || 1, text: input.trim(),
       });
       setInput('');
-    } catch (err) {
-      console.error('Failed to send message:', err);
-    }
-  };
-
-  const RARITY_COLORS = {
-    common: '#9ca3af',
-    uncommon: '#22c55e',
-    rare: '#3b82f6',
-    epic: '#a855f7',
-    legendary: '#f59e0b',
+    } catch {}
   };
 
   return (
-    <div className="flex flex-col h-full bg-gradient-to-b from-[#1a1a2e] to-[#0d0d1a] border-l border-[#00d9ff]/10">
-      {selectedUser && <UserStatsModal userName={selectedUser.user} userEmail={selectedUser.user} onClose={() => setSelectedUser(null)} currentUser={user} />}
-      {/* Tabs Header */}
-      <div className="flex border-b border-[#00d9ff]/10 items-center justify-between">
-        <div className="flex flex-1">
-          <button
-            onClick={() => setTab('chat')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-semibold smooth-transition
-              ${tab === 'chat' ? 'text-[#00d9ff] border-b-2 border-[#00d9ff]' : 'text-[#a0a0b0] hover:text-[#00d9ff]'}`}
-          >
-            <MessageCircle className="w-3.5 h-3.5" /> Chat
+    <div className="lc" style={{
+      display:'flex', flexDirection:'column', height:'100%',
+      background:'linear-gradient(180deg,#08001a 0%,#04000a 100%)',
+      position:'relative', overflow:'hidden',
+    }}>
+      <style>{CSS}</style>
+      <div className="lc-scan" />
+
+      {selectedUser && (
+        <UserStatsModal userName={selectedUser.user} userEmail={selectedUser.user}
+          onClose={() => setSelectedUser(null)} currentUser={user} />
+      )}
+
+      {/* ── Header ── */}
+      <div style={{
+        position:'relative', zIndex:3,
+        borderBottom:'1px solid rgba(251,191,36,.08)',
+        background:'rgba(0,0,0,.2)',
+      }}>
+        {/* Top accent line */}
+        <div style={{ height:2, background:'linear-gradient(90deg,transparent,#fbbf24,#a855f7,transparent)' }} />
+
+        <div style={{ display:'flex', alignItems:'center', padding:'0 4px' }}>
+          {/* Chat tab */}
+          <button onClick={() => setTab('chat')} className={tab==='chat' ? 'tab-active-chat' : ''} style={{
+            flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5,
+            padding:'11px 0', border:'none', cursor:'pointer', background:'transparent',
+            borderBottom: tab==='chat' ? '2px solid #fbbf24' : '2px solid transparent',
+            color: tab==='chat' ? '#fbbf24' : 'rgba(255,255,255,.28)',
+            fontSize:11, fontWeight:800, fontFamily:'Nunito,sans-serif',
+            transition:'all .2s',
+          }}>
+            <MessageCircle style={{ width:13, height:13 }} />
+            Chat
           </button>
-          <button
-            onClick={() => setTab('drops')}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-3 text-xs font-semibold smooth-transition
-              ${tab === 'drops' ? 'text-[#ff006e] border-b-2 border-[#ff006e]' : 'text-[#a0a0b0] hover:text-[#00d9ff]'}`}
-          >
-            <Zap className="w-3.5 h-3.5" /> Live Drops
+
+          {/* Live Drops tab */}
+          <button onClick={() => setTab('drops')} style={{
+            flex:1, display:'flex', alignItems:'center', justifyContent:'center', gap:5,
+            padding:'11px 0', border:'none', cursor:'pointer', background:'transparent',
+            borderBottom: tab==='drops' ? '2px solid #a855f7' : '2px solid transparent',
+            color: tab==='drops' ? '#c084fc' : 'rgba(255,255,255,.28)',
+            fontSize:11, fontWeight:800, fontFamily:'Nunito,sans-serif',
+            transition:'all .2s',
+          }}>
+            {tab==='drops' && <div className="live-dot" style={{ width:5, height:5, borderRadius:'50%', background:'#a855f7', boxShadow:'0 0 6px #a855f7' }} />}
+            <Zap style={{ width:13, height:13 }} />
+            Live Drops
           </button>
+
+          {onClose && (
+            <button onClick={onClose} style={{
+              width:30, height:30, borderRadius:8, border:'none', cursor:'pointer',
+              background:'rgba(255,255,255,.04)', color:'rgba(255,255,255,.25)',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              margin:'0 6px', transition:'all .2s', flexShrink:0,
+            }}>
+              <X style={{ width:13, height:13 }} />
+            </button>
+          )}
         </div>
-        {onClose && (
-          <button
-            onClick={onClose}
-            className="p-2 text-[#a0a0b0] hover:text-[#ff006e] smooth-transition mr-1"
-            title="Close chat"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        )}
       </div>
 
-      {tab === 'chat' ? (
+      {/* ── Chat Tab ── */}
+      {tab === 'chat' && (
         <>
-          {/* Messages */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-3 scrollbar-hide">
+          <div style={{ flex:1, overflowY:'auto', padding:'10px 10px 6px', display:'flex', flexDirection:'column', gap:10 }}>
             <AnimatePresence initial={false}>
-              {messages.map((msg) => (
-                <motion.div
-                  key={msg.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="flex items-start gap-2"
-                >
-                  <div className="w-6 h-6 rounded-full bg-gradient-to-br from-[#00d9ff] to-[#9d4edd] overflow-hidden flex items-center justify-center text-[9px] font-bold text-[#0a0a15] flex-shrink-0 mt-0.5">
-                    {msg.avatar_url
-                      ? <img src={msg.avatar_url} alt="" className="w-full h-full object-cover" />
-                      : msg.user[0]?.toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-1.5 mb-0.5">
-                      <span className="text-[10px] font-bold bg-[#00d9ff]/20 text-[#00d9ff] rounded px-1">{msg.level}</span>
-                      <button
-                        onClick={() => setSelectedUser(msg)}
-                        className={`text-[11px] font-semibold hover:text-[#ff006e] smooth-transition ${msg.isMe ? 'text-[#00d9ff]' : 'text-[#a0a0b0]'}`}
-                      >
-                        {msg.user}
-                      </button>
-                      {userRoles[msg.user] === 'admin' && <Crown className="w-3 h-3 text-[#ff006e]" title="Admin" />}
-                      {userRoles[msg.user] === 'owner' && <Crown className="w-3.5 h-3.5 text-[#00d9ff]" title="Owner" />}
-                      {userRoles[msg.user] === 'mod' && <Shield className="w-3 h-3 text-[#9d4edd]" title="Moderator" />}
-                      <span className="text-[9px] text-[#a0a0b0]/40 ml-auto">{msg.time}</span>
+              {messages.map(msg => {
+                const role = userRoles[msg.user];
+                return (
+                  <motion.div key={msg.id} initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }}
+                    style={{ display:'flex', alignItems:'flex-start', gap:8 }}>
+
+                    {/* Avatar */}
+                    <div style={{
+                      width:26, height:26, borderRadius:8, flexShrink:0,
+                      background:'linear-gradient(135deg,#fbbf24,#a855f7)',
+                      overflow:'hidden', display:'flex', alignItems:'center', justifyContent:'center',
+                      fontSize:10, fontWeight:900, color:'#000',
+                      border:'1px solid rgba(251,191,36,.2)',
+                      boxShadow:'0 0 8px rgba(251,191,36,.15)',
+                    }}>
+                      {msg.avatar_url
+                        ? <img src={msg.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                        : msg.user?.[0]?.toUpperCase()}
                     </div>
-                    <p className="text-[12px] text-[#a0a0b0] leading-relaxed break-words">{msg.text}</p>
-                  </div>
-                </motion.div>
-              ))}
+
+                    <div style={{ flex:1, minWidth:0 }}>
+                      {/* Name row */}
+                      <div style={{ display:'flex', alignItems:'center', gap:4, marginBottom:3 }}>
+                        {/* Level badge */}
+                        <span style={{
+                          fontSize:8, fontWeight:900, padding:'1px 4px', borderRadius:4,
+                          background:'rgba(168,85,247,.2)', border:'1px solid rgba(168,85,247,.3)',
+                          color:'#c084fc', flexShrink:0,
+                        }}>{msg.level}</span>
+
+                        <button onClick={() => setSelectedUser(msg)} style={{
+                          fontSize:11, fontWeight:800, background:'none', border:'none', cursor:'pointer', padding:0,
+                          color: msg.isMe ? '#fbbf24' : 'rgba(255,255,255,.65)',
+                          overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+                          maxWidth:110, fontFamily:'Nunito,sans-serif',
+                          transition:'color .15s',
+                        }}>{msg.user}</button>
+
+                        {role === 'owner' && <Crown style={{ width:10, height:10, color:'#fbbf24', flexShrink:0 }} title="Owner" />}
+                        {role === 'admin' && <Crown style={{ width:10, height:10, color:'#c084fc', flexShrink:0 }} title="Admin" />}
+                        {role === 'mod'   && <Shield style={{ width:10, height:10, color:'#60a5fa', flexShrink:0 }} title="Mod" />}
+
+                        <span style={{ marginLeft:'auto', fontSize:8, fontWeight:600, color:'rgba(255,255,255,.18)', flexShrink:0 }}>
+                          {msg.time}
+                        </span>
+                      </div>
+
+                      {/* Message bubble */}
+                      <div style={{
+                        fontSize:11, fontWeight:600, lineHeight:1.5,
+                        color:'rgba(255,255,255,.6)',
+                        background:'rgba(255,255,255,.03)',
+                        border:'1px solid rgba(255,255,255,.05)',
+                        borderRadius:'0 8px 8px 8px',
+                        padding:'6px 9px',
+                        wordBreak:'break-word',
+                      }}>
+                        {msg.text}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
             <div ref={bottomRef} />
           </div>
 
           {/* Input */}
-          <form onSubmit={handleSend} className="p-3 border-t border-[#00d9ff]/10">
-            <div className="flex items-center gap-2 bg-[#1a1a2e] rounded-lg border border-[#00d9ff]/15 px-3 py-2 smooth-transition hover:border-[#00d9ff]/30">
+          <form onSubmit={handleSend} style={{
+            padding:'10px', borderTop:'1px solid rgba(251,191,36,.07)',
+            background:'rgba(0,0,0,.2)',
+          }}>
+            <div style={{ display:'flex', gap:6, alignItems:'center' }}>
               <input
+                className="msg-input"
                 value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="Enter message..."
-                className="flex-1 bg-transparent text-xs text-[#fafafa] placeholder:text-[#a0a0b0]/40 outline-none"
+                onChange={e => setInput(e.target.value)}
+                placeholder={user ? 'Say something…' : 'Sign in to chat'}
+                disabled={!user}
               />
-              <EmojiPicker onEmojiClick={(emoji) => setInput(input + emoji)} />
-              <button type="submit" className="text-[#a0a0b0] hover:text-[#00d9ff] smooth-transition">
-                <Send className="w-3.5 h-3.5" />
+              <EmojiPicker onPick={emoji => setInput(v => v + emoji)} />
+              <button type="submit" className="send-btn" disabled={!input.trim() || !user}>
+                <Send style={{ width:13, height:13, color:'#000' }} />
               </button>
             </div>
           </form>
         </>
-      ) : (
-        <div className="flex-1 overflow-y-auto p-3 space-y-2 scrollbar-hide">
+      )}
+
+      {/* ── Live Drops Tab ── */}
+      {tab === 'drops' && (
+        <div style={{ flex:1, overflowY:'auto', padding:'10px' }}>
           {recentDrops.length === 0 ? (
-            <p className="text-[#a0a0b0]/30 text-xs text-center pt-8">No drops yet</p>
+            <div style={{ textAlign:'center', paddingTop:50 }}>
+              <Sparkles style={{ width:28, height:28, color:'rgba(251,191,36,.15)', margin:'0 auto 10px', display:'block' }} />
+              <p style={{ fontSize:11, color:'rgba(255,255,255,.15)', fontWeight:600 }}>No drops yet</p>
+            </div>
           ) : (
-            recentDrops.map((drop, i) => (
-              <motion.div
-                key={drop.id || i}
-                initial={{ opacity: 0, x: 10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.03 }}
-                className="flex items-center gap-2.5 bg-[#1a1a2e] rounded-lg p-2.5 border border-[#00d9ff]/10"
-              >
-                <div
-                  className="w-7 h-7 rounded-md flex items-center justify-center flex-shrink-0"
-                  style={{ backgroundColor: (RARITY_COLORS[drop.rarity] || '#a0a0b0') + '20', border: `1px solid ${(RARITY_COLORS[drop.rarity] || '#a0a0b0')}40` }}
-                >
-                  <Zap className="w-3.5 h-3.5" style={{ color: RARITY_COLORS[drop.rarity] || '#a0a0b0' }} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[11px] font-semibold text-[#fafafa] truncate">{drop.item_name}</p>
-                  <p className="text-[10px] text-[#a0a0b0]/50">{drop.source_case || 'case'}</p>
-                </div>
-                <span className="text-[11px] font-bold text-[#ff006e]">{drop.value?.toLocaleString()}</span>
-              </motion.div>
-            ))
+            <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
+              {recentDrops.map((drop, i) => {
+                const r = rs(drop.rarity);
+                return (
+                  <motion.div key={drop.id || i} className="drop-in"
+                    initial={{ opacity:0, x:14 }} animate={{ opacity:1, x:0 }}
+                    transition={{ delay: i * .03 }}
+                    style={{
+                      display:'flex', alignItems:'center', gap:9,
+                      padding:'9px 10px', borderRadius:11,
+                      background:'linear-gradient(145deg,#07000f,#0e001a)',
+                      border:`1px solid ${r.color}20`,
+                      boxShadow:`0 0 14px ${r.glow.replace('.3','.06').replace('.35','.06').replace('.4','.06').replace('.45','.06').replace('.5','.07')}`,
+                      position:'relative', overflow:'hidden',
+                    }}>
+
+                    {/* Left glow bar */}
+                    <div style={{
+                      position:'absolute', left:0, top:0, bottom:0, width:2, borderRadius:'2px 0 0 2px',
+                      background:`linear-gradient(to bottom,${r.color},${r.color}44)`,
+                      boxShadow:`0 0 6px ${r.color}`,
+                    }} />
+
+                    {/* Rarity icon */}
+                    <div style={{
+                      width:32, height:32, borderRadius:9, flexShrink:0,
+                      background:`${r.color}15`, border:`1px solid ${r.color}30`,
+                      display:'flex', alignItems:'center', justifyContent:'center',
+                      boxShadow:`0 0 10px ${r.glow.replace('.3','.2').replace('.35','.2').replace('.4','.2').replace('.45','.2').replace('.5','.2')}`,
+                    }}>
+                      <Zap style={{ width:14, height:14, color:r.color }} />
+                    </div>
+
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <p style={{ margin:0, fontSize:11, fontWeight:800, color:'rgba(255,255,255,.8)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                        {drop.item_name}
+                      </p>
+                      <p style={{ margin:0, fontSize:9, fontWeight:600, color:'rgba(255,255,255,.25)' }}>
+                        {drop.source_case || 'case opening'}
+                      </p>
+                    </div>
+
+                    <div style={{ textAlign:'right', flexShrink:0 }}>
+                      <div style={{ display:'flex', alignItems:'center', gap:3 }}>
+                        <div style={{
+                          width:11, height:11, borderRadius:'50%',
+                          background:'linear-gradient(135deg,#fbbf24,#f59e0b)',
+                          display:'flex', alignItems:'center', justifyContent:'center',
+                        }}>
+                          <span style={{ fontSize:6, fontWeight:900, color:'#000' }}>$</span>
+                        </div>
+                        <span style={{ fontSize:11, fontWeight:900, color:'#fbbf24' }}>
+                          {drop.value?.toLocaleString()}
+                        </span>
+                      </div>
+                      <span style={{
+                        fontSize:8, fontWeight:800, textTransform:'uppercase', letterSpacing:'.1em',
+                        color:r.color,
+                      }}>{drop.rarity}</span>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
           )}
         </div>
       )}
