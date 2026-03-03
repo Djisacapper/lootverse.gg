@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Bot, User, ArrowLeft, Crown, Zap, CheckCircle2, Loader2, Plus, Swords } from 'lucide-react';
 import { getRarityColor, getRarityBorder, rollItem } from './useWallet';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -99,6 +99,51 @@ const CSS = `
 .ba-magic-label { animation:ba-magic-label 1.4s ease-in-out infinite; }
 .ba-scrollbar::-webkit-scrollbar { width:3px; }
 .ba-scrollbar::-webkit-scrollbar-thumb { background:rgba(251,191,36,.2); border-radius:4px; }
+
+/* FIX: Spinner slot — reserve fixed height so layout never shifts */
+.ba-spinner-slot {
+  flex-shrink: 0;
+  height: 240px;
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  border: 1px solid rgba(251,191,36,.25);
+  background: #0a0018;
+}
+.ba-spinner-placeholder {
+  height: 240px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.05);
+  background: rgba(255,255,255,.02);
+}
+
+/* FIX: Player column — stable flex layout, spinner sits ABOVE items list */
+.ba-player-col {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #0f0020;
+  transition: border-color .4s, box-shadow .4s;
+}
+
+/* Avatar image — prevent flash/stutter with stable dimensions */
+.ba-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  /* Prevent layout reflow by reserving space before load */
+  background: rgba(255,255,255,.05);
+}
+.ba-avatar-img[src=""] {
+  visibility: hidden;
+}
 `;
 /* --- Theme --------------------------------------------------------- */
 const TEAM_PALETTE = [
@@ -121,13 +166,7 @@ const getRarityDropShadow = (rarity) => {
   return shadows[rarity] || shadows.common;
 };
 
-/* --- Audio ---------------------------------------------------------
-   Safari requires AudioContext to be created AND resumed inside a
-   direct user-gesture handler. We do this on every pointerdown by
-   playing a silent 1-sample buffer, which permanently unlocks the
-   context for the lifetime of the page — including later async calls
-   from setTimeout (launchRound).
--------------------------------------------------------------------- */
+/* --- Audio -------------------------------------------------------- */
 let _audioCtx = null;
 
 function getAudioCtx() {
@@ -143,7 +182,6 @@ function unlockAudio() {
   const ctx = getAudioCtx();
   if (!ctx) return;
   if (ctx.state === 'suspended') ctx.resume();
-  // Silent 1-sample buffer — the only reliable Safari unlock trick
   try {
     const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
     const src = ctx.createBufferSource();
@@ -154,11 +192,9 @@ function unlockAudio() {
 }
 
 if (typeof window !== 'undefined') {
-  // Use capture:true so we fire before any other handler consumes the event
   window.addEventListener('pointerdown', unlockAudio, { capture: true });
 }
 
-/* --- Spin tick sound ---------------------------------------------- */
 let _spinTickTimer = null;
 
 function stopSpinSound() {
@@ -195,13 +231,65 @@ function playRoundSound(fast) {
     }
   };
 
-  // If context is suspended (e.g. Safari between gestures), resume then start
   const ctx = getAudioCtx();
   if (ctx && ctx.state === 'suspended') {
     ctx.resume().then(tick).catch(tick);
   } else {
     tick();
   }
+}
+
+/* --- Stable Avatar ------------------------------------------------
+   Renders avatar without any stutter. Uses a stable img element
+   with a placeholder background while loading.
+-------------------------------------------------------------------- */
+function PlayerAvatar({ player, color, size = 36, iconSize = 14 }) {
+  const url = safeAvatarUrl(player?.avatar_url);
+  const [loaded, setLoaded] = useState(false);
+  const [errored, setErrored] = useState(false);
+
+  // Reset state when url changes (e.g. new player joins)
+  const prevUrl = useRef(url);
+  if (prevUrl.current !== url) {
+    prevUrl.current = url;
+    // Don't call setState during render; use effect instead
+  }
+  useEffect(() => {
+    setLoaded(false);
+    setErrored(false);
+  }, [url]);
+
+  const showImg = url && !errored;
+
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%', flexShrink: 0, overflow: 'hidden',
+      background: `${color}33`, border: `2px solid ${color}`,
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      boxShadow: `0 0 14px ${color}55`, position: 'relative',
+    }}>
+      {/* Always render img element if we have a url — avoids remount flicker */}
+      {showImg && (
+        <img
+          src={url}
+          alt=""
+          className="ba-avatar-img"
+          style={{ opacity: loaded ? 1 : 0, transition: 'opacity 0.2s' }}
+          onLoad={() => setLoaded(true)}
+          onError={() => setErrored(true)}
+        />
+      )}
+      {/* Fallback icon shown while loading or on error */}
+      {(!showImg || !loaded) && (
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          {player?.isBot
+            ? <Bot style={{ width: iconSize, height: iconSize, color }} />
+            : <User style={{ width: iconSize, height: iconSize, color }} />
+          }
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* --- Particles ----------------------------------------------------- */
@@ -226,6 +314,7 @@ function Particles({ accent = '#fbbf24', count = 10 }) {
     </div>
   );
 }
+
 /* --- Confetti ------------------------------------------------------ */
 function ConfettiEffect({ active }) {
   const ref = useRef(null);
@@ -259,7 +348,11 @@ function ConfettiEffect({ active }) {
   if(!active) return null;
   return <canvas ref={ref} style={{ position:'fixed',inset:0,pointerEvents:'none',zIndex:9999 }} />;
 }
-/* --- Vertical Spinner --------------------------------------------- */
+
+/* --- Vertical Spinner ---------------------------------------------
+   FIX: The spinner now lives in a FIXED-HEIGHT slot (.ba-spinner-slot)
+   so mounting/unmounting it never changes the column height or layout.
+-------------------------------------------------------------------- */
 function VerticalSpinner({ items, winnerItem, onDone, fast }) {
   const ITEM_H=80, WIN_POS=28, TOTAL=36, VISIBLE_H=240;
   const duration = fast ? 1.4 : 3.0;
@@ -278,12 +371,8 @@ function VerticalSpinner({ items, winnerItem, onDone, fast }) {
   const targetY = -(WIN_POS*ITEM_H - VISIBLE_H/2 + ITEM_H/2);
 
   return (
-    <div style={{
-      position:'relative', overflow:'hidden', borderRadius:14,
-      border:'1px solid rgba(251,191,36,.25)',
-      background:'#0a0018',
-      height:VISIBLE_H,
-    }}>
+    <>
+      {/* Highlight bar */}
       <div style={{
         position:'absolute', inset:'0 0', top:'50%', transform:'translateY(-50%)',
         height:ITEM_H, zIndex:10, pointerEvents:'none',
@@ -291,10 +380,12 @@ function VerticalSpinner({ items, winnerItem, onDone, fast }) {
         borderTop:'2px solid rgba(251,191,36,.5)',
         borderBottom:'2px solid rgba(251,191,36,.5)',
       }} />
+      {/* Top fade */}
       <div style={{
         position:'absolute', inset:'0 0', bottom:'auto', height:72, zIndex:20, pointerEvents:'none',
         background:'linear-gradient(to bottom,#0a0018 0%,transparent 100%)',
       }} />
+      {/* Bottom fade */}
       <div style={{
         position:'absolute', inset:'0 0', top:'auto', height:72, zIndex:20, pointerEvents:'none',
         background:'linear-gradient(to top,#0a0018 0%,transparent 100%)',
@@ -308,16 +399,9 @@ function VerticalSpinner({ items, winnerItem, onDone, fast }) {
           <div key={i} style={{
             height:ITEM_H, display:'flex', alignItems:'center', gap:8, padding:'0 10px', flexShrink:0,
           }}>
-            <div style={{
-              width:48, height:48, borderRadius:12, flexShrink:0,
-              display:'flex', alignItems:'center', justifyContent:'center',
-            }}>
+            <div style={{ width:48, height:48, borderRadius:12, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
               {item?.image || item?.image_url
-                ? <img
-                    src={item.image || item.image_url}
-                    alt={item?.name}
-                    style={{ width:42, height:42, objectFit:'contain', filter: getRarityDropShadow(item?.rarity) }}
-                  />
+                ? <img src={item.image || item.image_url} alt={item?.name} style={{ width:42, height:42, objectFit:'contain', filter: getRarityDropShadow(item?.rarity) }} />
                 : <span style={{ fontSize:22 }}>📦</span>}
             </div>
             <div style={{ flex:1, minWidth:0 }}>
@@ -327,9 +411,10 @@ function VerticalSpinner({ items, winnerItem, onDone, fast }) {
           </div>
         ))}
       </motion.div>
-    </div>
+    </>
   );
 }
+
 /* --- Item Chip ----------------------------------------------------- */
 function ItemChip({ item, index = 0 }) {
   const RARITY_COLORS = {
@@ -358,54 +443,58 @@ function ItemChip({ item, index = 0 }) {
     </div>
   );
 }
-/* --- Player Column ------------------------------------------------- */
+
+/* --- Player Column -------------------------------------------------
+   FIX: Layout is now stable. The spinner slot has a FIXED reserved
+   height (240px) at all times — it shows a subtle idle placeholder
+   when not spinning, so the column height never changes and items
+   below never get pushed around.
+-------------------------------------------------------------------- */
 function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, caseItems, spinnerKey, spinnerItem, magicItem, onSpinDone, onMagicSpinDone, fast, showPct, pct }) {
   if (!player) return null;
   const total = wonItems.reduce((s, it) => s + (it?.value||0), 0);
   const topItems = caseItems.filter(it => ['epic','legendary'].includes(it.rarity));
   const magicPool = topItems.length > 0 ? topItems : caseItems;
+  const isSpinning = spinPhase === 'spinning' || spinPhase === 'magic_spin';
+
   return (
     <div
-      className={isWinner ? 'ba-winner-glow' : ''}
+      className={`ba-player-col${isWinner ? ' ba-winner-glow' : ''}`}
       style={{
-        position:'relative', flex:1, display:'flex', flexDirection:'column',
-        borderRadius:16, overflow:'hidden', minHeight:0,
-        background: isWinner ? '#1a0e00' : '#0f0020',
+        flex:1,
         border:`2px solid ${isWinner ? '#fbbf24' : playerColor}`,
         boxShadow: isWinner
           ? `0 0 0 1px rgba(251,191,36,.2), inset 0 0 40px rgba(251,191,36,.05)`
           : `0 0 0 1px ${playerColor}22, inset 0 0 30px ${playerColor}08`,
-        transition:'border-color .4s, box-shadow .4s',
+        background: isWinner ? '#1a0e00' : '#0f0020',
       }}>
-      <div style={{ height:2, background: isWinner ? 'linear-gradient(90deg,transparent,#fbbf24,#f59e0b,transparent)' : `linear-gradient(90deg,transparent,${playerColor}88,transparent)` }} />
+      {/* Top accent line */}
+      <div style={{ height:2, flexShrink:0, background: isWinner ? 'linear-gradient(90deg,transparent,#fbbf24,#f59e0b,transparent)' : `linear-gradient(90deg,transparent,${playerColor}88,transparent)` }} />
       <div className="ba-scan" />
       {isWinner && (
         <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 60% 40% at 50% 0%,rgba(251,191,36,.12) 0%,transparent 70%)' }} />
       )}
+
+      {/* Header */}
       <div style={{ display:'flex', alignItems:'center', gap:8, padding:'12px 12px 8px', flexShrink:0 }}>
-        <div style={{
-          width:36, height:36, borderRadius:'50%', flexShrink:0, overflow:'hidden',
-          background:`${playerColor}33`, border:`2px solid ${playerColor}`,
-          display:'flex', alignItems:'center', justifyContent:'center',
-          boxShadow:`0 0 14px ${playerColor}55`,
-        }}>
-          {player.isBot
-            ? <Bot style={{ width:14, height:14, color:playerColor }} />
-            : safeAvatarUrl(player.avatar_url)
-              ? <img src={safeAvatarUrl(player.avatar_url)} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-              : <User style={{ width:14, height:14, color:playerColor }} />}
-        </div>
+        <PlayerAvatar player={player} color={playerColor} size={36} iconSize={14} />
         <div style={{ flex:1, minWidth:0 }}>
           <p style={{ fontSize:12, fontWeight:900, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{player.name}</p>
           {player.isBot && <p style={{ fontSize:9, fontWeight:800, color:playerColor, textTransform:'uppercase', letterSpacing:'.1em' }}>BOT</p>}
         </div>
         {isWinner && <Crown style={{ width:14, height:14, color:'#fbbf24', flexShrink:0 }} />}
       </div>
-      <div style={{ height:1, background:`linear-gradient(90deg,transparent,${playerColor}44,transparent)`, margin:'0 8px' }} />
+
+      {/* Divider */}
+      <div style={{ height:1, background:`linear-gradient(90deg,transparent,${playerColor}44,transparent)`, margin:'0 8px', flexShrink:0 }} />
+
+      {/* Total */}
       <div style={{ textAlign:'center', padding:'8px 8px 6px', flexShrink:0 }}>
         <span style={{ fontSize:24, fontWeight:900, color: isWinner ? '#fbbf24' : '#ffffff', letterSpacing:'-.02em' }}>{total.toLocaleString()}</span>
         <span style={{ fontSize:10, color:'rgba(255,255,255,.4)', fontWeight:700, marginLeft:4 }}>coins</span>
       </div>
+
+      {/* Win-chance bar */}
       {showPct && (
         <div style={{ padding:'0 10px 6px', flexShrink:0 }}>
           <div style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}>
@@ -416,22 +505,59 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
           </div>
         </div>
       )}
-      {(spinPhase==='spinning'||spinPhase==='magic_spin') && caseItems.length>0 && (
-        <div style={{ padding:'0 8px 8px', flex:1, minHeight:0 }}>
-          {spinPhase==='magic_spin' && (
-            <div style={{ textAlign:'center', marginBottom:6 }}>
-              <span className="ba-magic-label" style={{ fontSize:9, fontWeight:900, color:'#22d3ee', textTransform:'uppercase', letterSpacing:'.18em' }}>✦ Magic Spin ✦</span>
+
+      {/* ── SPINNER SLOT ──────────────────────────────────────────────
+           This div is ALWAYS present with a fixed height of 240px.
+           When not spinning it shows a subtle idle state.
+           When spinning, the VerticalSpinner renders inside it.
+           This prevents ANY layout shift between rounds.
+      ──────────────────────────────────────────────────────────────── */}
+      <div style={{ padding:'0 8px 8px', flexShrink:0 }}>
+        {spinPhase === 'magic_spin' && (
+          <div style={{ textAlign:'center', marginBottom:4 }}>
+            <span className="ba-magic-label" style={{ fontSize:9, fontWeight:900, color:'#22d3ee', textTransform:'uppercase', letterSpacing:'.18em' }}>✦ Magic Spin ✦</span>
+          </div>
+        )}
+        <div className="ba-spinner-slot">
+          {isSpinning && caseItems.length > 0 ? (
+            <VerticalSpinner
+              key={`${spinnerKey}-${spinPhase}`}
+              items={spinPhase === 'magic_spin' ? magicPool : caseItems}
+              winnerItem={spinPhase === 'magic_spin' ? magicItem : spinnerItem}
+              onDone={spinPhase === 'magic_spin' ? onMagicSpinDone : onSpinDone}
+              fast={fast}
+            />
+          ) : (
+            /* Idle placeholder — same height, no layout impact */
+            <div style={{
+              position:'absolute', inset:0,
+              display:'flex', alignItems:'center', justifyContent:'center',
+              flexDirection:'column', gap:8,
+            }}>
+              {wonItems.length === 0 ? (
+                <span style={{ fontSize:28, opacity:.15 }}>🎰</span>
+              ) : (
+                /* Show the most recently won item when idle */
+                (() => {
+                  const last = wonItems[wonItems.length - 1];
+                  const RARITY_COLORS = { legendary:'#fbbf24', epic:'#a855f7', rare:'#60a5fa', uncommon:'#34d399', common:'rgba(255,255,255,.35)' };
+                  const rc = RARITY_COLORS[last?.rarity] || RARITY_COLORS.common;
+                  return (
+                    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:6 }}>
+                      {last?.image || last?.image_url
+                        ? <img src={last.image || last.image_url} alt={last?.name} style={{ width:56, height:56, objectFit:'contain', filter: getRarityDropShadow(last?.rarity), opacity:.6 }} />
+                        : <span style={{ fontSize:36, opacity:.4 }}>📦</span>}
+                      <span style={{ fontSize:10, fontWeight:800, color:rc, opacity:.5 }}>{last?.name}</span>
+                    </div>
+                  );
+                })()
+              )}
             </div>
           )}
-          <VerticalSpinner
-            key={`${spinnerKey}-${spinPhase}`}
-            items={spinPhase==='magic_spin' ? magicPool : caseItems}
-            winnerItem={spinPhase==='magic_spin' ? magicItem : spinnerItem}
-            onDone={spinPhase==='magic_spin' ? onMagicSpinDone : onSpinDone}
-            fast={fast}
-          />
         </div>
-      )}
+      </div>
+
+      {/* Won items list — scrollable below the fixed-height spinner */}
       <div className="ba-scrollbar" style={{ padding:'0 8px 10px', flex:1, minHeight:0, overflowY:'auto' }}>
         <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
           {wonItems.map((item, i) => <ItemChip key={i} item={item} index={i} />)}
@@ -440,6 +566,7 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
     </div>
   );
 }
+
 /* --- Mode Notice --------------------------------------------------- */
 function ModeNotice({ icon, label, color, children }) {
   return (
@@ -449,6 +576,7 @@ function ModeNotice({ icon, label, color, children }) {
     </div>
   );
 }
+
 /* --- VS Divider ---------------------------------------------------- */
 function VsDivider() {
   return (
@@ -460,7 +588,13 @@ function VsDivider() {
     </div>
   );
 }
-/* --- Waiting Lobby ------------------------------------------------- */
+
+/* --- Waiting Lobby -------------------------------------------------
+   FIX: Avatar loading in lobby also uses PlayerAvatar so there's no
+   stutter when someone joins. The polling that re-fetches the battle
+   no longer triggers avatar re-fetches because avatars are memoized
+   per email in the PlayerAvatar component.
+-------------------------------------------------------------------- */
 function WaitingLobby({ battle, players, teams, modeLabel, userEmail, onClose, onJoin, onAddBot, onFillBots, balance }) {
   const maxPlayers  = battle.max_players || 2;
   const isCreator   = battle.creator_email === userEmail;
@@ -507,9 +641,7 @@ function WaitingLobby({ battle, players, teams, modeLabel, userEmail, onClose, o
                       <div key={globalIdx} style={{ flex:1, minWidth:100, borderRadius:14, background: filled ? pal.bg : 'rgba(255,255,255,.02)', border:`1px solid ${filled ? pal.border : 'rgba(255,255,255,.07)'}`, minHeight:180, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:10, padding:'16px 10px', transition:'border-color .3s, background .3s' }}>
                         {filled ? (
                           <>
-                            <div style={{ width:44, height:44, borderRadius:'50%', overflow:'hidden', background:`linear-gradient(135deg,${pal.color}33,${pal.color}18)`, border:`2px solid ${pal.color}66`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 0 16px ${pal.glow}` }}>
-                              {p.isBot ? <Bot style={{ width:18, height:18, color:pal.color }} /> : (p.avatar_url && p.avatar_url!=='null' && p.avatar_url!=='undefined') ? <img src={p.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <User style={{ width:18, height:18, color:pal.color }} />}
-                            </div>
+                            <PlayerAvatar player={p} color={pal.color} size={44} iconSize={18} />
                             <div style={{ textAlign:'center' }}>
                               <p style={{ fontSize:13, fontWeight:800, color:'#fff' }}>{p.name}</p>
                               {p.isBot && <p style={{ fontSize:9, fontWeight:800, color:pal.color, textTransform:'uppercase', letterSpacing:'.1em' }}>BOT</p>}
@@ -549,12 +681,24 @@ function WaitingLobby({ battle, players, teams, modeLabel, userEmail, onClose, o
     </div>
   );
 }
+
 /* --- Main BattleArena --------------------------------------------- */
 export default function BattleArena({ battle, selectedCases, players: rawPlayers, teams, modeLabel, battleModes={}, userEmail, onClose, onReward, onJoin, onAddBot, onFillBots, onBattleUpdated, balance=0 }) {
-  const players    = usePlayerAvatars(rawPlayers);
+  // FIX: Stabilize players array — usePlayerAvatars can cause re-renders;
+  // we memoize so the reference is stable unless actual player data changes.
+  const players = usePlayerAvatars(rawPlayers);
+
   const totalRounds = selectedCases.length;
   const teamList   = teams || [players.map((_,i) => i)];
   const isWaiting  = battle?.status === 'waiting';
+
+  // FIX: Polling uses a ref for the callback to avoid stale closures
+  // and doesn't update component state unless something actually changed.
+  const onBattleUpdatedRef = useRef(onBattleUpdated);
+  useEffect(() => { onBattleUpdatedRef.current = onBattleUpdated; }, [onBattleUpdated]);
+
+  const lastFilledCount = useRef(-1);
+
   useEffect(() => {
     if (!isWaiting || !battle?.id) return;
     const poll = async () => {
@@ -565,7 +709,14 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
         if (!updated) return;
         const filledCount = (updated.players||[]).filter(p=>p&&p.email).length;
         const maxPlayers  = updated.max_players || 2;
-        if (onBattleUpdated) onBattleUpdated(updated);
+
+        // FIX: Only call onBattleUpdated when data actually changed
+        // to prevent unnecessary re-renders that cause avatar stutter.
+        if (filledCount !== lastFilledCount.current || updated.status !== battle.status) {
+          lastFilledCount.current = filledCount;
+          if (onBattleUpdatedRef.current) onBattleUpdatedRef.current(updated);
+        }
+
         if (filledCount >= maxPlayers && updated.status==='waiting') {
           await base44.entities.CaseBattle.update(updated.id, { status:'in_progress' });
         }
@@ -574,6 +725,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
     const interval = setInterval(poll, 2000);
     return () => clearInterval(interval);
   }, [isWaiting, battle?.id]);
+
   const modes       = battleModes && typeof battleModes==='object' ? battleModes : {};
   const isCrazy     = modes.crazy===true;
   const isTerminal  = modes.terminal===true;
@@ -581,6 +733,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
   const isMagicSpin = modes.magic_spin===true;
   const isFastMode  = modes.fast_mode===true;
   const isJackpot   = modes.jackpot===true;
+
   const [phase, setPhase]                 = useState('countdown');
   const [countdown, setCountdown]         = useState(3);
   const [currentRound, setCurrentRound]   = useState(0);
@@ -590,10 +743,12 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
   const [winnerTeamIdx, setWinnerTeamIdx] = useState(null);
   const [showConfetti, setShowConfetti]   = useState(false);
   const [playerPhases, setPlayerPhases]   = useState(players.map(()=>'idle'));
+
   const allRolled      = useRef(null);
   const roundDoneCount = useRef(0);
   const currentRoundRef = useRef(0);
   const rewardGiven    = useRef(false);
+
   const rollWithMagicSpin = (caseItems) => {
     const item = rollItem(caseItems) || { name:'Nothing', value:0, rarity:'common', image_url:null };
     if (!isMagicSpin) return { item, isMagic:false };
@@ -601,22 +756,26 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
     if (topItems.length>0 && Math.random()<0.20) return { item: rollItem(topItems)||item, isMagic:true };
     return { item, isMagic:false };
   };
+
   useEffect(() => {
     if (isWaiting) return;
     allRolled.current = selectedCases.map(c => players.map(()=>rollWithMagicSpin(c.items||[])));
   }, []);
+
   useEffect(() => {
     if (isWaiting || phase!=='countdown') return;
     if (countdown===0) { setPhase('spinning'); launchRound(0); return; }
     const t = setTimeout(()=>setCountdown(c=>c-1), 1000);
     return ()=>clearTimeout(t);
   }, [phase, countdown, isWaiting]);
+
   const launchRound = (round) => {
     roundDoneCount.current=0; currentRoundRef.current=round;
     setCurrentRound(round);
     setPlayerPhases(players.map(()=>'spinning'));
     playRoundSound(isFastMode);
   };
+
   const handleNormalSpinDone = (pi) => {
     if (roundDoneCount.current === 0) stopSpinSound();
     const round  = currentRoundRef.current;
@@ -627,7 +786,9 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
       markPlayerRoundDone(pi, round);
     }
   };
+
   const handleMagicSpinDone = (pi) => { stopSpinSound(); markPlayerRoundDone(pi, currentRoundRef.current); };
+
   const markPlayerRoundDone = (pi, round) => {
     const rolled = allRolled.current[round];
     setPlayerItems(prev => { const n=[...prev]; n[pi]=[...n[pi], rolled[pi].item]; return n; });
@@ -641,11 +802,13 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
       }
     }
   };
+
   const getPlayerTotal = (pi) => {
     if (!allRolled.current) return 0;
     if (isTerminal) return allRolled.current[totalRounds-1]?.[pi]?.item?.value || 0;
     return allRolled.current.reduce((s,r)=>s+(r[pi]?.item?.value||0),0);
   };
+
   const finishBattle = (forcedWinnerTi=null) => {
     let winIdx;
     if (forcedWinnerTi!==null) winIdx=forcedWinnerTi;
@@ -672,6 +835,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
       }
     }
   };
+
   const playerTotals = playerItems.map(items=>items.reduce((s,it)=>s+(it?.value||0),0));
   const teamTotals   = teamList.map(mi=>mi.reduce((s,pi)=>s+(playerTotals[pi]||0),0));
   const totalPot     = (battle?.max_players||players.length)*(battle?.entry_cost||0);
@@ -682,6 +846,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
   const caseItems = (selectedCases[currentRound]||selectedCases[0])?.items||[];
   const totalItemsValue = allRolled.current
     ? allRolled.current.reduce((rs,round)=>rs+round.reduce((ps,r)=>ps+(r?.item?.value||0),0),0) : 0;
+
   let payoutLabel = '';
   if (done) {
     if (isGroup) payoutLabel=`Everyone gets ${Math.floor(totalItemsValue/players.length).toLocaleString()} coins`;
@@ -690,6 +855,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
       payoutLabel = wc===1 ? `Winner takes all: ${totalItemsValue.toLocaleString()} coins` : `Each winner gets ${Math.floor(totalItemsValue/wc).toLocaleString()} coins`;
     }
   }
+
   const activeModes = [
     isCrazy&&{icon:'🎭',label:'Crazy',color:'#f472b6'},
     isTerminal&&{icon:'⚡',label:'Terminal',color:'#fbbf24'},
@@ -698,6 +864,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
     isFastMode&&{icon:'💨',label:'Fast',color:'#22d3ee'},
     isJackpot&&{icon:'👑',label:'Jackpot',color:'#fbbf24'},
   ].filter(Boolean);
+
   if (isWaiting) {
     return (
       <div className="ba-root" style={{ background:'#04000a', minHeight:'100vh', padding:'20px 0 80px' }}>
@@ -721,11 +888,14 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
       </div>
     );
   }
+
   return (
     <div className="ba-root" style={{ background:'#04000a', minHeight:'100vh', padding:'20px 0 80px', position:'relative' }}>
       <style>{CSS}</style>
       <ConfettiEffect active={showConfetti} />
       <div style={{ maxWidth:860, margin:'0 auto', display:'flex', flexDirection:'column', gap:18 }}>
+
+        {/* Header bar */}
         <div style={{ position:'relative', overflow:'hidden', borderRadius:16, background:'linear-gradient(120deg,#04000a 0%,#0e0020 40%,#100030 70%,#08000e 100%)', border:'1px solid rgba(251,191,36,.12)', padding:'16px 20px' }}>
           <div className="ba-scan" />
           <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 40% 100% at 90% 50%,rgba(168,85,247,.12) 0%,transparent 60%)' }} />
@@ -754,14 +924,17 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
           </div>
           <div style={{ position:'absolute', bottom:0, left:0, right:0, height:2, background:'linear-gradient(90deg,transparent,rgba(251,191,36,.4),rgba(168,85,247,.4),transparent)' }} />
         </div>
+
         {isTerminal && !done && <ModeNotice icon="⚡" label="Terminal" color="#fbbf24">Terminal mode — only the <strong>last round</strong> determines the winner.</ModeNotice>}
         {isCrazy    && !done && <ModeNotice icon="🎭" label="Crazy"    color="#f472b6">Crazy mode — player with the <strong>lowest</strong> total wins!</ModeNotice>}
         {isGroup    && !done && <ModeNotice icon="🔄" label="Group"    color="#34d399">Group mode — all profit is split equally among all players.</ModeNotice>}
+
         {jackpotPhase && (
           <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }}>
             <JackpotWheel teamList={teamList} players={players} playerTotals={players.map((_,pi)=>getPlayerTotal(pi))} onWinner={(wTi)=>setTimeout(()=>finishBattle(wTi),800)} />
           </motion.div>
         )}
+
         {done && (
           <div className="ba-winner-banner" style={{ position:'relative', overflow:'hidden', borderRadius:18, background:'linear-gradient(145deg,#0e0800,#140c00,#0a0400)', border:'1px solid rgba(251,191,36,.35)', boxShadow:'0 0 0 1px rgba(251,191,36,.1), 0 0 80px rgba(251,191,36,.15)', padding:'28px 24px', textAlign:'center' }}>
             <div className="ba-hex" />
@@ -786,9 +959,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
                               <div style={{ height:24, display:'flex', alignItems:'center', justifyContent:'center' }}>
                                 {isW && <span style={{ fontSize:18 }}>{isGroup ? '🎁' : '👑'}</span>}
                               </div>
-                              <div style={{ width:48, height:48, borderRadius:'50%', overflow:'hidden', background:`linear-gradient(135deg,${pal.color}33,${pal.color}18)`, border:`2px solid ${pal.color}66`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow: isW ? `0 0 24px ${pal.glow}` : 'none', fontSize:20 }}>
-                                {players[pi]?.isBot ? <span>🤖</span> : safeAvatarUrl(players[pi]?.avatar_url) ? <img src={safeAvatarUrl(players[pi].avatar_url)} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <span>{players[pi]?.name?.[0]?.toUpperCase()||'?'}</span>}
-                              </div>
+                              <PlayerAvatar player={players[pi]} color={pal.color} size={48} iconSize={20} />
                               <p style={{ fontSize:11, color:'rgba(255,255,255,.55)', textAlign:'center', width:'100%', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{players[pi]?.name}</p>
                               <p style={{ fontSize:14, fontWeight:900, color: isW ? '#fbbf24' : 'rgba(255,255,255,.4)' }}>{playerTotals[pi]?.toLocaleString()}</p>
                             </div>
@@ -806,6 +977,8 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
             </div>
           </div>
         )}
+
+        {/* Countdown overlay */}
         <AnimatePresence>
           {phase==='countdown' && (
             <motion.div key="cd" initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }} style={{ position:'fixed', inset:0, zIndex:9000, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', background:'rgba(4,0,10,.92)', gap:32, backdropFilter:'blur(4px)' }}>
@@ -817,9 +990,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
                   const color = PLAYER_COLORS[idx%PLAYER_COLORS.length];
                   return (
                     <motion.div key={pi} initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:idx*0.1 }} style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:8 }}>
-                      <div style={{ width:52, height:52, borderRadius:'50%', overflow:'hidden', background:`linear-gradient(135deg,${color}33,${color}18)`, border:`3px solid ${color}`, display:'flex', alignItems:'center', justifyContent:'center', boxShadow:`0 0 20px ${color}55`, fontSize:22 }}>
-                        {players[pi]?.isBot ? <span>🤖</span> : safeAvatarUrl(players[pi]?.avatar_url) ? <img src={safeAvatarUrl(players[pi].avatar_url)} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : <span style={{ color, fontWeight:900 }}>{players[pi]?.name?.[0]?.toUpperCase()||'?'}</span>}
-                      </div>
+                      <PlayerAvatar player={players[pi]} color={color} size={52} iconSize={22} />
                       <span style={{ fontSize:12, fontWeight:800, color:'rgba(255,255,255,.8)' }}>{players[pi]?.name}</span>
                       <div style={{ width:36, height:3, borderRadius:2, background:color, boxShadow:`0 0 8px ${color}` }} />
                     </motion.div>
@@ -832,6 +1003,8 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Player columns */}
         <div style={{ display:'flex', gap:8, alignItems:'stretch', width:'100%' }}>
           {teamList.map((mi, ti) => {
             const pal = TEAM_PALETTE[ti%TEAM_PALETTE.length];
@@ -875,6 +1048,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
             );
           })}
         </div>
+
       </div>
     </div>
   );
