@@ -3,11 +3,51 @@ import { motion } from 'framer-motion';
 import { getRarityColor, getRarityBorder, getRarityGlow } from './useWallet';
 import { Sparkles } from 'lucide-react';
 
+function useSpinSound(spinning) {
+  const audioCtx = useRef(null);
+  const tickTimer = useRef(null);
+  const startTime = useRef(null);
+  const DURATION = 4000;
+
+  const playTick = () => {
+    try {
+      if (!audioCtx.current) audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = audioCtx.current;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300 + Math.random() * 80, ctx.currentTime);
+      gain.gain.setValueAtTime(0.04, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.06);
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (!spinning) { clearTimeout(tickTimer.current); return; }
+    startTime.current = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - startTime.current;
+      const progress = Math.min(elapsed / DURATION, 1);
+      const interval = 40 + progress * 260;
+      playTick();
+      tickTimer.current = setTimeout(tick, interval);
+    };
+    tick();
+    return () => clearTimeout(tickTimer.current);
+  }, [spinning]);
+}
+
 export default function CaseSpinner({ items, result, spinning, onComplete }) {
   const [spinItems, setSpinItems] = useState([]);
   const [offset, setOffset] = useState(0);
   const containerRef = useRef(null);
   const ITEM_WIDTH = 120;
+
+  useSpinSound(spinning);
   const VISIBLE_ITEMS = 40;
   const WINNER_INDEX = 33;
 
