@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
@@ -95,6 +95,20 @@ body, #root { font-family: 'Nunito', sans-serif; background: #04000a; }
   font-family: 'Nunito', sans-serif;
 }
 
+/* Stable avatar — reserves space before image loads, no layout jump */
+.lv-avatar {
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  position: relative;
+}
+.lv-avatar img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover;
+  /* Fade in once loaded — never flashes white or disappears */
+  opacity: 0; transition: opacity 0.2s ease;
+}
+.lv-avatar img.loaded { opacity: 1; }
+
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-thumb { background: rgba(251,191,36,.15); border-radius: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
@@ -138,6 +152,71 @@ function CoinIcon({ size = 16 }) {
   );
 }
 
+/* ── Stable Avatar component ──────────────────────────────────────
+   Uses a persistent <img> that fades in once loaded. The fallback
+   initial letter sits underneath and is only visible before load.
+   Critically: we never unmount/remount the img when user state
+   updates — the src only changes if the actual avatar_url changes.
+────────────────────────────────────────────────────────────────── */
+const StableAvatar = React.memo(({ avatarUrl, name, size, fontSize, gradient, boxShadow, onClick, style = {} }) => {
+  const imgRef = useRef(null);
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const prevUrl = useRef(avatarUrl);
+
+  // Only reset loaded state when the URL genuinely changes
+  useEffect(() => {
+    if (prevUrl.current !== avatarUrl) {
+      prevUrl.current = avatarUrl;
+      setImgLoaded(false);
+    }
+  }, [avatarUrl]);
+
+  // If img is already complete when mounted (browser cache), mark loaded immediately
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
+      setImgLoaded(true);
+    }
+  }, []);
+
+  const initial = name?.[0]?.toUpperCase() || '?';
+
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: size, height: size, borderRadius: '50%',
+        background: gradient || 'linear-gradient(135deg,#fbbf24,#a855f7)',
+        border: 'none', cursor: onClick ? 'pointer' : 'default', padding: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize, fontWeight: 900, color: '#000',
+        boxShadow: boxShadow || '0 0 12px rgba(251,191,36,.4)',
+        position: 'relative', overflow: 'hidden', flexShrink: 0,
+        ...style,
+      }}
+    >
+      {/* Fallback initial — always rendered underneath */}
+      <span style={{ position: 'relative', zIndex: 1, pointerEvents: 'none' }}>{initial}</span>
+
+      {/* Avatar image — fades in over the initial, never causes a flash */}
+      {avatarUrl && (
+        <img
+          ref={imgRef}
+          src={avatarUrl}
+          alt=""
+          style={{
+            position: 'absolute', inset: 0, width: '100%', height: '100%',
+            objectFit: 'cover', zIndex: 2,
+            opacity: imgLoaded ? 1 : 0,
+            transition: 'opacity 0.25s ease',
+          }}
+          onLoad={() => setImgLoaded(true)}
+          onError={() => setImgLoaded(false)}
+        />
+      )}
+    </button>
+  );
+});
+
 export default function Layout({ children, currentPageName }) {
   const [user,             setUser]             = useState(null);
   const [mobileOpen,       setMobileOpen]       = useState(false);
@@ -145,7 +224,27 @@ export default function Layout({ children, currentPageName }) {
   const [profileOpen,      setProfileOpen]      = useState(false);
   const [chatOpen,         setChatOpen]         = useState(true);
 
-  const reloadUser = () => base44.auth.me().then(setUser).catch(() => {});
+  // FIX: Track previous user data in a ref so we only call setUser
+  // when something meaningful actually changed. This stops the 3-second
+  // polling from triggering re-renders (and avatar blinks) on every tick.
+  const userRef = useRef(null);
+
+  const reloadUser = () => base44.auth.me().then(fresh => {
+    const prev = userRef.current;
+    if (
+      !prev ||
+      prev.balance    !== fresh.balance    ||
+      prev.xp         !== fresh.xp         ||
+      prev.level      !== fresh.level      ||
+      prev.avatar_url !== fresh.avatar_url ||
+      prev.full_name  !== fresh.full_name  ||
+      prev.role       !== fresh.role       ||
+      prev.email      !== fresh.email
+    ) {
+      userRef.current = fresh;
+      setUser(fresh);
+    }
+  }).catch(() => {});
 
   useEffect(() => {
     reloadUser();
@@ -230,25 +329,19 @@ export default function Layout({ children, currentPageName }) {
         ))}
       </nav>
 
-      {/* User card — bottom of sidebar only */}
+      {/* User card — bottom of sidebar */}
       {user && !collapsed && (
         <div style={{
           margin: '0 10px 12px', padding: '10px 12px', borderRadius: 12,
           background: 'rgba(251,191,36,.05)', border: '1px solid rgba(251,191,36,.1)',
         }}>
           <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:8 }}>
-            <button onClick={() => setProfileOpen(true)} style={{
-              width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
-              background: 'linear-gradient(135deg,#fbbf24,#a855f7)',
-              overflow: 'hidden', border: 'none', cursor: 'pointer', padding: 0,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 11, fontWeight: 900, color: '#000',
-              boxShadow: '0 0 12px rgba(251,191,36,.4)',
-            }}>
-              {user.avatar_url
-                ? <img src={user.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-                : (user.full_name?.[0]?.toUpperCase() || '?')}
-            </button>
+            <StableAvatar
+              avatarUrl={user.avatar_url}
+              name={user.full_name || user.email}
+              size={30} fontSize={11}
+              onClick={() => setProfileOpen(true)}
+            />
             <div style={{ flex:1, overflow:'hidden' }}>
               <div style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,.8)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                 {user.full_name || user.email?.split('@')[0] || 'Player'}
@@ -274,18 +367,12 @@ export default function Layout({ children, currentPageName }) {
       {/* Collapsed avatar */}
       {user && collapsed && (
         <div style={{ display:'flex', justifyContent:'center', paddingBottom:14 }}>
-          <button onClick={() => setProfileOpen(true)} style={{
-            width:32, height:32, borderRadius:'50%', overflow:'hidden',
-            background:'linear-gradient(135deg,#fbbf24,#a855f7)',
-            border:'none', cursor:'pointer', padding:0,
-            display:'flex', alignItems:'center', justifyContent:'center',
-            fontSize:11, fontWeight:900, color:'#000',
-            boxShadow:'0 0 12px rgba(251,191,36,.4)',
-          }}>
-            {user.avatar_url
-              ? <img src={user.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-              : (user.full_name?.[0]?.toUpperCase() || '?')}
-          </button>
+          <StableAvatar
+            avatarUrl={user.avatar_url}
+            name={user.full_name || user.email}
+            size={32} fontSize={11}
+            onClick={() => setProfileOpen(true)}
+          />
         </div>
       )}
     </div>
@@ -332,7 +419,6 @@ export default function Layout({ children, currentPageName }) {
         transition: 'left .3s cubic-bezier(.4,0,.2,1)',
       }} className="lv-header">
 
-        {/* Left: page name */}
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
           <div style={{ height:18, width:2, borderRadius:2, background:'linear-gradient(to bottom,#fbbf24,#a855f7)', opacity:.6 }} />
           <span style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,.2)', letterSpacing:'.1em', textTransform:'uppercase' }}>
@@ -340,7 +426,6 @@ export default function Layout({ children, currentPageName }) {
           </span>
         </div>
 
-        {/* Center: Wallet / Deposit button */}
         <div style={{ flex:1, display:'flex', justifyContent:'center' }}>
           {user && (
             <Link to={createPageUrl('Deposit')} style={{
@@ -356,7 +441,6 @@ export default function Layout({ children, currentPageName }) {
           )}
         </div>
 
-        {/* Right: balance only */}
         {user && (
           <div className="balance-chip" style={{
             display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:10,
@@ -467,14 +551,12 @@ export default function Layout({ children, currentPageName }) {
             {user && (
               <div style={{ margin:'0 10px 12px', padding:'10px 12px', borderRadius:12, background:'rgba(251,191,36,.05)', border:'1px solid rgba(251,191,36,.1)' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-                  <button onClick={() => { setProfileOpen(true); setMobileOpen(false); }} style={{
-                    width:28, height:28, borderRadius:'50%', flexShrink:0, overflow:'hidden',
-                    background:'linear-gradient(135deg,#fbbf24,#a855f7)', border:'none', cursor:'pointer', padding:0,
-                    display:'flex', alignItems:'center', justifyContent:'center',
-                    fontSize:10, fontWeight:900, color:'#000',
-                  }}>
-                    {user.avatar_url ? <img src={user.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : (user.full_name?.[0]?.toUpperCase() || '?')}
-                  </button>
+                  <StableAvatar
+                    avatarUrl={user.avatar_url}
+                    name={user.full_name || user.email}
+                    size={28} fontSize={10}
+                    onClick={() => { setProfileOpen(true); setMobileOpen(false); }}
+                  />
                   <div style={{ flex:1 }}>
                     <div style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,.7)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                       {user.full_name || user.email?.split('@')[0] || 'Player'}
@@ -520,7 +602,7 @@ export default function Layout({ children, currentPageName }) {
         </aside>
 
         {!chatOpen && (
-          <button className="chat-btn-pulse" onClick={() => setChatOpen(true)} style={{
+          <button onClick={() => setChatOpen(true)} style={{
             display:'none', position:'fixed', bottom:20, right:20, zIndex:50,
             width:46, height:46, borderRadius:'50%', border:'none', cursor:'pointer',
             background:'linear-gradient(135deg,#a855f7,#7c3aed)',
