@@ -511,41 +511,6 @@ export default function Admin() {
           </div>
         </TabsContent>
 
-        {/* ── LEADERBOARD SYNC TAB ── */}
-        <TabsContent value="leaderboard" className="space-y-4">
-          <div className="glass rounded-xl p-6 border border-white/5 space-y-6">
-            <div>
-              <h2 className="text-xl font-bold text-yellow-400 mb-1">Sync Leaderboard</h2>
-              <p className="text-white/40 text-sm">
-                This reads all user + transaction data (admin only) and writes the top 10 into the public
-                <span className="text-yellow-300 font-mono text-xs mx-1">LeaderboardEntry</span>
-                entity so regular users can see it.
-              </p>
-            </div>
-
-            {syncMessage && (
-              <motion.div
-                initial={{ opacity: 0, y: -10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`p-3 rounded-lg border text-sm font-medium ${
-                  syncMessage.startsWith('✅')
-                    ? 'bg-green-500/10 border-green-500/30 text-green-400'
-                    : 'bg-red-500/10 border-red-500/30 text-red-400'
-                }`}
-              >
-                {syncMessage}
-              </motion.div>
-            )}
-
-            <div className="bg-white/[0.02] rounded-lg p-4 border border-white/5">
-              <p className="text-xs text-white/40 leading-relaxed">
-                💡 <strong className="text-white/60">Tip:</strong> Run this sync periodically (daily or weekly) to keep the leaderboard fresh.
-                In the future you can automate this with a scheduled base44 function if it becomes available on your plan.
-              </p>
-            </div>
-          </div>
-        </TabsContent>
-
         {/* ── ACTIVITY TAB ── */}
         <TabsContent value="activity" className="space-y-4">
           <div className="glass rounded-xl p-4 border border-white/5">
