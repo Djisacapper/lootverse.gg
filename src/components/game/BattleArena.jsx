@@ -4,7 +4,7 @@ import { getRarityColor, getRarityBorder, rollItem } from './useWallet';
 import { motion, AnimatePresence } from 'framer-motion';
 import JackpotWheel from './JackpotWheel';
 import { usePlayerAvatars, safeAvatarUrl } from './usePlayerAvatars';
-/* ─── CSS ──────────────────────────────────────────────────────── */
+/* --- CSS ---------------------------------------------------------- */
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
 .ba-root { font-family: 'Nunito', sans-serif; }
@@ -100,7 +100,7 @@ const CSS = `
 .ba-scrollbar::-webkit-scrollbar { width:3px; }
 .ba-scrollbar::-webkit-scrollbar-thumb { background:rgba(251,191,36,.2); border-radius:4px; }
 `;
-/* ─── Theme ─────────────────────────────────────────────────────── */
+/* --- Theme --------------------------------------------------------- */
 const TEAM_PALETTE = [
   { color:'#fbbf24', glow:'rgba(251,191,36,.3)',  bg:'rgba(251,191,36,.07)',  border:'rgba(251,191,36,.25)' },
   { color:'#a855f7', glow:'rgba(168,85,247,.3)',   bg:'rgba(168,85,247,.07)',  border:'rgba(168,85,247,.25)'  },
@@ -109,7 +109,7 @@ const TEAM_PALETTE = [
 ];
 const PLAYER_COLORS = ['#fbbf24','#a855f7','#60a5fa','#34d399','#f472b6','#fb923c','#22d3ee','#a3e635'];
 
-/* ─── Rarity drop-shadow ─────────────────────────────────────────── */
+/* --- Rarity drop-shadow ------------------------------------------- */
 const getRarityDropShadow = (rarity) => {
   const shadows = {
     legendary: 'drop-shadow(0 0 12px rgba(251,191,36,0.95)) drop-shadow(0 0 20px rgba(251,191,36,0.5))',
@@ -121,35 +121,58 @@ const getRarityDropShadow = (rarity) => {
   return shadows[rarity] || shadows.common;
 };
 
-/* ─── Persistent AudioContext (unlocked on first user gesture) ───── */
+/* --- Audio ---------------------------------------------------------
+   Safari requires AudioContext to be created AND resumed inside a
+   direct user-gesture handler. We do this on every pointerdown by
+   playing a silent 1-sample buffer, which permanently unlocks the
+   context for the lifetime of the page — including later async calls
+   from setTimeout (launchRound).
+-------------------------------------------------------------------- */
 let _audioCtx = null;
+
 function getAudioCtx() {
   try {
-    if (!_audioCtx) {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (!AudioCtx) return null;
-      _audioCtx = new AudioCtx();
-    }
-    if (_audioCtx.state === 'suspended') _audioCtx.resume();
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    if (!_audioCtx) _audioCtx = new AudioCtx();
     return _audioCtx;
   } catch { return null; }
 }
-if (typeof window !== 'undefined') {
-  window.addEventListener('pointerdown', () => getAudioCtx());
+
+function unlockAudio() {
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  if (ctx.state === 'suspended') ctx.resume();
+  // Silent 1-sample buffer — the only reliable Safari unlock trick
+  try {
+    const buf = ctx.createBuffer(1, 1, ctx.sampleRate);
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+  } catch {}
 }
 
-/* ─── Spin tick sound — one ticking loop per round ───────────────── */
+if (typeof window !== 'undefined') {
+  // Use capture:true so we fire before any other handler consumes the event
+  window.addEventListener('pointerdown', unlockAudio, { capture: true });
+}
+
+/* --- Spin tick sound ---------------------------------------------- */
 let _spinTickTimer = null;
+
 function stopSpinSound() {
   if (_spinTickTimer) { clearTimeout(_spinTickTimer); _spinTickTimer = null; }
 }
+
 function playRoundSound(fast) {
   stopSpinSound();
   const SPIN_DURATION = fast ? 1500 : 3100;
   const startTime = Date.now();
+
   const tick = () => {
     const ctx = getAudioCtx();
-    if (ctx) {
+    if (ctx && ctx.state === 'running') {
       try {
         const now = ctx.currentTime;
         const osc = ctx.createOscillator();
@@ -171,10 +194,17 @@ function playRoundSound(fast) {
       _spinTickTimer = setTimeout(tick, interval);
     }
   };
-  tick();
+
+  // If context is suspended (e.g. Safari between gestures), resume then start
+  const ctx = getAudioCtx();
+  if (ctx && ctx.state === 'suspended') {
+    ctx.resume().then(tick).catch(tick);
+  } else {
+    tick();
+  }
 }
 
-/* ─── Particles ─────────────────────────────────────────────────── */
+/* --- Particles ----------------------------------------------------- */
 function Particles({ accent = '#fbbf24', count = 10 }) {
   const pts = React.useRef(
     Array.from({ length: count }, (_, i) => ({
@@ -196,7 +226,7 @@ function Particles({ accent = '#fbbf24', count = 10 }) {
     </div>
   );
 }
-/* ─── Confetti ───────────────────────────────────────────────────── */
+/* --- Confetti ------------------------------------------------------ */
 function ConfettiEffect({ active }) {
   const ref = useRef(null);
   useEffect(() => {
@@ -229,7 +259,7 @@ function ConfettiEffect({ active }) {
   if(!active) return null;
   return <canvas ref={ref} style={{ position:'fixed',inset:0,pointerEvents:'none',zIndex:9999 }} />;
 }
-/* ─── Vertical Spinner ───────────────────────────────────────────── */
+/* --- Vertical Spinner --------------------------------------------- */
 function VerticalSpinner({ items, winnerItem, onDone, fast }) {
   const ITEM_H=80, WIN_POS=28, TOTAL=36, VISIBLE_H=240;
   const duration = fast ? 1.4 : 3.0;
@@ -291,7 +321,7 @@ function VerticalSpinner({ items, winnerItem, onDone, fast }) {
                 : <span style={{ fontSize:22 }}>📦</span>}
             </div>
             <div style={{ flex:1, minWidth:0 }}>
-              <p style={{ fontSize:11, color:'rgba(255,255,255,.75)', fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item?.name || '—'}</p>
+              <p style={{ fontSize:11, color:'rgba(255,255,255,.75)', fontWeight:700, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>{item?.name || '---'}</p>
               <p style={{ fontSize:12, color:'#fbbf24', fontWeight:900 }}>{item?.value?.toLocaleString() || 0}</p>
             </div>
           </div>
@@ -300,7 +330,7 @@ function VerticalSpinner({ items, winnerItem, onDone, fast }) {
     </div>
   );
 }
-/* ─── Item Chip ──────────────────────────────────────────────────── */
+/* --- Item Chip ----------------------------------------------------- */
 function ItemChip({ item, index = 0 }) {
   const RARITY_COLORS = {
     legendary:'#fbbf24', epic:'#a855f7', rare:'#60a5fa', uncommon:'#34d399', common:'rgba(255,255,255,.35)'
@@ -328,7 +358,7 @@ function ItemChip({ item, index = 0 }) {
     </div>
   );
 }
-/* ─── Player Column ──────────────────────────────────────────────── */
+/* --- Player Column ------------------------------------------------- */
 function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, caseItems, spinnerKey, spinnerItem, magicItem, onSpinDone, onMagicSpinDone, fast, showPct, pct }) {
   if (!player) return null;
   const total = wonItems.reduce((s, it) => s + (it?.value||0), 0);
@@ -410,7 +440,7 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
     </div>
   );
 }
-/* ─── Mode Notice ────────────────────────────────────────────────── */
+/* --- Mode Notice --------------------------------------------------- */
 function ModeNotice({ icon, label, color, children }) {
   return (
     <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderRadius:12, background:`${color}12`, border:`1px solid ${color}30` }}>
@@ -419,7 +449,7 @@ function ModeNotice({ icon, label, color, children }) {
     </div>
   );
 }
-/* ─── VS Divider ─────────────────────────────────────────────────── */
+/* --- VS Divider ---------------------------------------------------- */
 function VsDivider() {
   return (
     <div style={{ position:'relative', display:'flex', alignItems:'center', justifyContent:'center', padding:'0 2px', flexShrink:0, alignSelf:'stretch' }}>
@@ -430,7 +460,7 @@ function VsDivider() {
     </div>
   );
 }
-/* ─── Waiting Lobby ──────────────────────────────────────────────── */
+/* --- Waiting Lobby ------------------------------------------------- */
 function WaitingLobby({ battle, players, teams, modeLabel, userEmail, onClose, onJoin, onAddBot, onFillBots, balance }) {
   const maxPlayers  = battle.max_players || 2;
   const isCreator   = battle.creator_email === userEmail;
@@ -519,7 +549,7 @@ function WaitingLobby({ battle, players, teams, modeLabel, userEmail, onClose, o
     </div>
   );
 }
-/* ─── Main BattleArena ───────────────────────────────────────────── */
+/* --- Main BattleArena --------------------------------------------- */
 export default function BattleArena({ battle, selectedCases, players: rawPlayers, teams, modeLabel, battleModes={}, userEmail, onClose, onReward, onJoin, onAddBot, onFillBots, onBattleUpdated, balance=0 }) {
   const players    = usePlayerAvatars(rawPlayers);
   const totalRounds = selectedCases.length;
