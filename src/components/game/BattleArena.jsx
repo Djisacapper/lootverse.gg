@@ -121,6 +121,48 @@ const getRarityDropShadow = (rarity) => {
   return shadows[rarity] || shadows.common;
 };
 
+/* ─── One-shot round-start sound ─────────────────────────────────── */
+function playRoundSound() {
+  try {
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const now = ctx.currentTime;
+    // Noise swoosh
+    const bufferSize = ctx.sampleRate * 0.18;
+    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    const filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1800, now);
+    filter.frequency.exponentialRampToValueAtTime(400, now + 0.18);
+    filter.Q.value = 1.2;
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+    noise.start(now);
+    noise.stop(now + 0.18);
+    // Accent tone
+    const osc = ctx.createOscillator();
+    const oscGain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(520, now);
+    osc.frequency.exponentialRampToValueAtTime(260, now + 0.12);
+    oscGain.gain.setValueAtTime(0.12, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+    osc.connect(oscGain);
+    oscGain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.12);
+  } catch {}
+}
+
 /* ─── Particles ─────────────────────────────────────────────────── */
 function Particles({ accent = '#fbbf24', count = 10 }) {
   const pts = React.useRef(
@@ -177,53 +219,14 @@ function ConfettiEffect({ active }) {
   return <canvas ref={ref} style={{ position:'fixed',inset:0,pointerEvents:'none',zIndex:9999 }} />;
 }
 /* ─── Vertical Spinner ───────────────────────────────────────────── */
-function VerticalSpinner({ items, winnerItem, onDone, fast, playSound = true }) {
+function VerticalSpinner({ items, winnerItem, onDone, fast }) {
   const ITEM_H=80, WIN_POS=28, TOTAL=36, VISIBLE_H=240;
   const duration = fast ? 1.4 : 3.0;
   const SPIN_DURATION = fast ? 1500 : 3100;
 
-  // ── Spin sound ──
-  const audioCtx = useRef(null);
-  const tickTimer = useRef(null);
-  const startTime = useRef(Date.now());
-
-  const getCtx = () => {
-    if (!audioCtx.current) audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.current.state === 'suspended') audioCtx.current.resume();
-    return audioCtx.current;
-  };
-
-  const playTick = () => {
-    try {
-      const ctx = getCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.type = 'triangle';
-      osc.frequency.setValueAtTime(280 + Math.random() * 100, ctx.currentTime);
-      gain.gain.setValueAtTime(0.035, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.07);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.07);
-    } catch {}
-  };
-
   useEffect(() => {
-    startTime.current = Date.now();
-    const tick = () => {
-      const elapsed = Date.now() - startTime.current;
-      const progress = Math.min(elapsed / SPIN_DURATION, 1);
-      const interval = 40 + progress * 280;
-      if (playSound) playTick();
-      tickTimer.current = setTimeout(tick, interval);
-    };
-    tick();
-    const t = setTimeout(() => {
-      clearTimeout(tickTimer.current);
-      onDone();
-    }, SPIN_DURATION);
-    return () => { clearTimeout(tickTimer.current); clearTimeout(t); };
+    const t = setTimeout(() => { onDone(); }, SPIN_DURATION);
+    return () => { clearTimeout(t); };
   }, []);
 
   const strip = useRef(
@@ -315,7 +318,7 @@ function ItemChip({ item, index = 0 }) {
   );
 }
 /* ─── Player Column ──────────────────────────────────────────────── */
-function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, caseItems, spinnerKey, spinnerItem, magicItem, onSpinDone, onMagicSpinDone, fast, showPct, pct, playSound = true }) {
+function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, caseItems, spinnerKey, spinnerItem, magicItem, onSpinDone, onMagicSpinDone, fast, showPct, pct }) {
   if (!player) return null;
   const total = wonItems.reduce((s, it) => s + (it?.value||0), 0);
   const topItems = caseItems.filter(it => ['epic','legendary'].includes(it.rarity));
@@ -385,7 +388,6 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
             winnerItem={spinPhase==='magic_spin' ? magicItem : spinnerItem}
             onDone={spinPhase==='magic_spin' ? onMagicSpinDone : onSpinDone}
             fast={fast}
-            playSound={playSound}
           />
         </div>
       )}
@@ -551,11 +553,6 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
   const roundDoneCount = useRef(0);
   const currentRoundRef = useRef(0);
   const rewardGiven    = useRef(false);
-
-  // The index of the single player who will play sounds — always the first player overall
-  const allPlayerIndices = teamList.flat();
-  const soundPlayerIndex = allPlayerIndices[0] ?? 0;
-
   const rollWithMagicSpin = (caseItems) => {
     const item = rollItem(caseItems) || { name:'Nothing', value:0, rarity:'common', image_url:null };
     if (!isMagicSpin) return { item, isMagic:false };
@@ -577,6 +574,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
     roundDoneCount.current=0; currentRoundRef.current=round;
     setCurrentRound(round);
     setPlayerPhases(players.map(()=>'spinning'));
+    playRoundSound();
   };
   const handleNormalSpinDone = (pi) => {
     const round  = currentRoundRef.current;
@@ -635,6 +633,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
   const playerTotals = playerItems.map(items=>items.reduce((s,it)=>s+(it?.value||0),0));
   const teamTotals   = teamList.map(mi=>mi.reduce((s,pi)=>s+(playerTotals[pi]||0),0));
   const totalPot     = (battle?.max_players||players.length)*(battle?.entry_cost||0);
+  const allPlayerIndices = teamList.flat();
   const playerColorMap   = {};
   allPlayerIndices.forEach((pi,idx)=>{ playerColorMap[pi]=PLAYER_COLORS[idx%PLAYER_COLORS.length]; });
   const grandPlayerTotal = playerTotals.reduce((s,v)=>s+v,0);
@@ -824,7 +823,6 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
                           pct={grandPlayerTotal>0 ? (playerTotals[pi]||0)/grandPlayerTotal : 0}
                           grandTotal={grandPlayerTotal}
                           showPct={isJackpot}
-                          playSound={pi === soundPlayerIndex}
                         />
                       );
                     })}
