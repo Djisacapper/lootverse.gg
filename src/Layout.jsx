@@ -7,10 +7,9 @@ import ProfileModal from './components/game/ProfileModal';
 import {
   Box, Swords, Coins, TrendingUp, Gift, Award, Users,
   Menu, X, ChevronLeft, ChevronRight, Wallet,
-  Shield, MessageCircle, Zap, Home,
+  Shield, MessageCircle, Home,
 } from 'lucide-react';
 
-/* ─── CSS ─────────────────────────────────────────────────── */
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
 * { box-sizing: border-box; }
@@ -61,8 +60,6 @@ body, #root { font-family: 'Nunito', sans-serif; background: #04000a; }
 }
 .chat-btn-pulse { animation: chat-btn-pulse 2s ease-in-out infinite; }
 
-@keyframes spin-loader { to { transform: rotate(360deg); } }
-
 .nav-link {
   display: flex; align-items: center; gap: 10px;
   margin: 1px 8px; border-radius: 10px; cursor: pointer;
@@ -89,7 +86,7 @@ body, #root { font-family: 'Nunito', sans-serif; background: #04000a; }
   border-radius: 0 2px 2px 0;
 }
 .nav-link.collapsed { justify-content: center; margin: 2px 6px; padding: 10px 0; }
-.nav-link.expanded { padding: 9px 12px; }
+.nav-link.expanded  { padding: 9px 12px; }
 
 .sidebar-section-label {
   font-size: 9px; font-weight: 800; letter-spacing: .18em;
@@ -107,19 +104,19 @@ const NAV_SECTIONS = (role) => [
   {
     label: 'Games',
     items: [
-      { name: 'Home',     icon: Home,       page: 'Home'      },
-      { name: 'Battles',  icon: Swords,     page: 'Battles'   },
-      { name: 'Cases',    icon: Box,        page: 'Cases'     },
-      { name: 'Coinflip', icon: Coins,      page: 'Coinflip'  },
-      { name: 'Crash',    icon: TrendingUp, page: 'Crash'     },
+      { name: 'Home',     icon: Home,       page: 'Home'     },
+      { name: 'Battles',  icon: Swords,     page: 'Battles'  },
+      { name: 'Cases',    icon: Box,        page: 'Cases'    },
+      { name: 'Coinflip', icon: Coins,      page: 'Coinflip' },
+      { name: 'Crash',    icon: TrendingUp, page: 'Crash'    },
     ],
   },
   {
     label: 'Earn',
     items: [
-      { name: 'Referrals',    icon: Users,  page: 'Referrals'    },
-      { name: 'Rewards',      icon: Gift,   page: 'Rewards'      },
-      { name: 'Leaderboard',  icon: Award,  page: 'Leaderboard'  },
+      { name: 'Referrals',   icon: Users,  page: 'Referrals'   },
+      { name: 'Rewards',     icon: Gift,   page: 'Rewards'     },
+      { name: 'Leaderboard', icon: Award,  page: 'Leaderboard' },
     ],
   },
   ...(role === 'admin' ? [{
@@ -128,8 +125,7 @@ const NAV_SECTIONS = (role) => [
   }] : []),
 ];
 
-/* ── Coin icon ── */
-function CoinIcon({ size = 18 }) {
+function CoinIcon({ size = 16 }) {
   return (
     <div style={{
       width: size, height: size, borderRadius: '50%', flexShrink: 0,
@@ -143,11 +139,11 @@ function CoinIcon({ size = 18 }) {
 }
 
 export default function Layout({ children, currentPageName }) {
-  const [user,              setUser]              = useState(null);
-  const [mobileOpen,        setMobileOpen]        = useState(false);
-  const [sidebarCollapsed,  setSidebarCollapsed]  = useState(false);
-  const [profileOpen,       setProfileOpen]       = useState(false);
-  const [chatOpen,          setChatOpen]          = useState(true);
+  const [user,             setUser]             = useState(null);
+  const [mobileOpen,       setMobileOpen]       = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [profileOpen,      setProfileOpen]      = useState(false);
+  const [chatOpen,         setChatOpen]         = useState(true);
 
   const reloadUser = () => base44.auth.me().then(setUser).catch(() => {});
 
@@ -162,6 +158,7 @@ export default function Layout({ children, currentPageName }) {
 
   const xpProgress = user ? ((user.xp || 0) % 500) / 5 : 0;
   const level      = user?.level || 1;
+  const sidebarW   = sidebarCollapsed ? 60 : 210;
 
   /* ── Sidebar inner ── */
   const SidebarInner = ({ collapsed }) => (
@@ -204,7 +201,7 @@ export default function Layout({ children, currentPageName }) {
         {NAV_SECTIONS(user?.role).map(section => (
           <div key={section.label}>
             {!collapsed && <div className="sidebar-section-label">{section.label}</div>}
-            {collapsed && <div style={{ height: 12 }} />}
+            {collapsed  && <div style={{ height: 12 }} />}
             {section.items.map(item => {
               const active = currentPageName === item.page;
               return (
@@ -233,14 +230,11 @@ export default function Layout({ children, currentPageName }) {
         ))}
       </nav>
 
-      {/* User mini card at bottom */}
+      {/* User card — bottom of sidebar only */}
       {user && !collapsed && (
         <div style={{
-          margin: '0 10px 12px',
-          padding: '10px 12px',
-          borderRadius: 12,
-          background: 'rgba(251,191,36,.05)',
-          border: '1px solid rgba(251,191,36,.1)',
+          margin: '0 10px 12px', padding: '10px 12px', borderRadius: 12,
+          background: 'rgba(251,191,36,.05)', border: '1px solid rgba(251,191,36,.1)',
         }}>
           <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:8 }}>
             <button onClick={() => setProfileOpen(true)} style={{
@@ -267,7 +261,6 @@ export default function Layout({ children, currentPageName }) {
               color:'#c084fc',
             }}>Lv{level}</div>
           </div>
-          {/* XP bar */}
           <div style={{ height:3, background:'rgba(255,255,255,.06)', borderRadius:99, overflow:'hidden' }}>
             <div className="xp-bar" style={{ height:'100%', width:`${xpProgress}%`, borderRadius:99, transition:'width .5s' }} />
           </div>
@@ -277,10 +270,26 @@ export default function Layout({ children, currentPageName }) {
           </div>
         </div>
       )}
+
+      {/* Collapsed avatar */}
+      {user && collapsed && (
+        <div style={{ display:'flex', justifyContent:'center', paddingBottom:14 }}>
+          <button onClick={() => setProfileOpen(true)} style={{
+            width:32, height:32, borderRadius:'50%', overflow:'hidden',
+            background:'linear-gradient(135deg,#fbbf24,#a855f7)',
+            border:'none', cursor:'pointer', padding:0,
+            display:'flex', alignItems:'center', justifyContent:'center',
+            fontSize:11, fontWeight:900, color:'#000',
+            boxShadow:'0 0 12px rgba(251,191,36,.4)',
+          }}>
+            {user.avatar_url
+              ? <img src={user.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+              : (user.full_name?.[0]?.toUpperCase() || '?')}
+          </button>
+        </div>
+      )}
     </div>
   );
-
-  const sidebarW = sidebarCollapsed ? 60 : 210;
 
   return (
     <div style={{ minHeight:'100vh', background:'#04000a', display:'flex', fontFamily:'Nunito,sans-serif' }}>
@@ -288,27 +297,21 @@ export default function Layout({ children, currentPageName }) {
 
       {/* ── Desktop Sidebar ── */}
       <aside style={{
-        display:'none',
-        width: sidebarW,
-        flexShrink: 0,
-        position: 'fixed',
-        top: 0, left: 0, bottom: 0,
-        zIndex: 40,
+        width: sidebarW, flexShrink: 0,
+        position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 40,
         background: 'linear-gradient(180deg,#08001a 0%,#04000a 100%)',
         borderRight: '1px solid rgba(251,191,36,.08)',
         transition: 'width .3s cubic-bezier(.4,0,.2,1)',
         overflow: 'hidden',
+        display: 'none',
       }} className="lv-sidebar">
         <SidebarInner collapsed={sidebarCollapsed} />
-
-        {/* Collapse toggle */}
         <button onClick={() => setSidebarCollapsed(v => !v)} style={{
-          position: 'absolute', right: -12, top: 68,
-          width: 24, height: 24, borderRadius: '50%',
-          background: '#0e0020', border: '1px solid rgba(251,191,36,.2)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', zIndex: 50, color: 'rgba(251,191,36,.5)',
-          transition: 'color .2s, border-color .2s',
+          position:'absolute', right:-12, top:68,
+          width:24, height:24, borderRadius:'50%',
+          background:'#0e0020', border:'1px solid rgba(251,191,36,.2)',
+          display:'flex', alignItems:'center', justifyContent:'center',
+          cursor:'pointer', zIndex:50, color:'rgba(251,191,36,.5)',
         }}>
           {sidebarCollapsed
             ? <ChevronRight style={{ width:12, height:12 }} />
@@ -316,12 +319,11 @@ export default function Layout({ children, currentPageName }) {
         </button>
       </aside>
 
-      {/* ── Top Header (desktop) ── */}
+      {/* ── Desktop Top Header ── */}
       <header style={{
         display: 'none',
         position: 'fixed', top: 0, right: 0, zIndex: 30,
-        left: sidebarW,
-        height: 54,
+        left: sidebarW, height: 54,
         background: 'linear-gradient(90deg,#08001a,#0a0015)',
         borderBottom: '1px solid rgba(251,191,36,.08)',
         alignItems: 'center',
@@ -330,75 +332,41 @@ export default function Layout({ children, currentPageName }) {
         transition: 'left .3s cubic-bezier(.4,0,.2,1)',
       }} className="lv-header">
 
-        {/* Decorative left accent */}
-        <div style={{ flex:1, display:'flex', alignItems:'center', gap:8 }}>
-          <div style={{ height:20, width:2, borderRadius:2, background:'linear-gradient(to bottom,#fbbf24,#a855f7)', opacity:.5 }} />
-          <span style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,.2)', letterSpacing:'.08em' }}>
-            {currentPageName?.toUpperCase() || ''}
+        {/* Left: page name */}
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ height:18, width:2, borderRadius:2, background:'linear-gradient(to bottom,#fbbf24,#a855f7)', opacity:.6 }} />
+          <span style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,.2)', letterSpacing:'.1em', textTransform:'uppercase' }}>
+            {currentPageName || ''}
           </span>
         </div>
 
-        {/* XP chip */}
-        {user && (
-          <div style={{
-            display:'flex', alignItems:'center', gap:8, padding:'5px 10px', borderRadius:10,
-            background:'rgba(168,85,247,.08)', border:'1px solid rgba(168,85,247,.18)',
-          }}>
-            <div style={{
-              width:22, height:22, borderRadius:7, flexShrink:0,
-              background:'linear-gradient(135deg,#a855f7,#7c3aed)',
-              display:'flex', alignItems:'center', justifyContent:'center',
-              fontSize:10, fontWeight:900, color:'#fff',
-              boxShadow:'0 0 10px rgba(168,85,247,.45)',
-            }}>{level}</div>
-            <div style={{ display:'flex', flexDirection:'column', gap:2, width:80 }}>
-              <div style={{ display:'flex', justifyContent:'space-between' }}>
-                <span style={{ fontSize:9, fontWeight:700, color:'rgba(192,132,252,.6)' }}>Level {level}</span>
-                <span style={{ fontSize:9, fontWeight:700, color:'rgba(192,132,252,.35)' }}>{Math.round(xpProgress)}%</span>
-              </div>
-              <div style={{ height:2, background:'rgba(168,85,247,.12)', borderRadius:99, overflow:'hidden' }}>
-                <div className="xp-bar" style={{ height:'100%', width:`${xpProgress}%`, borderRadius:99 }} />
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Center: Wallet / Deposit button */}
+        <div style={{ flex:1, display:'flex', justifyContent:'center' }}>
+          {user && (
+            <Link to={createPageUrl('Deposit')} style={{
+              display:'flex', alignItems:'center', gap:7, padding:'6px 16px', borderRadius:10,
+              background:'linear-gradient(135deg,#fbbf24,#f59e0b)',
+              textDecoration:'none',
+              boxShadow:'0 0 20px rgba(251,191,36,.35)',
+              transition:'transform .2s, box-shadow .2s',
+            }}>
+              <Wallet style={{ width:14, height:14, color:'#000' }} />
+              <span style={{ fontSize:12, fontWeight:900, color:'#000', letterSpacing:'.04em' }}>Deposit</span>
+            </Link>
+          )}
+        </div>
 
-        {/* Balance chip */}
+        {/* Right: balance only */}
         {user && (
           <div className="balance-chip" style={{
-            display:'flex', alignItems:'center', gap:6, padding:'5px 6px 5px 10px', borderRadius:10,
+            display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:10,
             background:'rgba(251,191,36,.07)', border:'1px solid rgba(251,191,36,.15)',
           }}>
             <CoinIcon size={16} />
-            <span style={{ fontSize:13, fontWeight:900, color:'#fbbf24', minWidth:50 }}>
+            <span style={{ fontSize:14, fontWeight:900, color:'#fbbf24', minWidth:50 }}>
               {(user.balance || 0).toLocaleString()}
             </span>
-            <Link to={createPageUrl('Deposit')} style={{
-              display:'flex', alignItems:'center', gap:4, padding:'4px 8px', borderRadius:7,
-              background:'linear-gradient(135deg,#fbbf24,#f59e0b)', textDecoration:'none',
-              boxShadow:'0 0 12px rgba(251,191,36,.35)',
-            }}>
-              <Wallet style={{ width:11, height:11, color:'#000' }} />
-              <span style={{ fontSize:10, fontWeight:900, color:'#000' }}>Deposit</span>
-            </Link>
           </div>
-        )}
-
-        {/* Avatar */}
-        {user && (
-          <button onClick={() => setProfileOpen(true)} style={{
-            width:32, height:32, borderRadius:'50%', flexShrink:0, overflow:'hidden',
-            background:'linear-gradient(135deg,#fbbf24,#a855f7)',
-            border:'2px solid rgba(251,191,36,.3)',
-            display:'flex', alignItems:'center', justifyContent:'center',
-            fontSize:12, fontWeight:900, color:'#000', cursor:'pointer',
-            boxShadow:'0 0 14px rgba(251,191,36,.35)', padding:0,
-            transition:'box-shadow .2s',
-          }}>
-            {user.avatar_url
-              ? <img src={user.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-              : (user.full_name?.[0]?.toUpperCase() || '?')}
-          </button>
         )}
       </header>
 
@@ -410,10 +378,10 @@ export default function Layout({ children, currentPageName }) {
         display:'flex', alignItems:'center', padding:'0 14px', gap:10,
       }} className="lv-mobile-header">
         <button onClick={() => setMobileOpen(v => !v)} style={{
-          width:32, height:32, borderRadius:9, border:'none', cursor:'pointer',
+          width:32, height:32, borderRadius:9,
           background:'rgba(251,191,36,.08)', border:'1px solid rgba(251,191,36,.15)',
           display:'flex', alignItems:'center', justifyContent:'center',
-          color:'rgba(251,191,36,.7)',
+          color:'rgba(251,191,36,.7)', cursor:'pointer',
         }}>
           {mobileOpen ? <X style={{ width:15, height:15 }} /> : <Menu style={{ width:15, height:15 }} />}
         </button>
@@ -434,35 +402,28 @@ export default function Layout({ children, currentPageName }) {
           }}>LOOTVERSE</span>
         </Link>
 
-        <div style={{ flex:1 }} />
+        <div style={{ flex:1, display:'flex', justifyContent:'center' }}>
+          {user && (
+            <Link to={createPageUrl('Deposit')} style={{
+              display:'flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:8,
+              background:'linear-gradient(135deg,#fbbf24,#f59e0b)',
+              textDecoration:'none', boxShadow:'0 0 12px rgba(251,191,36,.3)',
+            }}>
+              <Wallet style={{ width:12, height:12, color:'#000' }} />
+              <span style={{ fontSize:11, fontWeight:900, color:'#000' }}>Deposit</span>
+            </Link>
+          )}
+        </div>
 
         {user && (
-          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-            {/* Mobile XP */}
-            <div style={{
-              display:'flex', alignItems:'center', gap:6, padding:'4px 8px', borderRadius:8,
-              background:'rgba(168,85,247,.08)', border:'1px solid rgba(168,85,247,.18)',
-            }}>
-              <div style={{
-                width:18, height:18, borderRadius:5, flexShrink:0,
-                background:'linear-gradient(135deg,#a855f7,#7c3aed)',
-                display:'flex', alignItems:'center', justifyContent:'center',
-                fontSize:8, fontWeight:900, color:'#fff',
-              }}>{level}</div>
-              <div style={{ width:50, height:2, background:'rgba(168,85,247,.15)', borderRadius:99, overflow:'hidden' }}>
-                <div className="xp-bar" style={{ height:'100%', width:`${xpProgress}%`, borderRadius:99 }} />
-              </div>
-            </div>
-            {/* Mobile balance */}
-            <div style={{
-              display:'flex', alignItems:'center', gap:5, padding:'4px 8px', borderRadius:8,
-              background:'rgba(251,191,36,.07)', border:'1px solid rgba(251,191,36,.15)',
-            }}>
-              <CoinIcon size={14} />
-              <span style={{ fontSize:11, fontWeight:900, color:'#fbbf24' }}>
-                {(user.balance || 0).toLocaleString()}
-              </span>
-            </div>
+          <div className="balance-chip" style={{
+            display:'flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:8,
+            background:'rgba(251,191,36,.07)', border:'1px solid rgba(251,191,36,.15)',
+          }}>
+            <CoinIcon size={13} />
+            <span style={{ fontSize:11, fontWeight:900, color:'#fbbf24' }}>
+              {(user.balance || 0).toLocaleString()}
+            </span>
           </div>
         )}
       </header>
@@ -475,8 +436,7 @@ export default function Layout({ children, currentPageName }) {
             position:'absolute', left:0, top:0, bottom:0, width:240,
             background:'linear-gradient(180deg,#08001a 0%,#04000a 100%)',
             borderRight:'1px solid rgba(251,191,36,.1)',
-            paddingTop:54, display:'flex', flexDirection:'column',
-            overflow:'hidden',
+            paddingTop:54, display:'flex', flexDirection:'column', overflow:'hidden',
           }}>
             <div style={{ position:'relative', overflow:'hidden', flex:1 }}>
               <div className="sidebar-scan" />
@@ -494,9 +454,7 @@ export default function Layout({ children, currentPageName }) {
                         >
                           <item.icon style={{ width:16, height:16, flexShrink:0, color: active ? '#fbbf24' : 'rgba(255,255,255,.3)' }} />
                           {item.name}
-                          {active && (
-                            <div style={{ marginLeft:'auto', width:5, height:5, borderRadius:'50%', background:'#a855f7', boxShadow:'0 0 6px #a855f7' }} />
-                          )}
+                          {active && <div style={{ marginLeft:'auto', width:5, height:5, borderRadius:'50%', background:'#a855f7', boxShadow:'0 0 6px #a855f7' }} />}
                         </Link>
                       );
                     })}
@@ -507,11 +465,8 @@ export default function Layout({ children, currentPageName }) {
 
             {/* Mobile bottom user strip */}
             {user && (
-              <div style={{
-                margin:'0 10px 12px', padding:'10px 12px', borderRadius:12,
-                background:'rgba(251,191,36,.05)', border:'1px solid rgba(251,191,36,.1)',
-              }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+              <div style={{ margin:'0 10px 12px', padding:'10px 12px', borderRadius:12, background:'rgba(251,191,36,.05)', border:'1px solid rgba(251,191,36,.1)' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
                   <button onClick={() => { setProfileOpen(true); setMobileOpen(false); }} style={{
                     width:28, height:28, borderRadius:'50%', flexShrink:0, overflow:'hidden',
                     background:'linear-gradient(135deg,#fbbf24,#a855f7)', border:'none', cursor:'pointer', padding:0,
@@ -520,16 +475,20 @@ export default function Layout({ children, currentPageName }) {
                   }}>
                     {user.avatar_url ? <img src={user.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : (user.full_name?.[0]?.toUpperCase() || '?')}
                   </button>
-                  <div style={{ flex:1, overflow:'hidden' }}>
+                  <div style={{ flex:1 }}>
                     <div style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,.7)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                       {user.full_name || user.email?.split('@')[0] || 'Player'}
                     </div>
+                    <div style={{ fontSize:9, color:'rgba(251,191,36,.4)', fontWeight:700 }}>Level {level}</div>
                   </div>
-                  <Link to={createPageUrl('Deposit')} onClick={() => setMobileOpen(false)} style={{
-                    padding:'4px 10px', borderRadius:7, textDecoration:'none',
-                    background:'linear-gradient(135deg,#fbbf24,#f59e0b)',
-                    fontSize:10, fontWeight:900, color:'#000',
-                  }}>+ Deposit</Link>
+                  <div style={{ padding:'2px 7px', borderRadius:100, fontSize:9, fontWeight:800, background:'rgba(168,85,247,.15)', border:'1px solid rgba(168,85,247,.3)', color:'#c084fc' }}>Lv{level}</div>
+                </div>
+                <div style={{ height:3, background:'rgba(255,255,255,.06)', borderRadius:99, overflow:'hidden' }}>
+                  <div className="xp-bar" style={{ height:'100%', width:`${xpProgress}%`, borderRadius:99 }} />
+                </div>
+                <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
+                  <span style={{ fontSize:8, color:'rgba(255,255,255,.2)', fontWeight:700 }}>XP</span>
+                  <span style={{ fontSize:8, color:'rgba(251,191,36,.4)', fontWeight:700 }}>{Math.round(xpProgress)}%</span>
                 </div>
               </div>
             )}
@@ -540,14 +499,8 @@ export default function Layout({ children, currentPageName }) {
       {/* ── Profile Modal ── */}
       {profileOpen && user && <ProfileModal user={user} onClose={() => setProfileOpen(false)} />}
 
-      {/* ── Main content area ── */}
-      <div style={{
-        display:'flex', flex:1, minHeight:'100vh', paddingTop:54,
-        marginLeft: sidebarW,
-        transition:'margin-left .3s cubic-bezier(.4,0,.2,1)',
-      }} className="lv-main">
-
-        {/* Page */}
+      {/* ── Main ── */}
+      <div style={{ display:'flex', flex:1, minHeight:'100vh', paddingTop:54, marginLeft: sidebarW, transition:'margin-left .3s cubic-bezier(.4,0,.2,1)' }} className="lv-main">
         <main style={{ flex:1, minWidth:0, overflowY:'auto' }}>
           <div style={{ maxWidth:900, margin:'0 auto', padding:'20px 20px 40px' }}>
             {children}
@@ -556,24 +509,19 @@ export default function Layout({ children, currentPageName }) {
 
         {/* Chat panel */}
         <aside style={{
-          display:'none',
-          flexShrink:0,
-          height:'calc(100vh - 54px)',
-          position:'sticky', top:54,
+          display:'none', flexShrink:0,
+          height:'calc(100vh - 54px)', position:'sticky', top:54,
           background:'linear-gradient(180deg,#08001a 0%,#04000a 100%)',
           borderLeft:'1px solid rgba(251,191,36,.07)',
           transition:'width .3s cubic-bezier(.4,0,.2,1)',
-          overflow:'hidden',
-          width: chatOpen ? 260 : 0,
+          overflow:'hidden', width: chatOpen ? 260 : 0,
         }} className="lv-chat">
           <LiveChat onClose={() => setChatOpen(false)} />
         </aside>
 
-        {/* Chat open button */}
         {!chatOpen && (
           <button className="chat-btn-pulse" onClick={() => setChatOpen(true)} style={{
-            display:'none',
-            position:'fixed', bottom:20, right:20, zIndex:50,
+            display:'none', position:'fixed', bottom:20, right:20, zIndex:50,
             width:46, height:46, borderRadius:'50%', border:'none', cursor:'pointer',
             background:'linear-gradient(135deg,#a855f7,#7c3aed)',
             alignItems:'center', justifyContent:'center',
@@ -584,15 +532,14 @@ export default function Layout({ children, currentPageName }) {
         )}
       </div>
 
-      {/* ── Responsive show/hide via injected style ── */}
       <style>{`
         @media (min-width: 1024px) {
-          .lv-sidebar  { display: flex !important; flex-direction: column; }
-          .lv-header   { display: flex !important; }
+          .lv-sidebar       { display: flex !important; flex-direction: column; }
+          .lv-header        { display: flex !important; }
           .lv-mobile-header { display: none !important; }
-          .lv-main     { margin-left: ${sidebarW}px !important; }
-          .lv-chat     { display: flex !important; flex-direction: column; }
-          .lv-chat-btn { display: flex !important; }
+          .lv-main          { margin-left: ${sidebarW}px !important; }
+          .lv-chat          { display: flex !important; flex-direction: column; }
+          .lv-chat-btn      { display: flex !important; }
         }
         @media (max-width: 1023px) {
           .lv-main { margin-left: 0 !important; }
