@@ -4,13 +4,10 @@ import { getRarityColor, getRarityBorder, rollItem } from './useWallet';
 import { motion, AnimatePresence } from 'framer-motion';
 import JackpotWheel from './JackpotWheel';
 import { usePlayerAvatars, safeAvatarUrl } from './usePlayerAvatars';
-
 /* ─── CSS ──────────────────────────────────────────────────────── */
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-
 .ba-root { font-family: 'Nunito', sans-serif; }
-
 @keyframes ba-scan {
   0%  { top:-1px; opacity:0; }
   5%  { opacity:.5; }
@@ -22,7 +19,6 @@ const CSS = `
   background:linear-gradient(90deg,transparent,rgba(255,220,0,.18),transparent);
   animation:ba-scan 7s linear infinite; pointer-events:none;
 }
-
 @keyframes ba-shimmer {
   0%  { transform:translateX(-120%) skewX(-15deg); }
   100%{ transform:translateX(350%)  skewX(-15deg); }
@@ -33,7 +29,6 @@ const CSS = `
   background:linear-gradient(90deg,transparent,rgba(255,220,0,.04),transparent);
   animation:ba-shimmer 6s ease-in-out infinite; pointer-events:none; border-radius:inherit;
 }
-
 @keyframes ba-p-rise {
   0%   { transform:translateY(0) translateX(0); opacity:0; }
   8%   { opacity:1; }
@@ -44,7 +39,6 @@ const CSS = `
   position:absolute; border-radius:50%; pointer-events:none;
   animation:ba-p-rise var(--d) ease-out infinite var(--dl);
 }
-
 @keyframes ba-hex-pulse {
   0%,100% { opacity:.02; }
   50%     { opacity:.05; }
@@ -57,66 +51,55 @@ const CSS = `
   background-size:32px 32px;
   animation:ba-hex-pulse 5s ease-in-out infinite;
 }
-
 @keyframes ba-live-ping {
   0%   { transform:scale(1); opacity:.8; }
   100% { transform:scale(2.8); opacity:0; }
 }
 .ba-live-ring { animation:ba-live-ping 1.6s ease-out infinite; }
-
 @keyframes ba-glow-pulse {
   0%,100% { box-shadow:0 0 0 1px rgba(251,191,36,.15), 0 0 40px rgba(251,191,36,.08); }
   50%     { box-shadow:0 0 0 1px rgba(251,191,36,.3),  0 0 70px rgba(251,191,36,.18); }
 }
 .ba-winner-glow { animation:ba-glow-pulse 2s ease-in-out infinite; }
-
 @keyframes ba-vs-pulse {
   0%,100% { transform:scale(1) translateY(-50%); opacity:.5; }
   50%     { transform:scale(1.15) translateY(-50%); opacity:1; }
 }
 .ba-vs { animation:ba-vs-pulse 2s ease-in-out infinite; transform-origin:center; }
-
 @keyframes ba-float-swords {
   0%,100% { transform:translateY(0) rotate(-6deg); }
   50%     { transform:translateY(-8px) rotate(6deg); }
 }
 .ba-swords-float { animation:ba-float-swords 3.5s ease-in-out infinite; }
-
 @keyframes ba-countdown-pop {
   0%   { transform:scale(0.1); opacity:0; }
   60%  { transform:scale(1.12); opacity:1; }
   100% { transform:scale(1); opacity:1; }
 }
 .ba-cd-num { animation:ba-countdown-pop 0.4s cubic-bezier(.34,1.56,.64,1) forwards; }
-
 @keyframes ba-round-pip-active {
   0%,100% { box-shadow:0 0 0 0 rgba(251,191,36,.5); }
   50%     { box-shadow:0 0 0 4px rgba(251,191,36,.2); }
 }
 .ba-pip-active { animation:ba-round-pip-active 1.2s ease-in-out infinite; }
-
 @keyframes ba-item-arrive {
   0%  { transform:translateY(10px) scale(.92); opacity:0; }
   100%{ transform:translateY(0) scale(1);     opacity:1; }
 }
 .ba-item-arrive { animation:ba-item-arrive .35s cubic-bezier(.22,1,.36,1) forwards; }
-
 @keyframes ba-winner-banner {
   0%  { transform:translateY(-24px) scale(.94); opacity:0; }
   100%{ transform:translateY(0) scale(1);       opacity:1; }
 }
 .ba-winner-banner { animation:ba-winner-banner .5s cubic-bezier(.34,1.56,.64,1) forwards; }
-
 @keyframes ba-magic-label {
   0%,100% { opacity:.7; letter-spacing:.18em; }
   50%     { opacity:1; letter-spacing:.28em; }
 }
 .ba-magic-label { animation:ba-magic-label 1.4s ease-in-out infinite; }
-
 .ba-scrollbar::-webkit-scrollbar { width:3px; }
 .ba-scrollbar::-webkit-scrollbar-thumb { background:rgba(251,191,36,.2); border-radius:4px; }
 `;
-
 /* ─── Theme ─────────────────────────────────────────────────────── */
 const TEAM_PALETTE = [
   { color:'#fbbf24', glow:'rgba(251,191,36,.3)',  bg:'rgba(251,191,36,.07)',  border:'rgba(251,191,36,.25)' },
@@ -125,6 +108,18 @@ const TEAM_PALETTE = [
   { color:'#34d399', glow:'rgba(52,211,153,.3)',   bg:'rgba(52,211,153,.07)',  border:'rgba(52,211,153,.25)'  },
 ];
 const PLAYER_COLORS = ['#fbbf24','#a855f7','#60a5fa','#34d399','#f472b6','#fb923c','#22d3ee','#a3e635'];
+
+/* ─── Rarity drop-shadow helper ─────────────────────────────────── */
+const getRarityDropShadow = (rarity) => {
+  const shadows = {
+    legendary: 'drop-shadow(0 0 12px rgba(251,191,36,0.95)) drop-shadow(0 0 20px rgba(251,191,36,0.5))',
+    epic:      'drop-shadow(0 0 12px rgba(168,85,247,0.9)) drop-shadow(0 0 20px rgba(168,85,247,0.4))',
+    rare:      'drop-shadow(0 0 12px rgba(59,130,246,0.9)) drop-shadow(0 0 20px rgba(59,130,246,0.4))',
+    uncommon:  'drop-shadow(0 0 12px rgba(34,197,94,0.8)) drop-shadow(0 0 20px rgba(34,197,94,0.3))',
+    common:    'drop-shadow(0 0 8px rgba(161,161,170,0.6))',
+  };
+  return shadows[rarity] || shadows.common;
+};
 
 /* ─── Particles ─────────────────────────────────────────────────── */
 function Particles({ accent = '#fbbf24', count = 10 }) {
@@ -148,7 +143,6 @@ function Particles({ accent = '#fbbf24', count = 10 }) {
     </div>
   );
 }
-
 /* ─── Confetti ───────────────────────────────────────────────────── */
 function ConfettiEffect({ active }) {
   const ref = useRef(null);
@@ -182,7 +176,6 @@ function ConfettiEffect({ active }) {
   if(!active) return null;
   return <canvas ref={ref} style={{ position:'fixed',inset:0,pointerEvents:'none',zIndex:9999 }} />;
 }
-
 /* ─── Vertical Spinner ───────────────────────────────────────────── */
 function VerticalSpinner({ items, winnerItem, onDone, fast }) {
   const ITEM_H=80, WIN_POS=28, TOTAL=36, VISIBLE_H=240;
@@ -233,12 +226,17 @@ function VerticalSpinner({ items, winnerItem, onDone, fast }) {
           }}>
             <div style={{
               width:48, height:48, borderRadius:12, flexShrink:0, overflow:'hidden',
-              background:'linear-gradient(145deg,rgba(168,85,247,.2),rgba(251,191,36,.1))',
-              border:'1px solid rgba(255,255,255,.08)',
               display:'flex', alignItems:'center', justifyContent:'center',
             }}>
-              {item?.image_url
-                ? <img src={item.image_url} alt={item?.name} style={{ width:42, height:42, objectFit:'contain' }} />
+              {item?.image || item?.image_url
+                ? <img
+                    src={item.image || item.image_url}
+                    alt={item?.name}
+                    style={{
+                      width:42, height:42, objectFit:'contain',
+                      filter: getRarityDropShadow(item?.rarity),
+                    }}
+                  />
                 : <span style={{ fontSize:22 }}>📦</span>}
             </div>
             <div style={{ flex:1, minWidth:0 }}>
@@ -251,7 +249,6 @@ function VerticalSpinner({ items, winnerItem, onDone, fast }) {
     </div>
   );
 }
-
 /* ─── Item Chip ──────────────────────────────────────────────────── */
 function ItemChip({ item, index = 0 }) {
   const RARITY_COLORS = {
@@ -271,12 +268,17 @@ function ItemChip({ item, index = 0 }) {
       }}>
       <div style={{
         width:28, height:28, borderRadius:8, flexShrink:0, overflow:'hidden',
-        background:`linear-gradient(135deg,${rc}22,${rc}10)`,
-        border:`1px solid ${rc}33`,
         display:'flex', alignItems:'center', justifyContent:'center',
       }}>
-        {item?.image_url
-          ? <img src={item.image_url} alt={item?.name} style={{ width:24, height:24, objectFit:'contain' }} />
+        {item?.image || item?.image_url
+          ? <img
+              src={item.image || item.image_url}
+              alt={item?.name}
+              style={{
+                width:24, height:24, objectFit:'contain',
+                filter: getRarityDropShadow(item?.rarity),
+              }}
+            />
           : <span style={{ fontSize:13 }}>📦</span>}
       </div>
       <div style={{ flex:1, minWidth:0 }}>
@@ -286,31 +288,25 @@ function ItemChip({ item, index = 0 }) {
     </div>
   );
 }
-
 /* ─── Player Column ──────────────────────────────────────────────── */
 function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, caseItems, spinnerKey, spinnerItem, magicItem, onSpinDone, onMagicSpinDone, fast, showPct, pct }) {
   if (!player) return null;
   const total = wonItems.reduce((s, it) => s + (it?.value||0), 0);
-  const isMagic = !!magicItem;
   const topItems = caseItems.filter(it => ['epic','legendary'].includes(it.rarity));
   const magicPool = topItems.length > 0 ? topItems : caseItems;
-
   return (
     <div
       className={isWinner ? 'ba-winner-glow' : ''}
       style={{
         position:'relative', flex:1, display:'flex', flexDirection:'column',
         borderRadius:16, overflow:'hidden', minHeight:0,
-        background: isWinner
-          ? '#1a0e00'
-          : '#0f0020',
+        background: isWinner ? '#1a0e00' : '#0f0020',
         border:`2px solid ${isWinner ? '#fbbf24' : playerColor}`,
         boxShadow: isWinner
           ? `0 0 0 1px rgba(251,191,36,.2), inset 0 0 40px rgba(251,191,36,.05)`
           : `0 0 0 1px ${playerColor}22, inset 0 0 30px ${playerColor}08`,
         transition:'border-color .4s, box-shadow .4s',
       }}>
-      {/* Top accent bar */}
       <div style={{
         height:2,
         background: isWinner
@@ -318,18 +314,13 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
           : `linear-gradient(90deg,transparent,${playerColor}88,transparent)`,
       }} />
       <div className="ba-scan" />
-
-      {/* Winner crown flash */}
       {isWinner && (
         <div style={{
           position:'absolute', inset:0, pointerEvents:'none',
           background:'radial-gradient(ellipse 60% 40% at 50% 0%,rgba(251,191,36,.12) 0%,transparent 70%)',
         }} />
       )}
-
-      {/* Header */}
       <div style={{ display:'flex', alignItems:'center', gap:8, padding:'12px 12px 8px', flexShrink:0 }}>
-        {/* Avatar */}
         <div style={{
           width:36, height:36, borderRadius:'50%', flexShrink:0, overflow:'hidden',
           background:`${playerColor}33`,
@@ -351,19 +342,13 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
         </div>
         {isWinner && <Crown style={{ width:14, height:14, color:'#fbbf24', flexShrink:0 }} />}
       </div>
-
-      {/* Divider */}
       <div style={{ height:1, background:`linear-gradient(90deg,transparent,${playerColor}44,transparent)`, margin:'0 8px' }} />
-
-      {/* Total value */}
       <div style={{ textAlign:'center', padding:'8px 8px 6px', flexShrink:0 }}>
         <span style={{ fontSize:24, fontWeight:900, color: isWinner ? '#fbbf24' : '#ffffff', letterSpacing:'-.02em' }}>
           {total.toLocaleString()}
         </span>
         <span style={{ fontSize:10, color:'rgba(255,255,255,.4)', fontWeight:700, marginLeft:4 }}>coins</span>
       </div>
-
-      {/* Jackpot % bar */}
       {showPct && (
         <div style={{ padding:'0 10px 6px', flexShrink:0 }}>
           <div style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}>
@@ -381,8 +366,6 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
           </div>
         </div>
       )}
-
-      {/* Spinner */}
       {(spinPhase==='spinning'||spinPhase==='magic_spin') && caseItems.length>0 && (
         <div style={{ padding:'0 8px 8px', flex:1, minHeight:0 }}>
           {spinPhase==='magic_spin' && (
@@ -402,8 +385,6 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
           />
         </div>
       )}
-
-      {/* Won items */}
       <div className="ba-scrollbar" style={{ padding:'0 8px 10px', flex:1, minHeight:0, overflowY:'auto' }}>
         <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
           {wonItems.map((item, i) => <ItemChip key={i} item={item} index={i} />)}
@@ -412,7 +393,6 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
     </div>
   );
 }
-
 /* ─── Mode Notice ────────────────────────────────────────────────── */
 function ModeNotice({ icon, label, color, children }) {
   return (
@@ -425,7 +405,6 @@ function ModeNotice({ icon, label, color, children }) {
     </div>
   );
 }
-
 /* ─── VS Divider ─────────────────────────────────────────────────── */
 function VsDivider() {
   return (
@@ -448,21 +427,18 @@ function VsDivider() {
     </div>
   );
 }
-
 /* ─── Waiting Lobby ──────────────────────────────────────────────── */
 function WaitingLobby({ battle, players, teams, modeLabel, userEmail, onClose, onJoin, onAddBot, onFillBots, balance }) {
   const maxPlayers  = battle.max_players || 2;
   const isCreator   = battle.creator_email === userEmail;
   const hasJoined   = players.some(p => p && p.email === userEmail && !p.isBot);
   const filledCount = players.filter(p => p && p.email).length;
-
   const waitingTeamList = teams && teams.length > 0
     ? teams
     : [
         Array.from({ length: Math.ceil(maxPlayers/2) }, (_,i) => i),
         Array.from({ length: Math.floor(maxPlayers/2) }, (_,i) => i + Math.ceil(maxPlayers/2)),
       ];
-
   return (
     <div style={{ position:'relative', overflow:'hidden', borderRadius:18,
       background:'linear-gradient(145deg,#080012,#0e001c,#040009)',
@@ -474,14 +450,10 @@ function WaitingLobby({ battle, players, teams, modeLabel, userEmail, onClose, o
       <div className="ba-hex" />
       <Particles accent="#a855f7" count={8} />
       <Particles accent="#fbbf24" count={5} />
-
-      {/* Top accent */}
       <div style={{
         position:'absolute', top:0, left:0, right:0, height:2,
         background:'linear-gradient(90deg,transparent,#a855f7,#fbbf24,transparent)',
       }} />
-
-      {/* Waiting header */}
       <div style={{ position:'relative', zIndex:2, display:'flex', alignItems:'center', gap:10, marginBottom:22 }}>
         <div style={{ position:'relative', width:8, height:8 }}>
           <div className="ba-live-ring" style={{ position:'absolute', inset:0, borderRadius:'50%', background:'rgba(168,85,247,.5)' }} />
@@ -494,8 +466,6 @@ function WaitingLobby({ battle, players, teams, modeLabel, userEmail, onClose, o
           border:'1px solid rgba(251,191,36,.25)', marginLeft:'auto',
         }}>{filledCount}/{maxPlayers}</span>
       </div>
-
-      {/* Team grid */}
       <div style={{ position:'relative', zIndex:2, display:'flex', gap:8, alignItems:'stretch', overflowX:'auto' }}>
         {waitingTeamList.map((memberIndices, ti) => {
           const pal = TEAM_PALETTE[ti % TEAM_PALETTE.length];
@@ -624,14 +594,12 @@ function WaitingLobby({ battle, players, teams, modeLabel, userEmail, onClose, o
     </div>
   );
 }
-
 /* ─── Main BattleArena ───────────────────────────────────────────── */
 export default function BattleArena({ battle, selectedCases, players: rawPlayers, teams, modeLabel, battleModes={}, userEmail, onClose, onReward, onJoin, onAddBot, onFillBots, onBattleUpdated, balance=0 }) {
   const players    = usePlayerAvatars(rawPlayers);
   const totalRounds = selectedCases.length;
   const teamList   = teams || [players.map((_,i) => i)];
   const isWaiting  = battle?.status === 'waiting';
-
   useEffect(() => {
     if (!isWaiting || !battle?.id) return;
     const poll = async () => {
@@ -651,7 +619,6 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
     const interval = setInterval(poll, 2000);
     return () => clearInterval(interval);
   }, [isWaiting, battle?.id]);
-
   const modes       = battleModes && typeof battleModes==='object' ? battleModes : {};
   const isCrazy     = modes.crazy===true;
   const isTerminal  = modes.terminal===true;
@@ -659,7 +626,6 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
   const isMagicSpin = modes.magic_spin===true;
   const isFastMode  = modes.fast_mode===true;
   const isJackpot   = modes.jackpot===true;
-
   const [phase, setPhase]                 = useState('countdown');
   const [countdown, setCountdown]         = useState(3);
   const [currentRound, setCurrentRound]   = useState(0);
@@ -669,12 +635,10 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
   const [winnerTeamIdx, setWinnerTeamIdx] = useState(null);
   const [showConfetti, setShowConfetti]   = useState(false);
   const [playerPhases, setPlayerPhases]   = useState(players.map(()=>'idle'));
-
   const allRolled      = useRef(null);
   const roundDoneCount = useRef(0);
   const currentRoundRef = useRef(0);
   const rewardGiven    = useRef(false);
-
   const rollWithMagicSpin = (caseItems) => {
     const item = rollItem(caseItems) || { name:'Nothing', value:0, rarity:'common', image_url:null };
     if (!isMagicSpin) return { item, isMagic:false };
@@ -682,25 +646,21 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
     if (topItems.length>0 && Math.random()<0.20) return { item: rollItem(topItems)||item, isMagic:true };
     return { item, isMagic:false };
   };
-
   useEffect(() => {
     if (isWaiting) return;
     allRolled.current = selectedCases.map(c => players.map(()=>rollWithMagicSpin(c.items||[])));
   }, []);
-
   useEffect(() => {
     if (isWaiting || phase!=='countdown') return;
     if (countdown===0) { setPhase('spinning'); launchRound(0); return; }
     const t = setTimeout(()=>setCountdown(c=>c-1), 1000);
     return ()=>clearTimeout(t);
   }, [phase, countdown, isWaiting]);
-
   const launchRound = (round) => {
     roundDoneCount.current=0; currentRoundRef.current=round;
     setCurrentRound(round);
     setPlayerPhases(players.map(()=>'spinning'));
   };
-
   const handleNormalSpinDone = (pi) => {
     const round  = currentRoundRef.current;
     const rolled = allRolled.current[round];
@@ -710,9 +670,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
       markPlayerRoundDone(pi, round);
     }
   };
-
   const handleMagicSpinDone = (pi) => markPlayerRoundDone(pi, currentRoundRef.current);
-
   const markPlayerRoundDone = (pi, round) => {
     const rolled = allRolled.current[round];
     setPlayerItems(prev => { const n=[...prev]; n[pi]=[...n[pi], rolled[pi].item]; return n; });
@@ -726,13 +684,11 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
       }
     }
   };
-
   const getPlayerTotal = (pi) => {
     if (!allRolled.current) return 0;
     if (isTerminal) return allRolled.current[totalRounds-1]?.[pi]?.item?.value || 0;
     return allRolled.current.reduce((s,r)=>s+(r[pi]?.item?.value||0),0);
   };
-
   const finishBattle = (forcedWinnerTi=null) => {
     let winIdx;
     if (forcedWinnerTi!==null) winIdx=forcedWinnerTi;
@@ -742,7 +698,6 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
       winIdx = isCrazy ? vals.indexOf(Math.min(...vals)) : vals.indexOf(Math.max(...vals));
     }
     setWinnerTeamIdx(winIdx); setDone(true); setJackpotPhase(false);
-
     if (!rewardGiven.current) {
       rewardGiven.current = true;
       const totalItemsValue = allRolled.current.reduce((rs,round)=>rs+round.reduce((ps,r)=>ps+(r?.item?.value||0),0),0);
@@ -760,7 +715,6 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
       }
     }
   };
-
   const playerTotals = playerItems.map(items=>items.reduce((s,it)=>s+(it?.value||0),0));
   const teamTotals   = teamList.map(mi=>mi.reduce((s,pi)=>s+(playerTotals[pi]||0),0));
   const totalPot     = (battle?.max_players||players.length)*(battle?.entry_cost||0);
@@ -771,7 +725,6 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
   const caseItems = (selectedCases[currentRound]||selectedCases[0])?.items||[];
   const totalItemsValue = allRolled.current
     ? allRolled.current.reduce((rs,round)=>rs+round.reduce((ps,r)=>ps+(r?.item?.value||0),0),0) : 0;
-
   let payoutLabel = '';
   if (done) {
     if (isGroup) payoutLabel=`Everyone gets ${Math.floor(totalItemsValue/players.length).toLocaleString()} coins`;
@@ -782,7 +735,6 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
         : `Each winner gets ${Math.floor(totalItemsValue/wc).toLocaleString()} coins`;
     }
   }
-
   const activeModes = [
     isCrazy&&{icon:'🎭',label:'Crazy',color:'#f472b6'},
     isTerminal&&{icon:'⚡',label:'Terminal',color:'#fbbf24'},
@@ -791,14 +743,12 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
     isFastMode&&{icon:'💨',label:'Fast',color:'#22d3ee'},
     isJackpot&&{icon:'👑',label:'Jackpot',color:'#fbbf24'},
   ].filter(Boolean);
-
   /* ── Waiting Lobby ── */
   if (isWaiting) {
     return (
       <div className="ba-root" style={{ background:'#04000a', minHeight:'100vh', padding:'20px 0 80px' }}>
         <style>{CSS}</style>
         <div style={{ maxWidth:860, margin:'0 auto', display:'flex', flexDirection:'column', gap:22 }}>
-          {/* Header */}
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             <button onClick={onClose} style={{
               width:32, height:32, borderRadius:10, border:'1px solid rgba(255,255,255,.12)',
@@ -828,15 +778,12 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
       </div>
     );
   }
-
   /* ── Active Arena ── */
   return (
     <div className="ba-root" style={{ background:'#04000a', minHeight:'100vh', padding:'20px 0 80px', position:'relative' }}>
       <style>{CSS}</style>
       <ConfettiEffect active={showConfetti} />
-
       <div style={{ maxWidth:860, margin:'0 auto', display:'flex', flexDirection:'column', gap:18 }}>
-
         {/* ── Arena Header ── */}
         <div style={{
           position:'relative', overflow:'hidden', borderRadius:16,
@@ -849,7 +796,6 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
             position:'absolute', inset:0, pointerEvents:'none',
             background:'radial-gradient(ellipse 40% 100% at 90% 50%,rgba(168,85,247,.12) 0%,transparent 60%)',
           }} />
-
           <div style={{ position:'relative', zIndex:2, display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
             <button onClick={onClose} style={{
               width:30, height:30, borderRadius:9, border:'1px solid rgba(255,255,255,.12)',
@@ -861,20 +807,15 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
             onMouseLeave={e=>{ e.currentTarget.style.borderColor='rgba(255,255,255,.12)'; e.currentTarget.style.color='rgba(255,255,255,.5)'; }}>
               <ArrowLeft style={{ width:13, height:13 }} />
             </button>
-
             <div style={{ display:'flex', alignItems:'center', gap:6 }}>
               <div style={{ width:3, height:18, borderRadius:2, background:'linear-gradient(to bottom,#fbbf24,#a855f7)' }} />
               <span style={{ fontSize:14, fontWeight:900, color:'#fff' }}>{modeLabel||'1v1'}</span>
             </div>
-
-            {/* Cost */}
             <div style={{ display:'flex', alignItems:'center', gap:5 }}>
               <span style={{ fontSize:11, color:'rgba(255,255,255,.3)', fontWeight:700 }}>Pot:</span>
               <span style={{ fontSize:14, fontWeight:900, color:'#fbbf24' }}>{totalPot.toLocaleString()}</span>
               <span style={{ fontSize:9, color:'rgba(251,191,36,.5)', fontWeight:700 }}>coins</span>
             </div>
-
-            {/* Mode badges */}
             {activeModes.map(m => (
               <span key={m.label} style={{
                 fontSize:9, fontWeight:800, padding:'2px 8px', borderRadius:20,
@@ -882,8 +823,6 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
                 letterSpacing:'.1em', textTransform:'uppercase',
               }}>{m.icon} {m.label}</span>
             ))}
-
-            {/* Round pips */}
             <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:4 }}>
               {selectedCases.map((_,i) => (
                 <div key={i} className={i===currentRound&&!done ? 'ba-pip-active' : ''}
@@ -898,20 +837,14 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
               </span>
             </div>
           </div>
-
-          {/* Bottom accent */}
           <div style={{
             position:'absolute', bottom:0, left:0, right:0, height:2,
             background:'linear-gradient(90deg,transparent,rgba(251,191,36,.4),rgba(168,85,247,.4),transparent)',
           }} />
         </div>
-
-        {/* ── Mode Notices ── */}
         {isTerminal && !done && <ModeNotice icon="⚡" label="Terminal" color="#fbbf24">Terminal mode — only the <strong>last round</strong> determines the winner.</ModeNotice>}
         {isCrazy    && !done && <ModeNotice icon="🎭" label="Crazy"    color="#f472b6">Crazy mode — player with the <strong>lowest</strong> total wins!</ModeNotice>}
         {isGroup    && !done && <ModeNotice icon="🔄" label="Group"    color="#34d399">Group mode — all profit is split equally among all players.</ModeNotice>}
-
-        {/* ── Jackpot Wheel ── */}
         {jackpotPhase && (
           <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }}>
             <JackpotWheel
@@ -921,16 +854,13 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
             />
           </motion.div>
         )}
-
-        {/* ── Winner Banner ── */}
         {done && (
           <div className="ba-winner-banner" style={{
             position:'relative', overflow:'hidden', borderRadius:18,
             background:'linear-gradient(145deg,#0e0800,#140c00,#0a0400)',
             border:'1px solid rgba(251,191,36,.35)',
             boxShadow:'0 0 0 1px rgba(251,191,36,.1), 0 0 80px rgba(251,191,36,.15)',
-            padding:'28px 24px',
-            textAlign:'center',
+            padding:'28px 24px', textAlign:'center',
           }}>
             <div className="ba-hex" />
             <Particles accent="#fbbf24" count={12} />
@@ -941,13 +871,11 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
             }} />
             <div style={{ position:'absolute', top:0, left:0, right:0, height:2,
               background:'linear-gradient(90deg,transparent,#fbbf24,#f59e0b,transparent)' }} />
-
             <div style={{ position:'relative', zIndex:2 }}>
               <p style={{ fontSize:28, fontWeight:900, color:'#fff', marginBottom:6 }}>🏆 Battle Over!</p>
               {payoutLabel && (
                 <p style={{ fontSize:13, color:'#34d399', fontWeight:800, marginBottom:20 }}>{payoutLabel}</p>
               )}
-
               <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:24, overflowX:'auto', flexWrap:'wrap' }}>
                 {teamList.map((mi, ti) => {
                   const isW = isGroup || ti===winnerTeamIdx;
@@ -993,27 +921,21 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
                   );
                 })}
               </div>
-
               <div style={{ marginTop:24 }}>
-                <button
-                  onClick={onClose}
-                  style={{
-                    padding:'12px 44px', borderRadius:12, border:'none', cursor:'pointer',
-                    background:'linear-gradient(135deg,#fbbf24,#f59e0b)',
-                    color:'#000', fontSize:14, fontWeight:900, fontFamily:'Nunito,sans-serif',
-                    boxShadow:'0 0 36px rgba(251,191,36,.5)',
-                    transition:'all .2s',
-                  }}
-                  onMouseEnter={e=>{ e.currentTarget.style.transform='translateY(-2px) scale(1.04)'; }}
-                  onMouseLeave={e=>{ e.currentTarget.style.transform='translateY(0) scale(1)'; }}>
+                <button onClick={onClose} style={{
+                  padding:'12px 44px', borderRadius:12, border:'none', cursor:'pointer',
+                  background:'linear-gradient(135deg,#fbbf24,#f59e0b)',
+                  color:'#000', fontSize:14, fontWeight:900, fontFamily:'Nunito,sans-serif',
+                  boxShadow:'0 0 36px rgba(251,191,36,.5)', transition:'all .2s',
+                }}
+                onMouseEnter={e=>{ e.currentTarget.style.transform='translateY(-2px) scale(1.04)'; }}
+                onMouseLeave={e=>{ e.currentTarget.style.transform='translateY(0) scale(1)'; }}>
                   Done
                 </button>
               </div>
             </div>
           </div>
         )}
-
-        {/* ── Countdown Overlay ── */}
         <AnimatePresence>
           {phase==='countdown' && (
             <motion.div key="cd"
@@ -1024,12 +946,9 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
                 background:'rgba(4,0,10,.92)', gap:32,
                 backdropFilter:'blur(4px)',
               }}>
-              {/* Hex bg */}
               <div className="ba-hex" style={{ opacity:1 }} />
               <Particles accent="#fbbf24" count={14} />
               <Particles accent="#a855f7" count={10} />
-
-              {/* Players row */}
               <div style={{ display:'flex', gap:20, flexWrap:'wrap', justifyContent:'center', position:'relative', zIndex:2 }}>
                 {allPlayerIndices.map((pi, idx) => {
                   const color = PLAYER_COLORS[idx%PLAYER_COLORS.length];
@@ -1043,8 +962,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
                         background:`linear-gradient(135deg,${color}33,${color}18)`,
                         border:`3px solid ${color}`,
                         display:'flex', alignItems:'center', justifyContent:'center',
-                        boxShadow:`0 0 20px ${color}55`,
-                        fontSize:22,
+                        boxShadow:`0 0 20px ${color}55`, fontSize:22,
                       }}>
                         {players[pi]?.isBot
                           ? <span>🤖</span>
@@ -1058,8 +976,6 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
                   );
                 })}
               </div>
-
-              {/* Countdown number */}
               <motion.div key={countdown}
                 initial={{ scale:0.1, opacity:0 }}
                 animate={{ scale:1, opacity:1 }}
@@ -1076,8 +992,6 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
             </motion.div>
           )}
         </AnimatePresence>
-
-        {/* ── Player Grid ── */}
         <div style={{ display:'flex', gap:8, alignItems:'stretch', width:'100%' }}>
           {teamList.map((mi, ti) => {
             const pal = TEAM_PALETTE[ti%TEAM_PALETTE.length];
@@ -1127,7 +1041,6 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
             );
           })}
         </div>
-
       </div>
     </div>
   );
