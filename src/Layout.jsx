@@ -6,106 +6,225 @@ import LiveChat from './components/game/LiveChat';
 import ProfileModal from './components/game/ProfileModal';
 import {
   Box, Swords, Coins, TrendingUp, Gift, Award, Users,
-  Menu, X, Home, LogOut, Zap, ChevronLeft,
-  ChevronRight, Wallet, Plus, Shield, MessageCircle
+  Menu, X, ChevronLeft, ChevronRight, Wallet,
+  Shield, MessageCircle, Zap, Home,
 } from 'lucide-react';
 
-const getNavSections = (userRole) => [
+/* ─── CSS ─────────────────────────────────────────────────── */
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+* { box-sizing: border-box; }
+body, #root { font-family: 'Nunito', sans-serif; background: #04000a; }
+
+@keyframes scan {
+  0%  { top:-1px; opacity:0; }
+  5%  { opacity:1; } 95%{ opacity:1; }
+  100%{ top:100%; opacity:0; }
+}
+.sidebar-scan {
+  position:absolute; left:0; right:0; height:1px; z-index:2;
+  background:linear-gradient(90deg,transparent,rgba(255,220,0,.15),transparent);
+  animation:scan 8s linear infinite; pointer-events:none;
+}
+
+@keyframes logo-pulse {
+  0%,100%{ box-shadow: 0 0 0 0 rgba(251,191,36,.3); }
+  50%    { box-shadow: 0 0 0 6px rgba(251,191,36,0); }
+}
+.logo-pulse { animation: logo-pulse 2.5s ease-in-out infinite; }
+
+@keyframes xp-shimmer {
+  0%  { background-position: -200% center; }
+  100%{ background-position: 200% center; }
+}
+.xp-bar {
+  background: linear-gradient(90deg, #a855f7, #fbbf24, #f59e0b, #a855f7);
+  background-size: 200% auto;
+  animation: xp-shimmer 3s linear infinite;
+}
+
+@keyframes nav-glow {
+  0%,100%{ box-shadow: inset 0 0 0 0 rgba(251,191,36,0); }
+  50%    { box-shadow: inset 0 0 20px rgba(251,191,36,.04); }
+}
+.nav-active { animation: nav-glow 3s ease-in-out infinite; }
+
+@keyframes gold-pulse-border {
+  0%,100%{ border-color: rgba(251,191,36,.15); }
+  50%    { border-color: rgba(251,191,36,.35); }
+}
+.balance-chip { animation: gold-pulse-border 3s ease-in-out infinite; }
+
+@keyframes chat-btn-pulse {
+  0%,100%{ box-shadow: 0 0 0 0 rgba(168,85,247,.5); }
+  50%    { box-shadow: 0 0 0 10px rgba(168,85,247,0); }
+}
+.chat-btn-pulse { animation: chat-btn-pulse 2s ease-in-out infinite; }
+
+@keyframes spin-loader { to { transform: rotate(360deg); } }
+
+.nav-link {
+  display: flex; align-items: center; gap: 10px;
+  margin: 1px 8px; border-radius: 10px; cursor: pointer;
+  text-decoration: none; transition: all .22s ease;
+  border: 1px solid transparent;
+  font-family: 'Nunito', sans-serif;
+  font-size: 13px; font-weight: 700;
+  color: rgba(255,255,255,.35);
+  position: relative; overflow: hidden;
+}
+.nav-link:hover {
+  color: rgba(251,191,36,.9);
+  background: rgba(251,191,36,.06);
+  border-color: rgba(251,191,36,.12);
+}
+.nav-link.active {
+  color: #fbbf24;
+  background: linear-gradient(90deg,rgba(251,191,36,.12),rgba(168,85,247,.06));
+  border-color: rgba(251,191,36,.25);
+}
+.nav-link.active::before {
+  content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
+  background: linear-gradient(to bottom, #fbbf24, #a855f7);
+  border-radius: 0 2px 2px 0;
+}
+.nav-link.collapsed { justify-content: center; margin: 2px 6px; padding: 10px 0; }
+.nav-link.expanded { padding: 9px 12px; }
+
+.sidebar-section-label {
+  font-size: 9px; font-weight: 800; letter-spacing: .18em;
+  text-transform: uppercase; color: rgba(251,191,36,.25);
+  padding: 0 16px; margin: 14px 0 4px;
+  font-family: 'Nunito', sans-serif;
+}
+
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(251,191,36,.15); border-radius: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+`;
+
+const NAV_SECTIONS = (role) => [
   {
-    label: 'GAMES',
+    label: 'Games',
     items: [
-      { name: 'Battles', icon: Swords, page: 'Battles' },
-      { name: 'Cases', icon: Box, page: 'Cases' },
-      { name: 'Coinflip', icon: Coins, page: 'Coinflip' },
-      { name: 'Crash', icon: TrendingUp, page: 'Crash' },
-    ]
+      { name: 'Home',     icon: Home,       page: 'Home'      },
+      { name: 'Battles',  icon: Swords,     page: 'Battles'   },
+      { name: 'Cases',    icon: Box,        page: 'Cases'     },
+      { name: 'Coinflip', icon: Coins,      page: 'Coinflip'  },
+      { name: 'Crash',    icon: TrendingUp, page: 'Crash'     },
+    ],
   },
   {
-    label: 'REWARDS',
+    label: 'Earn',
     items: [
-      { name: 'Referrals', icon: Users, page: 'Referrals' },
-      { name: 'Rewards', icon: Gift, page: 'Rewards' },
-      { name: 'Leaderboard', icon: Award, page: 'Leaderboard' },
-    ]
+      { name: 'Referrals',    icon: Users,  page: 'Referrals'    },
+      { name: 'Rewards',      icon: Gift,   page: 'Rewards'      },
+      { name: 'Leaderboard',  icon: Award,  page: 'Leaderboard'  },
+    ],
   },
-  ...(userRole === 'admin' ? [{
-    label: 'ADMIN',
-    items: [
-      { name: 'Admin Panel', icon: Shield, page: 'Admin' },
-    ]
+  ...(role === 'admin' ? [{
+    label: 'Staff',
+    items: [{ name: 'Admin', icon: Shield, page: 'Admin' }],
   }] : []),
 ];
 
-export default function Layout({ children, currentPageName }) {
-  const [user, setUser] = useState(null);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
-  const [chatOpen, setChatOpen] = useState(true);
+/* ── Coin icon ── */
+function CoinIcon({ size = 18 }) {
+  return (
+    <div style={{
+      width: size, height: size, borderRadius: '50%', flexShrink: 0,
+      background: 'linear-gradient(135deg,#fbbf24,#f59e0b)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center',
+      boxShadow: '0 0 8px rgba(251,191,36,.55)',
+    }}>
+      <span style={{ fontSize: size * 0.45, fontWeight: 900, color: '#000' }}>$</span>
+    </div>
+  );
+}
 
-  const reloadUser = () => {
-    base44.auth.me().then(setUser).catch(() => {});
-  };
+export default function Layout({ children, currentPageName }) {
+  const [user,              setUser]              = useState(null);
+  const [mobileOpen,        setMobileOpen]        = useState(false);
+  const [sidebarCollapsed,  setSidebarCollapsed]  = useState(false);
+  const [profileOpen,       setProfileOpen]       = useState(false);
+  const [chatOpen,          setChatOpen]          = useState(true);
+
+  const reloadUser = () => base44.auth.me().then(setUser).catch(() => {});
 
   useEffect(() => {
     reloadUser();
-    // Poll every 3 seconds for balance/xp/avatar updates
     const interval = setInterval(reloadUser, 3000);
-    // Also subscribe to User entity changes for instant updates
-    const unsub = base44.entities.User.subscribe((event) => {
-      if (event.type === 'update') reloadUser();
-    });
+    const unsub = base44.entities.User.subscribe(e => { if (e.type === 'update') reloadUser(); });
     return () => { clearInterval(interval); unsub(); };
   }, []);
 
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [currentPageName]);
+  useEffect(() => { setMobileOpen(false); }, [currentPageName]);
 
   const xpProgress = user ? ((user.xp || 0) % 500) / 5 : 0;
-  const level = user?.level || 1;
+  const level      = user?.level || 1;
 
-  const SidebarContent = ({ collapsed }) => (
-    <>
+  /* ── Sidebar inner ── */
+  const SidebarInner = ({ collapsed }) => (
+    <div style={{ display:'flex', flexDirection:'column', height:'100%', position:'relative', overflow:'hidden' }}>
+      <div className="sidebar-scan" />
+
       {/* Logo */}
-      <div className={`flex items-center border-b border-[#00d9ff]/10 ${collapsed ? 'px-3 py-4 justify-center' : 'px-5 py-4'}`}>
-        <Link to={createPageUrl('Home')} className="flex items-center gap-2.5 group">
-          <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[#00d9ff] to-[#9d4edd] flex items-center justify-center flex-shrink-0 glow-cyan group-hover:glow-cyan-lg smooth-transition">
-            <Box className="w-5 h-5 text-[#0a0a15]" />
+      <div style={{
+        padding: collapsed ? '18px 0' : '16px 18px',
+        borderBottom: '1px solid rgba(251,191,36,.08)',
+        display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start',
+        gap: 10,
+      }}>
+        <Link to={createPageUrl('Home')} style={{ display:'flex', alignItems:'center', gap:10, textDecoration:'none' }}>
+          <div className="logo-pulse" style={{
+            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
+            background: 'linear-gradient(135deg,#fbbf24,#f59e0b,#a855f7)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            boxShadow: '0 0 20px rgba(251,191,36,.35)',
+          }}>
+            <Box style={{ width: 18, height: 18, color: '#000' }} />
           </div>
           {!collapsed && (
             <div>
-              <span className="text-base font-bold text-[#00d9ff] tracking-widest">LOOTVERSE</span>
+              <div style={{
+                fontSize: 14, fontWeight: 900, letterSpacing: '.18em',
+                background: 'linear-gradient(90deg,#fbbf24,#f59e0b 40%,#c084fc)',
+                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+              }}>LOOTVERSE</div>
+              <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '.1em', color: 'rgba(255,255,255,.2)', marginTop: 1 }}>
+                PLAY · WIN · EARN
+              </div>
             </div>
           )}
         </Link>
       </div>
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto scrollbar-hide py-3">
-        {getNavSections(user?.role).map((section) => (
-          <div key={section.label} className="mb-4">
-            {!collapsed && (
-              <p className="text-[10px] font-semibold text-[#00d9ff]/40 tracking-[0.15em] uppercase px-4 mb-1.5">{section.label}</p>
-            )}
-            {section.items.map((item) => {
+      <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 0 12px' }}>
+        {NAV_SECTIONS(user?.role).map(section => (
+          <div key={section.label}>
+            {!collapsed && <div className="sidebar-section-label">{section.label}</div>}
+            {collapsed && <div style={{ height: 12 }} />}
+            {section.items.map(item => {
               const active = currentPageName === item.page;
               return (
                 <Link
                   key={item.page}
                   to={createPageUrl(item.page)}
                   title={collapsed ? item.name : undefined}
-                  className={`flex items-center gap-3 mx-2 mb-0.5 rounded-lg smooth-transition
-                    ${collapsed ? 'px-2 py-2.5 justify-center' : 'px-3 py-2.5'}
-                    ${active
-                      ? 'bg-[#00d9ff]/15 text-[#00d9ff] border border-[#00d9ff]/30'
-                      : 'text-[#a0a0b0] hover:text-[#00d9ff] hover:bg-[#00d9ff]/5 border border-transparent'
-                    }`}
+                  className={`nav-link ${collapsed ? 'collapsed' : 'expanded'} ${active ? 'active nav-active' : ''}`}
                 >
-                  <item.icon className={`w-[18px] h-[18px] flex-shrink-0 ${active ? 'text-[#ff006e]' : ''}`} />
-                  {!collapsed && <span className="text-[13px] font-medium">{item.name}</span>}
-                  {active && !collapsed && (
-                    <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#ff006e]" />
+                  <item.icon style={{
+                    width: 16, height: 16, flexShrink: 0,
+                    color: active ? '#fbbf24' : 'rgba(255,255,255,.3)',
+                    transition: 'color .22s',
+                  }} />
+                  {!collapsed && item.name}
+                  {!collapsed && active && (
+                    <div style={{
+                      marginLeft: 'auto', width: 5, height: 5, borderRadius: '50%',
+                      background: '#a855f7', boxShadow: '0 0 6px #a855f7',
+                    }} />
                   )}
                 </Link>
               );
@@ -114,185 +233,371 @@ export default function Layout({ children, currentPageName }) {
         ))}
       </nav>
 
-
-    </>
+      {/* User mini card at bottom */}
+      {user && !collapsed && (
+        <div style={{
+          margin: '0 10px 12px',
+          padding: '10px 12px',
+          borderRadius: 12,
+          background: 'rgba(251,191,36,.05)',
+          border: '1px solid rgba(251,191,36,.1)',
+        }}>
+          <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:8 }}>
+            <button onClick={() => setProfileOpen(true)} style={{
+              width: 30, height: 30, borderRadius: '50%', flexShrink: 0,
+              background: 'linear-gradient(135deg,#fbbf24,#a855f7)',
+              overflow: 'hidden', border: 'none', cursor: 'pointer', padding: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 11, fontWeight: 900, color: '#000',
+              boxShadow: '0 0 12px rgba(251,191,36,.4)',
+            }}>
+              {user.avatar_url
+                ? <img src={user.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+                : (user.full_name?.[0]?.toUpperCase() || '?')}
+            </button>
+            <div style={{ flex:1, overflow:'hidden' }}>
+              <div style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,.8)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                {user.full_name || user.email?.split('@')[0] || 'Player'}
+              </div>
+              <div style={{ fontSize:9, fontWeight:700, color:'rgba(251,191,36,.5)' }}>Level {level}</div>
+            </div>
+            <div style={{
+              padding:'2px 7px', borderRadius:100, fontSize:9, fontWeight:800,
+              background:'rgba(168,85,247,.15)', border:'1px solid rgba(168,85,247,.3)',
+              color:'#c084fc',
+            }}>Lv{level}</div>
+          </div>
+          {/* XP bar */}
+          <div style={{ height:3, background:'rgba(255,255,255,.06)', borderRadius:99, overflow:'hidden' }}>
+            <div className="xp-bar" style={{ height:'100%', width:`${xpProgress}%`, borderRadius:99, transition:'width .5s' }} />
+          </div>
+          <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
+            <span style={{ fontSize:8, fontWeight:700, color:'rgba(255,255,255,.2)' }}>XP Progress</span>
+            <span style={{ fontSize:8, fontWeight:700, color:'rgba(251,191,36,.4)' }}>{Math.round(xpProgress)}%</span>
+          </div>
+        </div>
+      )}
+    </div>
   );
 
+  const sidebarW = sidebarCollapsed ? 60 : 210;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0a0805] via-[#1a1815] to-[#0d0c0a] flex text-[#fafaf8]">
-      {/* Sidebar - Desktop */}
-      <aside
-        className={`hidden lg:flex flex-col bg-gradient-to-b from-[#1a1a2e] to-[#0d0d1a] border-r border-[#00d9ff]/10 fixed h-full z-40 transition-all duration-300
-          ${sidebarCollapsed ? 'w-[60px]' : 'w-[220px]'}`}
-      >
-        <SidebarContent collapsed={sidebarCollapsed} />
+    <div style={{ minHeight:'100vh', background:'#04000a', display:'flex', fontFamily:'Nunito,sans-serif' }}>
+      <style>{CSS}</style>
+
+      {/* ── Desktop Sidebar ── */}
+      <aside style={{
+        display:'none',
+        width: sidebarW,
+        flexShrink: 0,
+        position: 'fixed',
+        top: 0, left: 0, bottom: 0,
+        zIndex: 40,
+        background: 'linear-gradient(180deg,#08001a 0%,#04000a 100%)',
+        borderRight: '1px solid rgba(251,191,36,.08)',
+        transition: 'width .3s cubic-bezier(.4,0,.2,1)',
+        overflow: 'hidden',
+      }} className="lv-sidebar">
+        <SidebarInner collapsed={sidebarCollapsed} />
 
         {/* Collapse toggle */}
-        <button
-          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-          className="absolute -right-3 top-[72px] w-6 h-6 rounded-full bg-[#242456] border border-[#00d9ff]/20 flex items-center justify-center text-[#00d9ff]/40 hover:text-[#00d9ff] smooth-transition z-50"
-        >
-          {sidebarCollapsed ? <ChevronRight className="w-3 h-3" /> : <ChevronLeft className="w-3 h-3" />}
+        <button onClick={() => setSidebarCollapsed(v => !v)} style={{
+          position: 'absolute', right: -12, top: 68,
+          width: 24, height: 24, borderRadius: '50%',
+          background: '#0e0020', border: '1px solid rgba(251,191,36,.2)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          cursor: 'pointer', zIndex: 50, color: 'rgba(251,191,36,.5)',
+          transition: 'color .2s, border-color .2s',
+        }}>
+          {sidebarCollapsed
+            ? <ChevronRight style={{ width:12, height:12 }} />
+            : <ChevronLeft  style={{ width:12, height:12 }} />}
         </button>
       </aside>
 
-      {/* Top Header Bar */}
-      <div
-        className={`fixed top-0 right-0 z-30 h-14 bg-gradient-to-r from-[#1a1a2e] to-[#242456] border-b border-[#00d9ff]/10 flex items-center px-4 gap-3 smooth-transition
-          ${sidebarCollapsed ? 'left-[60px]' : 'left-[220px]'} hidden lg:flex`}
-      >
-        <div className="flex-1" />
+      {/* ── Top Header (desktop) ── */}
+      <header style={{
+        display: 'none',
+        position: 'fixed', top: 0, right: 0, zIndex: 30,
+        left: sidebarW,
+        height: 54,
+        background: 'linear-gradient(90deg,#08001a,#0a0015)',
+        borderBottom: '1px solid rgba(251,191,36,.08)',
+        alignItems: 'center',
+        padding: '0 16px',
+        gap: 10,
+        transition: 'left .3s cubic-bezier(.4,0,.2,1)',
+      }} className="lv-header">
 
-        {/* Level + XP bar */}
+        {/* Decorative left accent */}
+        <div style={{ flex:1, display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ height:20, width:2, borderRadius:2, background:'linear-gradient(to bottom,#fbbf24,#a855f7)', opacity:.5 }} />
+          <span style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,.2)', letterSpacing:'.08em' }}>
+            {currentPageName?.toUpperCase() || ''}
+          </span>
+        </div>
+
+        {/* XP chip */}
         {user && (
-          <div className="flex items-center gap-2.5 bg-[#1a1a2e] border border-[#00d9ff]/15 rounded-lg px-3 py-1.5 smooth-transition hover:border-[#00d9ff]/30">
-            <div className="w-6 h-6 rounded-md bg-gradient-to-br from-[#00d9ff] to-[#9d4edd] flex items-center justify-center text-[10px] font-bold text-[#0a0a15] flex-shrink-0">
-              {level}
-            </div>
-            <div className="flex flex-col gap-0.5 w-24">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] text-[#00d9ff]/60">Level {level}</span>
-                <span className="text-[10px] text-[#00d9ff]/40">{Math.round(xpProgress)}%</span>
+          <div style={{
+            display:'flex', alignItems:'center', gap:8, padding:'5px 10px', borderRadius:10,
+            background:'rgba(168,85,247,.08)', border:'1px solid rgba(168,85,247,.18)',
+          }}>
+            <div style={{
+              width:22, height:22, borderRadius:7, flexShrink:0,
+              background:'linear-gradient(135deg,#a855f7,#7c3aed)',
+              display:'flex', alignItems:'center', justifyContent:'center',
+              fontSize:10, fontWeight:900, color:'#fff',
+              boxShadow:'0 0 10px rgba(168,85,247,.45)',
+            }}>{level}</div>
+            <div style={{ display:'flex', flexDirection:'column', gap:2, width:80 }}>
+              <div style={{ display:'flex', justifyContent:'space-between' }}>
+                <span style={{ fontSize:9, fontWeight:700, color:'rgba(192,132,252,.6)' }}>Level {level}</span>
+                <span style={{ fontSize:9, fontWeight:700, color:'rgba(192,132,252,.35)' }}>{Math.round(xpProgress)}%</span>
               </div>
-              <div className="h-1 bg-[#00d9ff]/10 rounded-full overflow-hidden w-full">
-                <div
-                  className="h-full bg-gradient-to-r from-[#00d9ff] to-[#9d4edd] rounded-full smooth-transition"
-                  style={{ width: `${xpProgress}%` }}
-                />
+              <div style={{ height:2, background:'rgba(168,85,247,.12)', borderRadius:99, overflow:'hidden' }}>
+                <div className="xp-bar" style={{ height:'100%', width:`${xpProgress}%`, borderRadius:99 }} />
               </div>
             </div>
           </div>
         )}
 
-        {/* Balance */}
+        {/* Balance chip */}
         {user && (
-          <div className="flex items-center gap-1.5 bg-[#1a1a2e] border border-[#00d9ff]/15 rounded-lg pl-2 pr-1 py-1 smooth-transition hover:border-[#00d9ff]/30">
-            <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#00d9ff] to-[#9d4edd] flex items-center justify-center">
-              <span className="text-[9px] font-bold text-[#0a0a15]">$</span>
-            </div>
-            <span className="text-sm font-bold text-[#00d9ff]">{(user.balance || 0).toLocaleString()}</span>
-            <Link to={createPageUrl('Deposit')}>
-              <div className="ml-1 bg-[#00d9ff]/20 hover:bg-[#00d9ff]/30 smooth-transition rounded-md px-2 py-1 flex items-center gap-1 border border-[#00d9ff]/30">
-                <Wallet className="w-3 h-3 text-[#00d9ff]" />
-                <span className="text-[11px] font-semibold text-[#00d9ff]">Wallet</span>
-              </div>
+          <div className="balance-chip" style={{
+            display:'flex', alignItems:'center', gap:6, padding:'5px 6px 5px 10px', borderRadius:10,
+            background:'rgba(251,191,36,.07)', border:'1px solid rgba(251,191,36,.15)',
+          }}>
+            <CoinIcon size={16} />
+            <span style={{ fontSize:13, fontWeight:900, color:'#fbbf24', minWidth:50 }}>
+              {(user.balance || 0).toLocaleString()}
+            </span>
+            <Link to={createPageUrl('Deposit')} style={{
+              display:'flex', alignItems:'center', gap:4, padding:'4px 8px', borderRadius:7,
+              background:'linear-gradient(135deg,#fbbf24,#f59e0b)', textDecoration:'none',
+              boxShadow:'0 0 12px rgba(251,191,36,.35)',
+            }}>
+              <Wallet style={{ width:11, height:11, color:'#000' }} />
+              <span style={{ fontSize:10, fontWeight:900, color:'#000' }}>Deposit</span>
             </Link>
           </div>
         )}
 
         {/* Avatar */}
         {user && (
-          <button
-            onClick={() => setProfileOpen(true)}
-            className="w-8 h-8 rounded-full bg-gradient-to-br from-[#00d9ff] to-[#9d4edd] overflow-hidden flex items-center justify-center text-xs font-bold text-[#0a0a15] glow-cyan hover:glow-cyan-lg smooth-transition"
-            title="Open profile"
-          >
+          <button onClick={() => setProfileOpen(true)} style={{
+            width:32, height:32, borderRadius:'50%', flexShrink:0, overflow:'hidden',
+            background:'linear-gradient(135deg,#fbbf24,#a855f7)',
+            border:'2px solid rgba(251,191,36,.3)',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            fontSize:12, fontWeight:900, color:'#000', cursor:'pointer',
+            boxShadow:'0 0 14px rgba(251,191,36,.35)', padding:0,
+            transition:'box-shadow .2s',
+          }}>
             {user.avatar_url
-              ? <img src={user.avatar_url} alt="" className="w-full h-full object-cover" />
+              ? <img src={user.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
               : (user.full_name?.[0]?.toUpperCase() || '?')}
           </button>
         )}
-      </div>
+      </header>
 
-      {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-gradient-to-r from-[#1a1a2e] to-[#242456] border-b border-[#00d9ff]/10 flex items-center px-4 gap-3">
-        <button onClick={() => setMobileOpen(!mobileOpen)} className="text-[#a0a0b0] hover:text-[#00d9ff] smooth-transition">
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+      {/* ── Mobile Header ── */}
+      <header style={{
+        position:'fixed', top:0, left:0, right:0, zIndex:50, height:54,
+        background:'linear-gradient(90deg,#08001a,#0a0015)',
+        borderBottom:'1px solid rgba(251,191,36,.08)',
+        display:'flex', alignItems:'center', padding:'0 14px', gap:10,
+      }} className="lv-mobile-header">
+        <button onClick={() => setMobileOpen(v => !v)} style={{
+          width:32, height:32, borderRadius:9, border:'none', cursor:'pointer',
+          background:'rgba(251,191,36,.08)', border:'1px solid rgba(251,191,36,.15)',
+          display:'flex', alignItems:'center', justifyContent:'center',
+          color:'rgba(251,191,36,.7)',
+        }}>
+          {mobileOpen ? <X style={{ width:15, height:15 }} /> : <Menu style={{ width:15, height:15 }} />}
         </button>
-        <Link to={createPageUrl('Home')} className="flex items-center gap-2 group">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-[#00d9ff] to-[#9d4edd] flex items-center justify-center glow-cyan group-hover:glow-cyan-lg smooth-transition">
-            <Box className="w-3.5 h-3.5 text-[#0a0a15]" />
+
+        <Link to={createPageUrl('Home')} style={{ display:'flex', alignItems:'center', gap:8, textDecoration:'none' }}>
+          <div style={{
+            width:28, height:28, borderRadius:8, flexShrink:0,
+            background:'linear-gradient(135deg,#fbbf24,#a855f7)',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            boxShadow:'0 0 14px rgba(251,191,36,.4)',
+          }}>
+            <Box style={{ width:14, height:14, color:'#000' }} />
           </div>
-          <span className="font-bold text-[#00d9ff] text-sm">LOOTVERSE</span>
+          <span style={{
+            fontSize:12, fontWeight:900, letterSpacing:'.15em',
+            background:'linear-gradient(90deg,#fbbf24,#c084fc)',
+            WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
+          }}>LOOTVERSE</span>
         </Link>
-        <div className="flex-1" />
+
+        <div style={{ flex:1 }} />
+
         {user && (
-          <div className="flex items-center gap-2">
-            {/* Mobile level badge */}
-            <div className="flex items-center gap-1.5 bg-[#1a1a2e] border border-[#00d9ff]/15 rounded-lg px-2 py-1 smooth-transition">
-              <div className="w-5 h-5 rounded-md bg-gradient-to-br from-[#00d9ff] to-[#9d4edd] flex items-center justify-center text-[9px] font-bold text-[#0a0a15]">
-                {level}
-              </div>
-              <div className="w-16 h-1.5 bg-[#00d9ff]/10 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-[#00d9ff] to-[#9d4edd] rounded-full smooth-transition"
-                  style={{ width: `${xpProgress}%` }}
-                />
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            {/* Mobile XP */}
+            <div style={{
+              display:'flex', alignItems:'center', gap:6, padding:'4px 8px', borderRadius:8,
+              background:'rgba(168,85,247,.08)', border:'1px solid rgba(168,85,247,.18)',
+            }}>
+              <div style={{
+                width:18, height:18, borderRadius:5, flexShrink:0,
+                background:'linear-gradient(135deg,#a855f7,#7c3aed)',
+                display:'flex', alignItems:'center', justifyContent:'center',
+                fontSize:8, fontWeight:900, color:'#fff',
+              }}>{level}</div>
+              <div style={{ width:50, height:2, background:'rgba(168,85,247,.15)', borderRadius:99, overflow:'hidden' }}>
+                <div className="xp-bar" style={{ height:'100%', width:`${xpProgress}%`, borderRadius:99 }} />
               </div>
             </div>
             {/* Mobile balance */}
-            <div className="flex items-center gap-1 bg-[#1a1a2e] border border-[#00d9ff]/15 rounded-lg px-2 py-1.5 smooth-transition">
-              <div className="w-4 h-4 rounded-full bg-gradient-to-br from-[#00d9ff] to-[#9d4edd] flex items-center justify-center">
-                <span className="text-[8px] font-bold text-[#0a0a15]">$</span>
-              </div>
-              <span className="text-xs font-bold text-[#00d9ff]">{(user.balance || 0).toLocaleString()}</span>
+            <div style={{
+              display:'flex', alignItems:'center', gap:5, padding:'4px 8px', borderRadius:8,
+              background:'rgba(251,191,36,.07)', border:'1px solid rgba(251,191,36,.15)',
+            }}>
+              <CoinIcon size={14} />
+              <span style={{ fontSize:11, fontWeight:900, color:'#fbbf24' }}>
+                {(user.balance || 0).toLocaleString()}
+              </span>
             </div>
           </div>
         )}
-      </div>
+      </header>
 
-      {/* Mobile Drawer */}
+      {/* ── Mobile Drawer ── */}
       {mobileOpen && (
-        <div className="lg:hidden fixed inset-0 z-40">
-          <div className="absolute inset-0 bg-black/70" onClick={() => setMobileOpen(false)} />
-          <aside className="absolute left-0 top-0 bottom-0 w-64 bg-gradient-to-b from-[#1a1a2e] to-[#0d0d1a] border-r border-[#00d9ff]/10 pt-14 flex flex-col overflow-y-auto">
-            <nav className="flex-1 py-3">
-              {getNavSections(user?.role).map((section) => (
-                <div key={section.label} className="mb-4">
-                  <p className="text-[10px] font-semibold text-[#00d9ff]/40 tracking-[0.15em] uppercase px-4 mb-1.5">{section.label}</p>
-                  {section.items.map((item) => {
-                    const active = currentPageName === item.page;
-                    return (
-                      <Link
-                        key={item.page}
-                        to={createPageUrl(item.page)}
-                        className={`flex items-center gap-3 mx-2 mb-0.5 px-3 py-2.5 rounded-lg text-[13px] font-medium smooth-transition
-                          ${active ? 'bg-[#00d9ff]/15 text-[#00d9ff] border border-[#00d9ff]/30' : 'text-[#a0a0b0] hover:text-[#00d9ff] hover:bg-[#00d9ff]/5 border border-transparent'}`}
-                      >
-                        <item.icon className={`w-[18px] h-[18px] ${active ? 'text-[#ff006e]' : ''}`} />
-                        {item.name}
-                      </Link>
-                    );
-                  })}
+        <div style={{ position:'fixed', inset:0, zIndex:40 }}>
+          <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.75)' }} onClick={() => setMobileOpen(false)} />
+          <aside style={{
+            position:'absolute', left:0, top:0, bottom:0, width:240,
+            background:'linear-gradient(180deg,#08001a 0%,#04000a 100%)',
+            borderRight:'1px solid rgba(251,191,36,.1)',
+            paddingTop:54, display:'flex', flexDirection:'column',
+            overflow:'hidden',
+          }}>
+            <div style={{ position:'relative', overflow:'hidden', flex:1 }}>
+              <div className="sidebar-scan" />
+              <nav style={{ padding:'10px 0', overflowY:'auto', height:'100%' }}>
+                {NAV_SECTIONS(user?.role).map(section => (
+                  <div key={section.label}>
+                    <div className="sidebar-section-label">{section.label}</div>
+                    {section.items.map(item => {
+                      const active = currentPageName === item.page;
+                      return (
+                        <Link
+                          key={item.page}
+                          to={createPageUrl(item.page)}
+                          className={`nav-link expanded ${active ? 'active nav-active' : ''}`}
+                        >
+                          <item.icon style={{ width:16, height:16, flexShrink:0, color: active ? '#fbbf24' : 'rgba(255,255,255,.3)' }} />
+                          {item.name}
+                          {active && (
+                            <div style={{ marginLeft:'auto', width:5, height:5, borderRadius:'50%', background:'#a855f7', boxShadow:'0 0 6px #a855f7' }} />
+                          )}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                ))}
+              </nav>
+            </div>
+
+            {/* Mobile bottom user strip */}
+            {user && (
+              <div style={{
+                margin:'0 10px 12px', padding:'10px 12px', borderRadius:12,
+                background:'rgba(251,191,36,.05)', border:'1px solid rgba(251,191,36,.1)',
+              }}>
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <button onClick={() => { setProfileOpen(true); setMobileOpen(false); }} style={{
+                    width:28, height:28, borderRadius:'50%', flexShrink:0, overflow:'hidden',
+                    background:'linear-gradient(135deg,#fbbf24,#a855f7)', border:'none', cursor:'pointer', padding:0,
+                    display:'flex', alignItems:'center', justifyContent:'center',
+                    fontSize:10, fontWeight:900, color:'#000',
+                  }}>
+                    {user.avatar_url ? <img src={user.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} /> : (user.full_name?.[0]?.toUpperCase() || '?')}
+                  </button>
+                  <div style={{ flex:1, overflow:'hidden' }}>
+                    <div style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,.7)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                      {user.full_name || user.email?.split('@')[0] || 'Player'}
+                    </div>
+                  </div>
+                  <Link to={createPageUrl('Deposit')} onClick={() => setMobileOpen(false)} style={{
+                    padding:'4px 10px', borderRadius:7, textDecoration:'none',
+                    background:'linear-gradient(135deg,#fbbf24,#f59e0b)',
+                    fontSize:10, fontWeight:900, color:'#000',
+                  }}>+ Deposit</Link>
                 </div>
-              ))}
-            </nav>
+              </div>
+            )}
           </aside>
         </div>
       )}
 
-      {/* Profile Modal */}
-      {profileOpen && user && (
-        <ProfileModal user={user} onClose={() => setProfileOpen(false)} />
-      )}
+      {/* ── Profile Modal ── */}
+      {profileOpen && user && <ProfileModal user={user} onClose={() => setProfileOpen(false)} />}
 
-      {/* Main Content + Chat Panel */}
-      <div
-        className={`flex flex-1 min-h-screen pt-14 smooth-transition relative
-          ${sidebarCollapsed ? 'lg:ml-[60px]' : 'lg:ml-[220px]'}`}
-      >
-        {/* Chat Toggle Button - when chat is closed */}
-        {!chatOpen && (
-          <button
-            onClick={() => setChatOpen(true)}
-            className="hidden lg:flex fixed bottom-6 right-6 z-50 w-12 h-12 rounded-full bg-gradient-to-br from-[#00d9ff] to-[#ff006e] items-center justify-center text-[#0a0a15] hover:shadow-lg glow-cyan hover:glow-cyan-lg smooth-transition"
-            title="Open chat"
-          >
-            <MessageCircle className="w-5 h-5" />
-          </button>
-        )}
-        {/* Page content */}
-        <main className="flex-1 min-w-0 overflow-y-auto">
-          <div className="max-w-5xl mx-auto p-4 md:p-5 lg:p-6">
+      {/* ── Main content area ── */}
+      <div style={{
+        display:'flex', flex:1, minHeight:'100vh', paddingTop:54,
+        marginLeft: sidebarW,
+        transition:'margin-left .3s cubic-bezier(.4,0,.2,1)',
+      }} className="lv-main">
+
+        {/* Page */}
+        <main style={{ flex:1, minWidth:0, overflowY:'auto' }}>
+          <div style={{ maxWidth:900, margin:'0 auto', padding:'20px 20px 40px' }}>
             {children}
           </div>
         </main>
 
-        {/* Right Chat Panel - desktop only */}
-        <aside className={`hidden lg:flex flex-col flex-shrink-0 h-[calc(100vh-56px)] sticky top-14 bg-gradient-to-b from-[#1a1a2e]/50 to-[#0d0d1a]/50 border-l border-[#00d9ff]/10 transition-all duration-300 overflow-hidden relative ${chatOpen ? 'w-[260px]' : 'w-0'}`}>
+        {/* Chat panel */}
+        <aside style={{
+          display:'none',
+          flexShrink:0,
+          height:'calc(100vh - 54px)',
+          position:'sticky', top:54,
+          background:'linear-gradient(180deg,#08001a 0%,#04000a 100%)',
+          borderLeft:'1px solid rgba(251,191,36,.07)',
+          transition:'width .3s cubic-bezier(.4,0,.2,1)',
+          overflow:'hidden',
+          width: chatOpen ? 260 : 0,
+        }} className="lv-chat">
           <LiveChat onClose={() => setChatOpen(false)} />
         </aside>
+
+        {/* Chat open button */}
+        {!chatOpen && (
+          <button className="chat-btn-pulse" onClick={() => setChatOpen(true)} style={{
+            display:'none',
+            position:'fixed', bottom:20, right:20, zIndex:50,
+            width:46, height:46, borderRadius:'50%', border:'none', cursor:'pointer',
+            background:'linear-gradient(135deg,#a855f7,#7c3aed)',
+            alignItems:'center', justifyContent:'center',
+            boxShadow:'0 4px 20px rgba(168,85,247,.5)',
+          }} className="lv-chat-btn chat-btn-pulse">
+            <MessageCircle style={{ width:20, height:20, color:'#fff' }} />
+          </button>
+        )}
       </div>
+
+      {/* ── Responsive show/hide via injected style ── */}
+      <style>{`
+        @media (min-width: 1024px) {
+          .lv-sidebar  { display: flex !important; flex-direction: column; }
+          .lv-header   { display: flex !important; }
+          .lv-mobile-header { display: none !important; }
+          .lv-main     { margin-left: ${sidebarW}px !important; }
+          .lv-chat     { display: flex !important; flex-direction: column; }
+          .lv-chat-btn { display: flex !important; }
+        }
+        @media (max-width: 1023px) {
+          .lv-main { margin-left: 0 !important; }
+        }
+      `}</style>
     </div>
   );
 }
