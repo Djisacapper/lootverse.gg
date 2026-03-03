@@ -253,9 +253,6 @@ export default function Admin() {
           <TabsTrigger value="cases" className="data-[state=active]:bg-cyan-500/20 data-[state=active]:text-cyan-300 rounded-lg">
             <Box className="w-3.5 h-3.5 mr-1.5" /> Create Cases
           </TabsTrigger>
-          <TabsTrigger value="leaderboard" className="data-[state=active]:bg-yellow-500/20 data-[state=active]:text-yellow-300 rounded-lg">
-            <Trophy className="w-3.5 h-3.5 mr-1.5" /> Leaderboard
-          </TabsTrigger>
           <TabsTrigger value="activity" className="data-[state=active]:bg-blue-500/20 data-[state=active]:text-blue-300 rounded-lg">
             <Activity className="w-3.5 h-3.5 mr-1.5" /> Activity Log
           </TabsTrigger>
