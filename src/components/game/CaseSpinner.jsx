@@ -9,30 +9,43 @@ function useSpinSound(spinning) {
   const startTime = useRef(null);
   const DURATION = 4000;
 
+  const getCtx = () => {
+    if (!audioCtx.current) {
+      audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.current.state === 'suspended') {
+      audioCtx.current.resume();
+    }
+    return audioCtx.current;
+  };
+
   const playTick = () => {
     try {
-      if (!audioCtx.current) audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
-      const ctx = audioCtx.current;
+      const ctx = getCtx();
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(300 + Math.random() * 80, ctx.currentTime);
-      gain.gain.setValueAtTime(0.04, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(280 + Math.random() * 100, ctx.currentTime);
+      gain.gain.setValueAtTime(0.035, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.07);
       osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.06);
+      osc.stop(ctx.currentTime + 0.07);
     } catch {}
   };
 
   useEffect(() => {
-    if (!spinning) { clearTimeout(tickTimer.current); return; }
+    if (!spinning) {
+      clearTimeout(tickTimer.current);
+      return;
+    }
     startTime.current = Date.now();
     const tick = () => {
       const elapsed = Date.now() - startTime.current;
       const progress = Math.min(elapsed / DURATION, 1);
-      const interval = 40 + progress * 260;
+      // Fast at start (40ms), slow at end (320ms)
+      const interval = 40 + progress * 280;
       playTick();
       tickTimer.current = setTimeout(tick, interval);
     };
@@ -41,19 +54,29 @@ function useSpinSound(spinning) {
   }, [spinning]);
 }
 
+const getRarityDropShadow = (rarity) => {
+  const shadows = {
+    legendary: 'drop-shadow(0 0 12px rgba(251,191,36,0.95)) drop-shadow(0 0 20px rgba(251,191,36,0.5))',
+    epic:      'drop-shadow(0 0 12px rgba(168,85,247,0.9)) drop-shadow(0 0 20px rgba(168,85,247,0.4))',
+    rare:      'drop-shadow(0 0 12px rgba(59,130,246,0.9)) drop-shadow(0 0 20px rgba(59,130,246,0.4))',
+    uncommon:  'drop-shadow(0 0 12px rgba(34,197,94,0.8)) drop-shadow(0 0 20px rgba(34,197,94,0.3))',
+    common:    'drop-shadow(0 0 8px rgba(161,161,170,0.6))',
+  };
+  return shadows[rarity] || shadows.common;
+};
+
 export default function CaseSpinner({ items, result, spinning, onComplete }) {
   const [spinItems, setSpinItems] = useState([]);
   const [offset, setOffset] = useState(0);
   const containerRef = useRef(null);
   const ITEM_WIDTH = 120;
-
-  useSpinSound(spinning);
   const VISIBLE_ITEMS = 40;
   const WINNER_INDEX = 33;
 
+  useSpinSound(spinning);
+
   useEffect(() => {
     if (!items || items.length === 0) return;
-
     const strip = [];
     for (let i = 0; i < VISIBLE_ITEMS; i++) {
       if (i === WINNER_INDEX && result) {
@@ -72,7 +95,6 @@ export default function CaseSpinner({ items, result, spinning, onComplete }) {
       const targetOffset = (WINNER_INDEX * ITEM_WIDTH) - (containerWidth / 2) + (ITEM_WIDTH / 2);
       const jitter = (Math.random() - 0.5) * 40;
       setOffset(targetOffset + jitter);
-
       const timer = setTimeout(() => {
         if (onComplete) onComplete();
       }, 4200);
@@ -82,18 +104,7 @@ export default function CaseSpinner({ items, result, spinning, onComplete }) {
     }
   }, [spinning, spinItems]);
 
-  const getRarityDropShadow = (rarity) => {
-    const shadows = {
-      legendary: 'drop-shadow(0 0 12px rgba(251,191,36,0.95)) drop-shadow(0 0 20px rgba(251,191,36,0.5))',
-      epic:      'drop-shadow(0 0 12px rgba(168,85,247,0.9)) drop-shadow(0 0 20px rgba(168,85,247,0.4))',
-      rare:      'drop-shadow(0 0 12px rgba(59,130,246,0.9)) drop-shadow(0 0 20px rgba(59,130,246,0.4))',
-      uncommon:  'drop-shadow(0 0 12px rgba(34,197,94,0.8)) drop-shadow(0 0 20px rgba(34,197,94,0.3))',
-      common:    'drop-shadow(0 0 8px rgba(161,161,170,0.6))',
-    };
-    return shadows[rarity] || shadows.common;
-  };
-
-  if (spinItems.length === 0) {
+  if (!spinItems || spinItems.length === 0) {
     return <div className="h-32 glass rounded-2xl animate-pulse" />;
   }
 
