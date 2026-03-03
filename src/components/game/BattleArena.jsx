@@ -177,7 +177,7 @@ function ConfettiEffect({ active }) {
   return <canvas ref={ref} style={{ position:'fixed',inset:0,pointerEvents:'none',zIndex:9999 }} />;
 }
 /* ─── Vertical Spinner ───────────────────────────────────────────── */
-function VerticalSpinner({ items, winnerItem, onDone, fast }) {
+function VerticalSpinner({ items, winnerItem, onDone, fast, playSound = true }) {
   const ITEM_H=80, WIN_POS=28, TOTAL=36, VISIBLE_H=240;
   const duration = fast ? 1.4 : 3.0;
   const SPIN_DURATION = fast ? 1500 : 3100;
@@ -215,7 +215,7 @@ function VerticalSpinner({ items, winnerItem, onDone, fast }) {
       const elapsed = Date.now() - startTime.current;
       const progress = Math.min(elapsed / SPIN_DURATION, 1);
       const interval = 40 + progress * 280;
-      playTick();
+      if (playSound) playTick();
       tickTimer.current = setTimeout(tick, interval);
     };
     tick();
@@ -315,7 +315,7 @@ function ItemChip({ item, index = 0 }) {
   );
 }
 /* ─── Player Column ──────────────────────────────────────────────── */
-function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, caseItems, spinnerKey, spinnerItem, magicItem, onSpinDone, onMagicSpinDone, fast, showPct, pct }) {
+function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, caseItems, spinnerKey, spinnerItem, magicItem, onSpinDone, onMagicSpinDone, fast, showPct, pct, playSound = true }) {
   if (!player) return null;
   const total = wonItems.reduce((s, it) => s + (it?.value||0), 0);
   const topItems = caseItems.filter(it => ['epic','legendary'].includes(it.rarity));
@@ -385,6 +385,7 @@ function PlayerColumn({ player, playerColor, isWinner, wonItems, spinPhase, case
             winnerItem={spinPhase==='magic_spin' ? magicItem : spinnerItem}
             onDone={spinPhase==='magic_spin' ? onMagicSpinDone : onSpinDone}
             fast={fast}
+            playSound={playSound}
           />
         </div>
       )}
@@ -550,6 +551,11 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
   const roundDoneCount = useRef(0);
   const currentRoundRef = useRef(0);
   const rewardGiven    = useRef(false);
+
+  // The index of the single player who will play sounds — always the first player overall
+  const allPlayerIndices = teamList.flat();
+  const soundPlayerIndex = allPlayerIndices[0] ?? 0;
+
   const rollWithMagicSpin = (caseItems) => {
     const item = rollItem(caseItems) || { name:'Nothing', value:0, rarity:'common', image_url:null };
     if (!isMagicSpin) return { item, isMagic:false };
@@ -629,7 +635,6 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
   const playerTotals = playerItems.map(items=>items.reduce((s,it)=>s+(it?.value||0),0));
   const teamTotals   = teamList.map(mi=>mi.reduce((s,pi)=>s+(playerTotals[pi]||0),0));
   const totalPot     = (battle?.max_players||players.length)*(battle?.entry_cost||0);
-  const allPlayerIndices = teamList.flat();
   const playerColorMap   = {};
   allPlayerIndices.forEach((pi,idx)=>{ playerColorMap[pi]=PLAYER_COLORS[idx%PLAYER_COLORS.length]; });
   const grandPlayerTotal = playerTotals.reduce((s,v)=>s+v,0);
@@ -819,6 +824,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
                           pct={grandPlayerTotal>0 ? (playerTotals[pi]||0)/grandPlayerTotal : 0}
                           grandTotal={grandPlayerTotal}
                           showPct={isJackpot}
+                          playSound={pi === soundPlayerIndex}
                         />
                       );
                     })}
