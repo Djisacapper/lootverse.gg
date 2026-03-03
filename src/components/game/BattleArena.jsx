@@ -151,20 +151,118 @@ const TEAM_PALETTE = [
 ];
 const PLAYER_COLORS = ['#f5c842','#c084fc','#60a5fa','#34d399','#f472b6','#fb923c','#22d3ee','#a3e635'];
 
-/* ─── Audio ──────────────────────────────────────────────────────── */
+/* ─── Audio ──────────────────────────────────────────────────────────
+   Safari requires AudioContext to be created AND have audio scheduled
+   directly inside a synchronous user-gesture call stack. A resume() call
+   alone is not enough — Safari also suspends a context that hasn't
+   produced any sound recently, even if it was previously unlocked.
+
+   Solution: on the first pointerdown we create the context, resume it,
+   and start a SILENT KEEPALIVE — a zero-gain oscillator that runs
+   forever. This keeps the context in an "audible" state so that later
+   async calls (from setTimeout chains in launchRound) work on Safari.
+   The keepalive is inaudible (gain = 0) and costs essentially nothing.
+─────────────────────────────────────────────────────────────────── */
 let _ctx = null;
-const getCtx = () => { try { const AC = window.AudioContext||window.webkitAudioContext; if(!AC)return null; if(!_ctx)_ctx=new AC(); return _ctx; } catch{return null;} };
-const unlockAudio = () => { const c=getCtx(); if(!c)return; if(c.state==='suspended')c.resume(); try{const b=c.createBuffer(1,1,c.sampleRate);const s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start(0);}catch{} };
-if(typeof window!=='undefined') window.addEventListener('pointerdown',unlockAudio,{capture:true});
-let _tick=null;
-const stopSpin=()=>{if(_tick){clearTimeout(_tick);_tick=null;}};
-const playSpin=(fast)=>{
-  stopSpin(); const dur=fast?1500:3100; const t0=Date.now();
-  const tick=()=>{
-    const c=getCtx(); if(c&&c.state==='running'){try{const n=c.currentTime;const o=c.createOscillator();const g=c.createGain();o.connect(g);g.connect(c.destination);o.type='triangle';o.frequency.setValueAtTime(260+Math.random()*120,n);g.gain.setValueAtTime(0.028,n);g.gain.exponentialRampToValueAtTime(0.001,n+.065);o.start(n);o.stop(n+.065);}catch{}}
-    const el=Date.now()-t0; if(el<dur){const p=el/dur;_tick=setTimeout(tick,35+p*290);}
+let _keepaliveStarted = false;
+
+const getCtx = () => {
+  try {
+    const AC = window.AudioContext||window.webkitAudioContext;
+    if(!AC) return null;
+    if(!_ctx) _ctx = new AC();
+    return _ctx;
+  } catch { return null; }
+};
+
+const startKeepalive = (c) => {
+  if(_keepaliveStarted) return;
+  _keepaliveStarted = true;
+  try {
+    // Silent oscillator running forever — tricks Safari into thinking
+    // the context is actively producing audio, preventing auto-suspend
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    gain.gain.value = 0; // completely silent
+    osc.connect(gain);
+    gain.connect(c.destination);
+    osc.start();
+    // No osc.stop() — intentionally runs for the page lifetime
+  } catch {}
+};
+
+const unlockAudio = () => {
+  const c = getCtx();
+  if(!c) return;
+  // Must resume() synchronously inside the gesture handler
+  if(c.state === 'suspended') c.resume();
+  // Silent buffer — satisfies Safari's "must schedule audio in gesture" rule
+  try {
+    const b = c.createBuffer(1,1,c.sampleRate);
+    const s = c.createBufferSource();
+    s.buffer = b; s.connect(c.destination); s.start(0);
+  } catch {}
+  // Start keepalive on first gesture so context stays alive for async calls
+  startKeepalive(c);
+};
+
+if(typeof window !== 'undefined') {
+  window.addEventListener('pointerdown', unlockAudio, {capture:true});
+}
+
+let _tick = null;
+const stopSpin = () => { if(_tick){ clearTimeout(_tick); _tick=null; } };
+const playSpin = (fast) => {
+  stopSpin();
+  const dur = fast?1500:3100; const t0 = Date.now();
+  const tick = () => {
+    const c = getCtx();
+    if(c && c.state==='running') {
+      try {
+        const n=c.currentTime;
+        const o=c.createOscillator(), g=c.createGain();
+        o.connect(g); g.connect(c.destination);
+        o.type='triangle';
+        o.frequency.setValueAtTime(260+Math.random()*120, n);
+        g.gain.setValueAtTime(0.028, n);
+        g.gain.exponentialRampToValueAtTime(0.001, n+.065);
+        o.start(n); o.stop(n+.065);
+      } catch {}
+    }
+    const el = Date.now()-t0;
+    if(el < dur) { const p=el/dur; _tick=setTimeout(tick, 35+p*290); }
   };
-  const c=getCtx(); if(c&&c.state==='suspended'){c.resume().then(tick).catch(tick);}else tick();
+  const c = getCtx();
+  if(c && c.state==='suspended') { c.resume().then(tick).catch(tick); } else tick();
+};
+
+/* Rising C5-E5-G5-C6 arpeggio + warm chord swell. Fires once when battle ends. */
+const playReward = () => {
+  const c = getCtx(); if(!c) return;
+  const run = () => {
+    try {
+      const n = c.currentTime;
+      [[523.25,0],[659.25,.11],[783.99,.22],[1046.5,.34]].forEach(([freq,dt]) => {
+        const o=c.createOscillator(), g=c.createGain();
+        o.connect(g); g.connect(c.destination); o.type='sine';
+        o.frequency.setValueAtTime(freq, n+dt);
+        g.gain.setValueAtTime(0, n+dt);
+        g.gain.linearRampToValueAtTime(0.16, n+dt+.04);
+        g.gain.exponentialRampToValueAtTime(0.001, n+dt+.48);
+        o.start(n+dt); o.stop(n+dt+.5);
+      });
+      [523.25,659.25,783.99].forEach(freq => {
+        const o=c.createOscillator(), g=c.createGain();
+        o.connect(g); g.connect(c.destination); o.type='triangle';
+        o.frequency.setValueAtTime(freq, n+.34);
+        g.gain.setValueAtTime(0, n+.34);
+        g.gain.linearRampToValueAtTime(0.055, n+.46);
+        g.gain.exponentialRampToValueAtTime(0.001, n+1.4);
+        o.start(n+.34); o.stop(n+1.4);
+      });
+    } catch {}
+  };
+  if(c.state==='suspended') { c.resume().then(run).catch(run); } else run();
 };
 
 /* ─── Particles ──────────────────────────────────────────────────── */
@@ -263,13 +361,10 @@ const PlayerColumn = ({ player, playerColor:pc, isWinner, wonItems, spinPhase, c
   const lastItem=wonItems[wonItems.length-1];
   return (
     <div className={`ba-col${isWinner?' ba-winner':''}`} style={{border:`1.5px solid ${isWinner?'rgba(245,200,66,.35)':pc+'28'}`,boxShadow:isWinner?undefined:`0 0 0 1px rgba(0,0,0,.3),inset 0 0 28px rgba(0,0,0,.25)`}}>
-      {/* Top bar */}
       <div style={{height:3,flexShrink:0,background:isWinner?`linear-gradient(90deg,transparent,${pc},rgba(255,255,255,.7),${pc},transparent)`:`linear-gradient(90deg,transparent,${pc}55,transparent)`}}/>
       <div className="ba-scan"/>
       <div className="ba-noise"/>
       {isWinner&&<div style={{position:'absolute',top:0,left:0,right:0,height:110,pointerEvents:'none',background:`radial-gradient(ellipse 70% 60% at 50% 0%,rgba(245,200,66,.1) 0%,transparent 100%)`}}/>}
-
-      {/* Header */}
       <div style={{display:'flex',alignItems:'center',gap:9,padding:'13px 12px 9px',flexShrink:0,position:'relative',zIndex:2}}>
         <PlayerAvatar player={player} color={pc} size={38} iconSize={15}/>
         <div style={{flex:1,minWidth:0}}>
@@ -282,10 +377,7 @@ const PlayerColumn = ({ player, playerColor:pc, isWinner, wonItems, spinPhase, c
             </div>
           : <Shield style={{width:13,height:13,color:pc,opacity:.3,flexShrink:0}}/>}
       </div>
-
       <div style={{height:1,background:`linear-gradient(90deg,transparent,${pc}28,transparent)`,margin:'0 10px',flexShrink:0}}/>
-
-      {/* Score */}
       <div style={{padding:'9px 12px 7px',flexShrink:0,position:'relative',zIndex:2}}>
         <div style={{display:'flex',alignItems:'baseline',gap:4}}>
           <motion.span key={total} initial={{y:-6,opacity:0}} animate={{y:0,opacity:1}} transition={{duration:.18}} className="ba-title" style={{fontSize:26,fontWeight:700,color:isWinner?'#f5c842':'#f0eaff',letterSpacing:'.01em',lineHeight:1}}>
@@ -295,8 +387,6 @@ const PlayerColumn = ({ player, playerColor:pc, isWinner, wonItems, spinPhase, c
         </div>
         {wonItems.length>0&&<p style={{fontSize:10,color:'var(--text-dim)',marginTop:2}}>{wonItems.length} item{wonItems.length!==1?'s':''} · avg {Math.round(total/wonItems.length).toLocaleString()}</p>}
       </div>
-
-      {/* Win % bar */}
       {showPct&&(
         <div style={{padding:'0 12px 7px',flexShrink:0}}>
           <div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}>
@@ -308,8 +398,6 @@ const PlayerColumn = ({ player, playerColor:pc, isWinner, wonItems, spinPhase, c
           </div>
         </div>
       )}
-
-      {/* Spinner slot — ALWAYS 252px, never shifts */}
       <div style={{padding:'0 10px 10px',flexShrink:0,position:'relative',zIndex:2}}>
         {spinPhase==='magic_spin'&&<span className="ba-magic-lbl" style={{marginBottom:5}}>✦ Magic Spin ✦</span>}
         <div className="ba-spin-slot">
@@ -333,8 +421,6 @@ const PlayerColumn = ({ player, playerColor:pc, isWinner, wonItems, spinPhase, c
           }
         </div>
       </div>
-
-      {/* Items list */}
       <div className="ba-scroll" style={{flex:1,minHeight:0,overflowY:'auto',padding:'0 10px 12px'}}>
         <div style={{display:'flex',flexDirection:'column',gap:4}}>
           {wonItems.length===0&&!isSpinning&&<p style={{fontSize:10,color:'var(--text-dim)',textAlign:'center',padding:'8px 0',fontWeight:500}}>No items yet</p>}
@@ -458,7 +544,6 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
   const teamList   = useMemo(()=>teams||[players.map((_,i)=>i)],[teams,players.length]);
   const isWaiting  = battle?.status==='waiting';
 
-  /* Stable polling */
   const cbRef=useRef(onBattleUpdated); useEffect(()=>{cbRef.current=onBattleUpdated;},[onBattleUpdated]);
   const lastFilled=useRef(-1), lastStatus=useRef('');
   useEffect(()=>{
@@ -520,6 +605,7 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
   const finishBattle=(forced=null)=>{
     let wi; if(forced!==null)wi=forced; else if(isGroup)wi=-1; else{const v=teamList.map(mi=>mi.reduce((s,pi)=>s+getTotal(pi),0)/mi.length);wi=isCrazy?v.indexOf(Math.min(...v)):v.indexOf(Math.max(...v));}
     setWT(wi);setDone(true);setJackpot(false);
+    playReward();
     if(!rewardGiven.current){
       rewardGiven.current=true;
       const tv=allRolled.current.reduce((a,rnd)=>a+rnd.reduce((b,r)=>b+(r?.item?.value||0),0),0);
@@ -541,7 +627,6 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
   if(done){ if(isGroup)payoutLabel=`Split: ${Math.floor(totalItemsVal/players.length).toLocaleString()} coins each`; else if(winnerTeam>=0){const wc=teamList[winnerTeam]?.length||1;payoutLabel=wc===1?`Winner takes ${totalItemsVal.toLocaleString()} coins`:`${Math.floor(totalItemsVal/wc).toLocaleString()} coins each`;} }
   const activeModes=[isCrazy&&{icon:'🎭',color:'#f472b6',label:'Crazy'},isTerminal&&{icon:'⚡',color:'#f5c842',label:'Terminal'},isGroup&&{icon:'🔄',color:'#00e5a0',label:'Group'},isMagicSpin&&{icon:'✨',color:'#c084fc',label:'Magic Spin'},isFast&&{icon:'💨',color:'#00e5ff',label:'Fast Mode'},isJackpot&&{icon:'👑',color:'#f5c842',label:'Jackpot'}].filter(Boolean);
 
-  /* Waiting screen */
   if(isWaiting) return (
     <div className="ba" style={{background:'var(--bg-deep)',minHeight:'100vh',padding:'20px 0 80px'}}>
       <style>{CSS}</style>
@@ -563,14 +648,11 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
     </div>
   );
 
-  /* Battle screen */
   return (
     <div className="ba" style={{background:'var(--bg-deep)',minHeight:'100vh',padding:'20px 0 80px',position:'relative'}}>
       <style>{CSS}</style>
       <ConfettiEffect active={confetti}/>
       <div style={{maxWidth:900,margin:'0 auto',display:'flex',flexDirection:'column',gap:14,padding:'0 16px'}}>
-
-        {/* Top bar */}
         <div style={{position:'relative',overflow:'hidden',borderRadius:16,background:'linear-gradient(120deg,#07041a 0%,#0d0822 50%,#060110 100%)',border:'1px solid rgba(157,111,255,.14)',padding:'14px 18px'}}>
           <div className="ba-scan"/><div className="ba-noise"/>
           <div style={{position:'absolute',right:0,top:0,bottom:0,width:'35%',background:'radial-gradient(ellipse 80% 100% at 100% 50%,rgba(157,111,255,.09) 0%,transparent 70%)',pointerEvents:'none'}}/>
@@ -604,7 +686,6 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
 
         {jackpot&&<motion.div initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}><JackpotWheel teamList={teamList} players={players} playerTotals={players.map((_,pi)=>getTotal(pi))} onWinner={wTi=>setTimeout(()=>finishBattle(wTi),800)}/></motion.div>}
 
-        {/* Winner banner */}
         {done&&(
           <div className="ba-win-banner" style={{position:'relative',overflow:'hidden',borderRadius:20,background:'linear-gradient(145deg,#0c0800,#160e00,#080300)',border:'1px solid rgba(245,200,66,.28)',boxShadow:'0 0 0 1px rgba(245,200,66,.07),0 0 90px rgba(245,200,66,.1)',padding:'30px 24px',textAlign:'center'}}>
             <div className="ba-noise"/><Particles accent="#f5c842" count={13}/><Particles accent="#c084fc" count={6}/>
@@ -642,7 +723,6 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
           </div>
         )}
 
-        {/* Countdown overlay */}
         <AnimatePresence>
           {phase==='countdown'&&(
             <motion.div key="cd" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0,transition:{duration:.3}}} style={{position:'fixed',inset:0,zIndex:9000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'rgba(3,0,13,.94)',gap:34,backdropFilter:'blur(8px)'}}>
@@ -670,7 +750,6 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
           )}
         </AnimatePresence>
 
-        {/* Player columns */}
         <div style={{display:'flex',gap:8,alignItems:'stretch',width:'100%'}}>
           {teamList.map((mi,ti)=>{
             const pal=TEAM_PALETTE[ti%TEAM_PALETTE.length];
