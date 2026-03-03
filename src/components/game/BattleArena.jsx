@@ -176,10 +176,50 @@ function ConfettiEffect({ active }) {
   if(!active) return null;
   return <canvas ref={ref} style={{ position:'fixed',inset:0,pointerEvents:'none',zIndex:9999 }} />;
 }
+/* ─── Spin Sound ─────────────────────────────────────────────────── */
+function useSpinSound(spinning, fast) {
+  const audioCtx = useRef(null);
+  const tickTimer = useRef(null);
+  const startTime = useRef(null);
+  const DURATION = fast ? 1400 : 3000;
+
+  const playTick = () => {
+    try {
+      if (!audioCtx.current) audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
+      const ctx = audioCtx.current;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(300 + Math.random() * 80, ctx.currentTime);
+      gain.gain.setValueAtTime(0.04, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.06);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.06);
+    } catch {}
+  };
+
+  useEffect(() => {
+    if (!spinning) { clearTimeout(tickTimer.current); return; }
+    startTime.current = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - startTime.current;
+      const progress = Math.min(elapsed / DURATION, 1);
+      const interval = 40 + progress * 260;
+      playTick();
+      tickTimer.current = setTimeout(tick, interval);
+    };
+    tick();
+    return () => clearTimeout(tickTimer.current);
+  }, [spinning]);
+}
+
 /* ─── Vertical Spinner ───────────────────────────────────────────── */
 function VerticalSpinner({ items, winnerItem, onDone, fast }) {
   const ITEM_H=80, WIN_POS=28, TOTAL=36, VISIBLE_H=240;
   const duration = fast ? 1.4 : 3.0;
+  useSpinSound(true, fast);
   const strip = useRef(
     Array.from({ length: TOTAL }, (_, i) =>
       i===WIN_POS ? winnerItem : items[Math.floor(Math.random()*items.length)]
