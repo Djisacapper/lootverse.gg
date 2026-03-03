@@ -537,17 +537,6 @@ export default function Admin() {
               </motion.div>
             )}
 
-            <Button
-              onClick={handleSyncLeaderboard}
-              disabled={syncLoading}
-              className="w-full bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-black font-bold py-3"
-            >
-              {syncLoading
-                ? <><Loader2 className="w-4 h-4 animate-spin mr-2" /> Syncing...</>
-                : <><RefreshCw className="w-4 h-4 mr-2" /> Sync Leaderboard Now</>
-              }
-            </Button>
-
             <div className="bg-white/[0.02] rounded-lg p-4 border border-white/5">
               <p className="text-xs text-white/40 leading-relaxed">
                 💡 <strong className="text-white/60">Tip:</strong> Run this sync periodically (daily or weekly) to keep the leaderboard fresh.
