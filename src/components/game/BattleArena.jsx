@@ -241,7 +241,7 @@ const VerticalSpinner = ({ items, winnerItem, onDone, fast }) => {
 const ItemChip = React.memo(({ item, index=0 }) => {
   const rc=rr(item?.rarity);
   return (
-    <div className="ba-item-in" style={{display:'flex',alignItems:'center',gap:8,padding:'6px 10px',borderRadius:10,background:rc.bg,border:`1px solid ${rc.border}`,animationDelay:`${index*0.033}s`}}>
+    <div className="ba-item-in" style={{display:'flex',alignItems:'center',gap:8,padding:'6px 10px',borderRadius:10,background:rc.bg,border:`1px solid ${rc.border}`,animationDelay:`${index*0.033}s`,borderLeft:`3px solid ${rc.color}`}}>
       <div style={{width:30,height:30,borderRadius:8,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,.25)'}}>
         {item?.image||item?.image_url?<img src={item.image||item.image_url} alt={item?.name} style={{width:24,height:24,objectFit:'contain',filter:rc.glow}}/>:<span style={{fontSize:13}}>📦</span>}
       </div>
@@ -249,7 +249,6 @@ const ItemChip = React.memo(({ item, index=0 }) => {
         <p style={{fontSize:10,color:'rgba(240,234,255,.55)',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:1}}>{item?.name}</p>
         <p style={{fontSize:11,color:rc.color,fontWeight:800}}>{item?.value?.toLocaleString()}</p>
       </div>
-      <span className="ba-rarity" style={{background:rc.bg,color:rc.color,border:`1px solid ${rc.border}`,flexShrink:0}}>{item?.rarity||'?'}</span>
     </div>
   );
 });
