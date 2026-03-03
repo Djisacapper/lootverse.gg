@@ -177,14 +177,53 @@ function ConfettiEffect({ active }) {
   return <canvas ref={ref} style={{ position:'fixed',inset:0,pointerEvents:'none',zIndex:9999 }} />;
 }
 /* ─── Vertical Spinner ───────────────────────────────────────────── */
-function VerticalSpinner({ items, winnerItem, onDone, fast }) {
+function VerticalSpinner({ items, winnerItem, onDone, fast, playSound = true }) {
   const ITEM_H=80, WIN_POS=28, TOTAL=36, VISIBLE_H=240;
   const duration = fast ? 1.4 : 3.0;
   const SPIN_DURATION = fast ? 1500 : 3100;
 
+  // ── Spin sound ──
+  const audioCtx = useRef(null);
+  const tickTimer = useRef(null);
+  const startTime = useRef(Date.now());
+
+  const getCtx = () => {
+    if (!audioCtx.current) audioCtx.current = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.current.state === 'suspended') audioCtx.current.resume();
+    return audioCtx.current;
+  };
+
+  const playTick = () => {
+    try {
+      const ctx = getCtx();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(280 + Math.random() * 100, ctx.currentTime);
+      gain.gain.setValueAtTime(0.035, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.07);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.07);
+    } catch {}
+  };
+
   useEffect(() => {
-    const t = setTimeout(() => { onDone(); }, SPIN_DURATION);
-    return () => { clearTimeout(t); };
+    startTime.current = Date.now();
+    const tick = () => {
+      const elapsed = Date.now() - startTime.current;
+      const progress = Math.min(elapsed / SPIN_DURATION, 1);
+      const interval = 40 + progress * 280;
+      if (playSound) playTick();
+      tickTimer.current = setTimeout(tick, interval);
+    };
+    tick();
+    const t = setTimeout(() => {
+      clearTimeout(tickTimer.current);
+      onDone();
+    }, SPIN_DURATION);
+    return () => { clearTimeout(tickTimer.current); clearTimeout(t); };
   }, []);
 
   const strip = useRef(
@@ -513,7 +552,9 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
   const currentRoundRef = useRef(0);
   const rewardGiven    = useRef(false);
 
+  // The index of the single player who will play sounds — always the first player overall
   const allPlayerIndices = teamList.flat();
+  const soundPlayerIndex = allPlayerIndices[0] ?? 0;
 
   const rollWithMagicSpin = (caseItems) => {
     const item = rollItem(caseItems) || { name:'Nothing', value:0, rarity:'common', image_url:null };
