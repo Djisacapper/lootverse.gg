@@ -588,6 +588,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
     playRoundSound(isFastMode);
   };
   const handleNormalSpinDone = (pi) => {
+    if (roundDoneCount.current === 0) stopSpinSound();
     const round  = currentRoundRef.current;
     const rolled = allRolled.current[round];
     if (rolled[pi].isMagic) {
@@ -596,7 +597,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
       markPlayerRoundDone(pi, round);
     }
   };
-  const handleMagicSpinDone = (pi) => markPlayerRoundDone(pi, currentRoundRef.current);
+  const handleMagicSpinDone = (pi) => { stopSpinSound(); markPlayerRoundDone(pi, currentRoundRef.current); };
   const markPlayerRoundDone = (pi, round) => {
     const rolled = allRolled.current[round];
     setPlayerItems(prev => { const n=[...prev]; n[pi]=[...n[pi], rolled[pi].item]; return n; });
