@@ -121,46 +121,57 @@ const getRarityDropShadow = (rarity) => {
   return shadows[rarity] || shadows.common;
 };
 
-/* ─── One-shot round-start sound ─────────────────────────────────── */
-function playRoundSound() {
+/* ─── Persistent AudioContext (unlocked on first user gesture) ───── */
+let _audioCtx = null;
+function getAudioCtx() {
   try {
-    const AudioCtx = window.AudioContext || window.webkitAudioContext;
-    if (!AudioCtx) return;
-    const ctx = new AudioCtx();
-    const now = ctx.currentTime;
-    // Noise swoosh
-    const bufferSize = ctx.sampleRate * 0.18;
-    const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
-    const noise = ctx.createBufferSource();
-    noise.buffer = buffer;
-    const filter = ctx.createBiquadFilter();
-    filter.type = 'bandpass';
-    filter.frequency.setValueAtTime(1800, now);
-    filter.frequency.exponentialRampToValueAtTime(400, now + 0.18);
-    filter.Q.value = 1.2;
-    const gain = ctx.createGain();
-    gain.gain.setValueAtTime(0.22, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
-    noise.connect(filter);
-    filter.connect(gain);
-    gain.connect(ctx.destination);
-    noise.start(now);
-    noise.stop(now + 0.18);
-    // Accent tone
-    const osc = ctx.createOscillator();
-    const oscGain = ctx.createGain();
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(520, now);
-    osc.frequency.exponentialRampToValueAtTime(260, now + 0.12);
-    oscGain.gain.setValueAtTime(0.12, now);
-    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
-    osc.connect(oscGain);
-    oscGain.connect(ctx.destination);
-    osc.start(now);
-    osc.stop(now + 0.12);
-  } catch {}
+    if (!_audioCtx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return null;
+      _audioCtx = new AudioCtx();
+    }
+    if (_audioCtx.state === 'suspended') _audioCtx.resume();
+    return _audioCtx;
+  } catch { return null; }
+}
+if (typeof window !== 'undefined') {
+  window.addEventListener('pointerdown', () => getAudioCtx());
+}
+
+/* ─── Spin tick sound — one ticking loop per round ───────────────── */
+let _spinTickTimer = null;
+function stopSpinSound() {
+  if (_spinTickTimer) { clearTimeout(_spinTickTimer); _spinTickTimer = null; }
+}
+function playRoundSound(fast) {
+  stopSpinSound();
+  const SPIN_DURATION = fast ? 1500 : 3100;
+  const startTime = Date.now();
+  const tick = () => {
+    const ctx = getAudioCtx();
+    if (ctx) {
+      try {
+        const now = ctx.currentTime;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(280 + Math.random() * 100, now);
+        gain.gain.setValueAtTime(0.035, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.07);
+        osc.start(now);
+        osc.stop(now + 0.07);
+      } catch {}
+    }
+    const elapsed = Date.now() - startTime;
+    if (elapsed < SPIN_DURATION) {
+      const progress = elapsed / SPIN_DURATION;
+      const interval = 40 + progress * 280;
+      _spinTickTimer = setTimeout(tick, interval);
+    }
+  };
+  tick();
 }
 
 /* ─── Particles ─────────────────────────────────────────────────── */
@@ -574,7 +585,7 @@ export default function BattleArena({ battle, selectedCases, players: rawPlayers
     roundDoneCount.current=0; currentRoundRef.current=round;
     setCurrentRound(round);
     setPlayerPhases(players.map(()=>'spinning'));
-    playRoundSound();
+    playRoundSound(isFastMode);
   };
   const handleNormalSpinDone = (pi) => {
     const round  = currentRoundRef.current;
