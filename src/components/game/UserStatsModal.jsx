@@ -245,6 +245,7 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
       try {
         // Use email from profileData (populated by getUserStats) — most reliable
         const recipientEmail = profileData?.email || userEmail;
+        console.log('[TIP DEBUG]', { recipientEmail, profileData, userEmail }); // ADD THIS
         const payload = {
           recipientEmail,
           amount,
