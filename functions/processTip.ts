@@ -15,8 +15,8 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Cannot tip yourself' }, { status: 400 });
     }
 
-    // Find recipient — same pattern as getPlayerStats
-    const users = await base44.asServiceRole.entities.User.filter({ email: recipientEmail }, '', 1);
+    // Use same pattern as getPlayerStats — no asServiceRole on the filter
+    const users = await base44.entities.User.filter({ email: recipientEmail }, '', 1);
     const recipient = users?.[0];
 
     if (!recipient) {
@@ -25,12 +25,11 @@ Deno.serve(async (req) => {
 
     const newBalance = (recipient.balance || 0) + amount;
 
-    // Credit recipient
+    // Use asServiceRole only for the write operations
     await base44.asServiceRole.entities.User.update(recipient.id, {
       balance: newBalance,
     });
 
-    // Transaction for recipient
     await base44.asServiceRole.entities.Transaction.create({
       user_email: recipientEmail,
       type: 'tip_received',
@@ -39,7 +38,6 @@ Deno.serve(async (req) => {
       balance_after: newBalance,
     });
 
-    // Transaction for sender
     if (senderEmail) {
       await base44.asServiceRole.entities.Transaction.create({
         user_email: senderEmail,
