@@ -12,30 +12,45 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { recipientEmail, amount, senderName } = body;
 
-    if (!recipientEmail || !amount) {
-      return Response.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!recipientEmail || !amount || typeof amount !== 'number' || amount <= 0) {
+      return Response.json({ error: 'Missing or invalid fields' }, { status: 400 });
     }
 
-    // Fetch recipient user
-    const allUsers = await base44.asServiceRole.entities.User.list();
-    const recipient = allUsers.find(u => u.email === recipientEmail);
+    // Filter directly by email — avoids pagination issues with .list()
+    const matches = await base44.asServiceRole.entities.User.filter({ email: recipientEmail });
+    const recipient = matches?.[0];
 
     if (!recipient) {
       return Response.json({ error: 'Recipient not found' }, { status: 404 });
     }
 
-    // Update recipient balance
+    // Prevent tipping yourself (double-check server side)
+    if (recipient.email === user.email) {
+      return Response.json({ error: 'Cannot tip yourself' }, { status: 400 });
+    }
+
+    const newBalance = (recipient.balance || 0) + amount;
+
+    // Credit recipient
     await base44.asServiceRole.entities.User.update(recipient.id, {
-      balance: (recipient.balance || 0) + amount
+      balance: newBalance,
     });
 
-    // Create transaction record
+    // Log transaction for recipient
     await base44.asServiceRole.entities.Transaction.create({
       user_email: recipientEmail,
       type: 'tip_received',
       amount,
-      description: `Tip from ${senderName}`,
-      balance_after: (recipient.balance || 0) + amount
+      description: `Tip from ${senderName || 'Anonymous'}`,
+      balance_after: newBalance,
+    });
+
+    // Log transaction for sender
+    await base44.asServiceRole.entities.Transaction.create({
+      user_email: user.email,
+      type: 'tip_sent',
+      amount: -amount,
+      description: `Tip sent to ${recipient.full_name || recipientEmail}`,
     });
 
     return Response.json({ success: true });
