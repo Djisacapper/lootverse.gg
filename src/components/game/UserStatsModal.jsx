@@ -259,7 +259,9 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
   const displayAvatar = profileData?.avatar_url;
   const shortId       = profileData?.id ? '#' + profileData.id.slice(-6).toUpperCase() : null;
   const isSelf        = (liveMe?.email && (profileData?.email || userEmail)) && liveMe.email === (profileData?.email || userEmail);
-  const levelLock     = !isSelf && (liveMe?.level || 0) < 5;
+  // Default locked (level ?? 0) so tip input never flashes before liveMe loads
+  const meLevel       = liveMe?.level ?? 0;
+  const levelLock     = !isSelf && meLevel < 5;
 
   return (
     <Portal>
@@ -347,6 +349,7 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
                     {levelLock ? (
                       <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.07)', textAlign: 'center' }}>
                         <p style={{ fontSize: 12, color: 'rgba(240,234,255,.3)', fontWeight: 600 }}>🔒 Reach <span style={{ color: '#f5c842' }}>Level 5</span> to tip players</p>
+                        <p style={{ fontSize: 10, color: 'rgba(240,234,255,.18)', fontWeight: 500, marginTop: 4 }}>Your level: <span style={{ color: '#c084fc' }}>{meLevel}</span> / 5 required</p>
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
