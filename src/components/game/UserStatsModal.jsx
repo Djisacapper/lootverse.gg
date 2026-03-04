@@ -223,16 +223,21 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
       // 1. Deduct sender
       await base44.auth.updateMe({ balance: freshMe.balance - amount });
 
-      // 2. Credit recipient via server function
-      let serverOk = false;
+      // 2. Credit recipient via direct fetch — base44 invoke uses wrong URL path
       try {
-        const result = await base44.functions.invoke('processTip', {
-          recipientEmail: profileData.email || userEmail,
-          amount,
+        const payload = {
+          recipientEmail: profileData?.email || userEmail,
+          amount: amount,
           senderName: freshMe.full_name || freshMe.email?.split('@')[0] || 'Someone',
+        };
+        const resp = await fetch('https://practical-robo-rush-win.base44.app/api/functions/processTip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          credentials: 'include',
         });
-        serverOk = result?.success === true || !result?.error;
-        if (result?.error) throw new Error(result.error);
+        const result = await resp.json();
+        if (!resp.ok || result?.error) throw new Error(result?.error || 'Server error');
       } catch (serverErr) {
         // Refund sender if server step failed
         await base44.auth.updateMe({ balance: freshMe.balance });
