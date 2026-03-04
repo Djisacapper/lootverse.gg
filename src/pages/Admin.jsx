@@ -698,17 +698,6 @@ export default function Admin() {
     setLoading(false);
   };
 
-  const handleSyncLeaderboard = async () => {
-    setSyncLoading(true); setSyncMessage('');
-    try {
-      const result = await base44.functions.syncLeaderboard();
-      addLog(`Leaderboard synced — ${result.synced} entries`);
-      setSyncMessage(`✅ Synced! ${result.synced} players updated.`);
-      setTimeout(() => setSyncMessage(''), 5000);
-    } catch { setSyncMessage('❌ Sync failed.'); }
-    setSyncLoading(false);
-  };
-
   const filteredUsers = allUsers.filter(u =>
     u.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     u.email?.toLowerCase().includes(searchQuery.toLowerCase())
@@ -724,7 +713,6 @@ export default function Admin() {
   const TABS = [
     { id:'users',       label:'Users',       icon:Users,   color:'#f87171' },
     { id:'cases',       label:'Cases',       icon:Box,     color:'#22d3ee' },
-    { id:'leaderboard', label:'Leaderboard', icon:Trophy,  color:'#fbbf24' },
     { id:'activity',    label:'Activity',    icon:Activity,color:'#a855f7' },
   ];
 
@@ -884,33 +872,6 @@ export default function Admin() {
 
           {/* ── CASES TAB ── */}
           {tab === 'cases' && <CasesTab key="cases" onLog={addLog} />}
-
-          {/* ── LEADERBOARD TAB ── */}
-          {tab === 'leaderboard' && (
-            <motion.div key="lb" initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0 }}>
-              <Card accent="gold">
-                <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
-                  <div style={{ width:3, height:20, borderRadius:2, background:'linear-gradient(to bottom,#fbbf24,#f97316)' }} />
-                  <Trophy style={{ width:16, height:16, color:'#fbbf24' }} />
-                  <span style={{ fontSize:16, fontWeight:900, color:'#fff' }}>Sync Leaderboard</span>
-                </div>
-                <p style={{ fontSize:12, color:'rgba(255,255,255,.3)', marginBottom:20, fontWeight:600, lineHeight:1.6 }}>
-                  Reads all user & transaction data and writes the top 10 into the public
-                  <code style={{ background:'rgba(251,191,36,.1)', color:'#fbbf24', padding:'1px 6px', borderRadius:4, fontSize:11, margin:'0 4px' }}>LeaderboardEntry</code>
-                  entity so regular users can see it.
-                </p>
-                <AnimatePresence>{syncMessage && <Toast msg={syncMessage} />}</AnimatePresence>
-                <motion.button whileHover={{ scale:syncLoading?1:1.02, y:syncLoading?0:-2 }} whileTap={{ scale:syncLoading?1:.97 }}
-                  onClick={handleSyncLeaderboard} disabled={syncLoading}
-                  style={{ width:'100%', height:48, borderRadius:12, border:'none', cursor:syncLoading?'not-allowed':'pointer', background:syncLoading?'rgba(255,255,255,.06)':'linear-gradient(135deg,#fbbf24,#f59e0b,#fde68a)', color:syncLoading?'rgba(255,255,255,.2)':'#000', fontSize:14, fontWeight:900, fontFamily:'Nunito,sans-serif', display:'flex', alignItems:'center', justifyContent:'center', gap:9, boxShadow:syncLoading?'none':'0 0 40px rgba(251,191,36,.35)', transition:'all .2s' }}>
-                  {syncLoading ? <><Loader2 style={{ width:16, height:16 }} className="spin" /> Syncing…</> : <><RefreshCw style={{ width:16, height:16 }} /> Sync Leaderboard Now</>}
-                </motion.button>
-                <div style={{ marginTop:16, padding:'12px 16px', borderRadius:12, background:'rgba(255,255,255,.03)', border:'1px solid rgba(255,255,255,.06)' }}>
-                  <p style={{ fontSize:11, color:'rgba(255,255,255,.35)', lineHeight:1.7, fontWeight:600 }}>💡 Run periodically (daily or weekly) to keep the leaderboard fresh.</p>
-                </div>
-              </Card>
-            </motion.div>
-          )}
 
           {/* ── ACTIVITY TAB ── */}
           {tab === 'activity' && (
