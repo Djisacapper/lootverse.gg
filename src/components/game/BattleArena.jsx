@@ -556,15 +556,22 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
         const fc=(u.players||[]).filter(p=>p&&p.email).length, mp=u.max_players||2;
         if(fc!==lastFilled.current||u.status!==lastStatus.current){ lastFilled.current=fc; lastStatus.current=u.status; if(cbRef.current)cbRef.current(u); }
         if(fc>=mp&&u.status==='waiting'){
-          // Generate all rolls server-side so every client gets identical results
-          const rolls=selectedCases.map(c=>(u.players||[]).map(()=>{
+          // Generate one independent roll per player per round.
+          // We call rollItem separately for each (round, player) pair so that
+          // each player gets a different item even within the same round.
+          const numPlayers=(u.players||[]).length;
+          const rolls=selectedCases.map(c=>{
             const items=c.items||[];
-            const item=rollItem(items)||{name:'Nothing',value:0,rarity:'common',image_url:null};
-            if(!isMagicSpin){ return{item,isMagic:false}; }
+            if(!items.length) return Array.from({length:numPlayers},()=>({item:{name:'Nothing',value:0,rarity:'common',image_url:null},isMagic:false}));
             const top=items.filter(it=>['epic','legendary'].includes(it.rarity));
-            const isMagic=top.length>0&&Math.random()<.20;
-            return{item:isMagic?(rollItem(top)||item):item,isMagic};
-          }));
+            return Array.from({length:numPlayers},()=>{
+              const item=rollItem(items)||items[Math.floor(Math.random()*items.length)];
+              if(!isMagicSpin) return{item,isMagic:false};
+              const isMagic=top.length>0&&Math.random()<.20;
+              const magicItem=isMagic?(rollItem(top)||top[Math.floor(Math.random()*top.length)]||item):item;
+              return{item:magicItem,isMagic};
+            });
+          });
           await base44.entities.CaseBattle.update(u.id,{status:'in_progress',rolled_results:JSON.stringify(rolls)});
         }
       }catch{}
