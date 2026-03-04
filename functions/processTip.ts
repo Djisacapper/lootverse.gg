@@ -10,19 +10,20 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { recipientEmail, amount, senderName } = body;
+    const { recipientEmail, senderName } = body;
 
-    if (!recipientEmail || !amount || typeof amount !== 'number' || amount <= 0) {
+    // Coerce amount — base44 may serialize numbers as strings over the wire
+    const amount = Number(body.amount);
+
+    if (!recipientEmail || !amount || isNaN(amount) || amount <= 0) {
       return Response.json({ error: 'Missing or invalid fields' }, { status: 400 });
     }
 
-    // Prevent tipping yourself
     if (user.email === recipientEmail) {
       return Response.json({ error: 'Cannot tip yourself' }, { status: 400 });
     }
 
-    // Find recipient — fetch all users and scan by email.
-    // This is the most reliable approach across all SDK versions.
+    // Paginate through ALL users to find recipient by email
     let recipient = null;
     let page = 1;
     const pageSize = 100;
@@ -34,10 +35,7 @@ Deno.serve(async (req) => {
       });
 
       if (!batch || batch.length === 0) break;
-
-      recipient = batch.find(u => u.email === recipientEmail) || null;
-
-      // If we got fewer results than pageSize we've reached the end
+      recipient = batch.find(u => u.email === recipientEmail) ?? null;
       if (batch.length < pageSize) break;
       page++;
     }
@@ -53,7 +51,7 @@ Deno.serve(async (req) => {
       balance: newBalance,
     });
 
-    // Transaction record for recipient
+    // Transaction for recipient
     await base44.asServiceRole.entities.Transaction.create({
       user_email: recipientEmail,
       type: 'tip_received',
@@ -62,7 +60,7 @@ Deno.serve(async (req) => {
       balance_after: newBalance,
     });
 
-    // Transaction record for sender
+    // Transaction for sender
     await base44.asServiceRole.entities.Transaction.create({
       user_email: user.email,
       type: 'tip_sent',
@@ -71,6 +69,7 @@ Deno.serve(async (req) => {
     });
 
     return Response.json({ success: true });
+
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
