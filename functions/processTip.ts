@@ -16,7 +16,7 @@ Deno.serve(async (req) => {
     }
 
     // asServiceRole for ALL operations — no user session needed
-    const users = await base44.asServiceRole.entities.User.filter({ email: recipientEmail }, '', 1);
+    const users = await base44.asServiceRole.entities.User.filter({ email: recipientEmail });       
     const recipient = users?.[0];
 
     if (!recipient) {
