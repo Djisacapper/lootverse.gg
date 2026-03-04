@@ -44,18 +44,6 @@ const CSS = `
 }
 .usm-level { animation: usm-level-glow 2s ease-in-out infinite; }
 
-.usm-stat-card {
-  background: rgba(255,255,255,.03);
-  border: 1px solid rgba(255,255,255,.07);
-  border-radius: 12px;
-  padding: 12px 14px;
-  transition: border-color .2s, background .2s;
-}
-.usm-stat-card:hover {
-  background: rgba(245,200,66,.04);
-  border-color: rgba(245,200,66,.18);
-}
-
 .usm-input {
   width: 100%; background: rgba(255,255,255,.05);
   border: 1px solid rgba(255,255,255,.1);
@@ -63,12 +51,10 @@ const CSS = `
   color: #f0eaff; font-family: 'Outfit', sans-serif;
   font-size: 14px; font-weight: 600;
   outline: none; transition: border-color .2s, background .2s;
+  box-sizing: border-box;
 }
 .usm-input::placeholder { color: rgba(240,234,255,.25); }
-.usm-input:focus {
-  border-color: rgba(245,200,66,.4);
-  background: rgba(245,200,66,.05);
-}
+.usm-input:focus { border-color: rgba(245,200,66,.4); background: rgba(245,200,66,.05); }
 .usm-input::-webkit-inner-spin-button,
 .usm-input::-webkit-outer-spin-button { -webkit-appearance: none; }
 
@@ -99,21 +85,31 @@ const CSS = `
   color: rgba(240,234,255,.4); transition: background .18s, color .18s, border-color .18s;
 }
 .usm-close-btn:hover { background: rgba(245,200,66,.1); border-color: rgba(245,200,66,.25); color: #f5c842; }
+
+@keyframes usm-spin { to { transform: rotate(360deg); } }
+@keyframes usm-pulse { 0%,100% { opacity:.5; } 50% { opacity:.2; } }
 `;
 
 /* ─── Stable Avatar ───────────────────────────────────────────────── */
 const StableAvatar = ({ url, name, size }) => {
   const [loaded, setLoaded] = useState(false);
   const [err, setErr]       = useState(false);
-  const safe = safeAvatarUrl(url);
-  const urlRef = useRef(safe);
-  useEffect(() => { if (urlRef.current !== safe) { urlRef.current = safe; setLoaded(false); setErr(false); } }, [safe]);
+  const safe    = safeAvatarUrl(url);
+  const urlRef  = useRef(safe);
+  useEffect(() => {
+    if (urlRef.current !== safe) { urlRef.current = safe; setLoaded(false); setErr(false); }
+  }, [safe]);
   const initial = name?.[0]?.toUpperCase() || '?';
   return (
     <div className="usm-avatar-ring" style={{ width: size, height: size, borderRadius: '50%', flexShrink: 0, position: 'relative', background: 'linear-gradient(135deg,#f5c842,#9d6fff)', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
       <span style={{ fontSize: size * 0.38, fontWeight: 900, color: '#000', position: 'relative', zIndex: 1 }}>{initial}</span>
       {safe && !err && (
-        <img src={safe} alt="" style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 2, opacity: loaded ? 1 : 0, transition: 'opacity .22s' }} onLoad={() => setLoaded(true)} onError={() => setErr(true)} />
+        <img
+          src={safe} alt=""
+          style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', zIndex: 2, opacity: loaded ? 1 : 0, transition: 'opacity .22s' }}
+          onLoad={() => setLoaded(true)}
+          onError={() => setErr(true)}
+        />
       )}
     </div>
   );
@@ -132,92 +128,138 @@ const Toast = ({ msg, type }) => (
       border: `1px solid ${type === 'error' ? 'rgba(255,78,106,.35)' : 'rgba(0,229,160,.35)'}`,
       color: type === 'error' ? '#ff4e6a' : '#00e5a0',
       fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap',
-      backdropFilter: 'blur(8px)',
-      boxShadow: '0 8px 32px rgba(0,0,0,.5)',
+      backdropFilter: 'blur(8px)', boxShadow: '0 8px 32px rgba(0,0,0,.5)',
+      fontFamily: 'Outfit, sans-serif',
     }}
-  >
-    {msg}
-  </motion.div>
+  >{msg}</motion.div>
 );
 
 /* ─── Main Modal ──────────────────────────────────────────────────── */
 export default function UserStatsModal({ userName, userEmail, onClose, currentUser }) {
-  const [stats,     setStats]     = useState(null);
-  const [loading,   setLoading]   = useState(true);
-  const [tipAmount, setTipAmount] = useState('');
-  const [tipping,   setTipping]   = useState(false);
-  const [copied,    setCopied]    = useState(false);
-  const [toast,     setToast]     = useState(null);
+  // profileData = the target user's info (who we're viewing)
+  const [profileData, setProfileData] = useState(null);
+  // liveMe = fresh fetch of the logged-in user so balance is never stale
+  const [liveMe,      setLiveMe]      = useState(currentUser || null);
+  const [loading,     setLoading]     = useState(true);
+  const [tipAmount,   setTipAmount]   = useState('');
+  const [tipping,     setTipping]     = useState(false);
+  const [copied,      setCopied]      = useState(false);
+  const [toast,       setToast]       = useState(null);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 2800);
   };
 
+  /* ── Fetch target user profile ── */
   useEffect(() => {
-    const fetchStats = async () => {
+    let cancelled = false;
+    const load = async () => {
+      setLoading(true);
       try {
+        // Try the getPlayerStats function first
         const res = await base44.functions.invoke('getPlayerStats', { userEmail });
-        setStats(res.data);
-      } catch (err) {
-        console.error('Failed to fetch stats:', err);
+        if (!cancelled && res?.data) {
+          setProfileData(res.data);
+          setLoading(false);
+          return;
+        }
+      } catch (e) {
+        console.warn('getPlayerStats failed, falling back to entity filter:', e);
+      }
+
+      // Fallback: fetch user directly from entity by email
+      try {
+        const users = await base44.entities.User.filter({ email: userEmail });
+        if (!cancelled && users?.[0]) {
+          setProfileData(users[0]);
+        }
+      } catch (e) {
+        console.error('Fallback user fetch also failed:', e);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
-    fetchStats();
-    const unsub = base44.entities.Transaction.subscribe(e => {
-      if (e.data?.user_email === userEmail) fetchStats();
-    });
-    return () => unsub();
+    load();
+    return () => { cancelled = true; };
   }, [userEmail]);
 
+  /* ── Always fetch fresh "me" so balance is live, not stale from props ── */
+  useEffect(() => {
+    base44.auth.me().then(me => { if (me) setLiveMe(me); }).catch(() => {});
+  }, []);
+
   const handleCopyId = () => {
-    if (!stats?.id) return;
-    navigator.clipboard.writeText(stats.id).then(() => {
+    const id = profileData?.id;
+    if (!id) return;
+    navigator.clipboard.writeText(id).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 1800);
     });
   };
 
   const handleTip = async () => {
-    if (!currentUser) return;
-    if ((currentUser.level || 0) < 5) { showToast('Reach level 5 to tip players', 'error'); return; }
-    const amount = parseInt(tipAmount);
+    // Re-fetch sender balance right before sending to guarantee it's current
+    let freshMe;
+    try {
+      freshMe = await base44.auth.me();
+      setLiveMe(freshMe);
+    } catch {
+      freshMe = liveMe;
+    }
+
+    if (!freshMe) { showToast('Not logged in', 'error'); return; }
+    if ((freshMe.level || 0) < 5) { showToast('Reach level 5 to tip players', 'error'); return; }
+
+    const amount = parseInt(tipAmount, 10);
     if (!amount || amount <= 0) { showToast('Enter a valid amount', 'error'); return; }
-    if ((currentUser.balance || 0) < amount) { showToast('Insufficient balance', 'error'); return; }
+    if ((freshMe.balance || 0) < amount) {
+      showToast(`Insufficient balance — you have ${(freshMe.balance || 0).toLocaleString()} coins`, 'error');
+      return;
+    }
 
     setTipping(true);
     try {
-      // 1. Server function first — credits recipient atomically.
-      //    Only deduct sender AFTER server confirms success.
-      const result = await base44.functions.invoke('processTip', {
-        recipientEmail: stats.email,
-        amount,
-        senderName: currentUser.full_name || currentUser.email?.split('@')[0] || 'Someone',
-      });
+      // 1. Deduct sender
+      await base44.auth.updateMe({ balance: freshMe.balance - amount });
 
-      if (result?.error) throw new Error(result.error);
+      // 2. Credit recipient via server function
+      let serverOk = false;
+      try {
+        const result = await base44.functions.invoke('processTip', {
+          recipientEmail: profileData.email || userEmail,
+          amount,
+          senderName: freshMe.full_name || freshMe.email?.split('@')[0] || 'Someone',
+        });
+        serverOk = result?.success === true || !result?.error;
+        if (result?.error) throw new Error(result.error);
+      } catch (serverErr) {
+        // Refund sender if server step failed
+        await base44.auth.updateMe({ balance: freshMe.balance });
+        throw serverErr;
+      }
 
-      // 2. Server confirmed — now safely deduct from sender
-      await base44.auth.updateMe({ balance: (currentUser.balance || 0) - amount });
+      // Refresh our local balance display
+      base44.auth.me().then(me => { if (me) setLiveMe(me); }).catch(() => {});
 
       showToast(`Sent ${amount.toLocaleString()} coins to ${userName}!`);
       setTipAmount('');
       setTimeout(onClose, 1600);
     } catch (err) {
-      console.error(err);
-      // Sender was never deducted since we failed before step 2
-      showToast('Failed to send tip — no coins were deducted', 'error');
+      console.error('Tip error:', err);
+      showToast(err?.message || 'Failed to send tip', 'error');
     } finally {
       setTipping(false);
     }
   };
 
-  const isSelf    = stats && currentUser?.email === stats.email;
-  const canTip    = !isSelf && (currentUser?.level || 0) >= 5;
-  const levelLock = !isSelf && (currentUser?.level || 0) < 5;
-  const shortId   = stats?.id ? '#' + stats.id.slice(-6).toUpperCase() : '#------';
+  // Display values — fall back to props so profile always shows something
+  const displayName   = profileData?.full_name || userName || userEmail?.split('@')[0] || '?';
+  const displayLevel  = profileData?.level  || 1;
+  const displayAvatar = profileData?.avatar_url;
+  const shortId       = profileData?.id ? '#' + profileData.id.slice(-6).toUpperCase() : null;
+  const isSelf        = (liveMe?.email && (profileData?.email || userEmail)) && liveMe.email === (profileData?.email || userEmail);
+  const levelLock     = !isSelf && (liveMe?.level || 0) < 5;
 
   return (
     <Portal>
@@ -227,7 +269,7 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
-        style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(3,0,13,.75)', backdropFilter: 'blur(6px)' }}
+        style={{ position: 'fixed', inset: 0, zIndex: 9998, background: 'rgba(3,0,13,.78)', backdropFilter: 'blur(6px)' }}
       />
 
       {/* Modal */}
@@ -249,8 +291,6 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
         >
           <div className="usm-scan" />
           <div className="usm-noise" />
-
-          {/* Top accent */}
           <div style={{ height: 2, background: 'linear-gradient(90deg, transparent, #f5c842, #9d6fff, transparent)' }} />
 
           {/* Header */}
@@ -261,48 +301,46 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
 
           {/* Body */}
           <div style={{ padding: '20px 18px 22px', position: 'relative', zIndex: 2 }}>
-
             {loading ? (
-              /* Loading skeleton */
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '20px 0' }}>
-                <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'rgba(255,255,255,.06)', animation: 'pulse 1.5s ease-in-out infinite' }} />
-                <div style={{ width: 120, height: 14, borderRadius: 8, background: 'rgba(255,255,255,.06)' }} />
-                <div style={{ width: 80, height: 10, borderRadius: 8, background: 'rgba(255,255,255,.04)' }} />
+                <div style={{ width: 76, height: 76, borderRadius: '50%', background: 'rgba(255,255,255,.06)', animation: 'usm-pulse 1.5s ease-in-out infinite' }} />
+                <div style={{ width: 120, height: 14, borderRadius: 8, background: 'rgba(255,255,255,.06)', animation: 'usm-pulse 1.5s ease-in-out infinite' }} />
+                <div style={{ width: 80, height: 10, borderRadius: 8, background: 'rgba(255,255,255,.04)', animation: 'usm-pulse 1.5s ease-in-out infinite' }} />
               </div>
-            ) : stats ? (
+            ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-                {/* ── Avatar + Identity ── */}
+                {/* ── Avatar + Identity — always renders using prop fallbacks ── */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, paddingBottom: 18, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
-                  <StableAvatar url={stats.avatar_url} name={userName} size={76} />
+                  <StableAvatar url={displayAvatar} name={displayName} size={76} />
 
                   <div style={{ textAlign: 'center' }}>
-                    <p style={{ fontSize: 20, fontWeight: 800, color: '#f0eaff', letterSpacing: '.01em', marginBottom: 4, fontFamily: 'Outfit, sans-serif' }}>{userName}</p>
+                    <p style={{ fontSize: 20, fontWeight: 800, color: '#f0eaff', letterSpacing: '.01em', marginBottom: 6 }}>{displayName}</p>
 
                     {/* Level badge */}
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 14px', borderRadius: 20, background: 'rgba(245,200,66,.1)', border: '1px solid rgba(245,200,66,.25)', marginBottom: 8 }}>
+                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '4px 14px', borderRadius: 20, background: 'rgba(245,200,66,.1)', border: '1px solid rgba(245,200,66,.25)', marginBottom: 10 }}>
                       <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(245,200,66,.6)', textTransform: 'uppercase', letterSpacing: '.1em' }}>Level</span>
-                      <span className="usm-level usm-title" style={{ fontSize: 18, fontWeight: 700, color: '#f5c842', lineHeight: 1 }}>{stats.level || 1}</span>
+                      <span className="usm-level usm-title" style={{ fontSize: 18, fontWeight: 700, color: '#f5c842', lineHeight: 1 }}>{displayLevel}</span>
                     </div>
 
-                    {/* ID row */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                      <span style={{ fontSize: 11, color: 'rgba(240,234,255,.25)', fontWeight: 600, letterSpacing: '.06em' }}>{shortId}</span>
-                      <button className="usm-copy-btn" onClick={handleCopyId} title="Copy ID">
-                        {copied
-                          ? <Check style={{ width: 11, height: 11, color: '#00e5a0' }} />
-                          : <Copy style={{ width: 11, height: 11 }} />}
-                      </button>
-                    </div>
+                    {/* ID */}
+                    {shortId && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                        <span style={{ fontSize: 11, color: 'rgba(240,234,255,.22)', fontWeight: 600, letterSpacing: '.06em' }}>{shortId}</span>
+                        <button className="usm-copy-btn" onClick={handleCopyId} title="Copy ID">
+                          {copied ? <Check style={{ width: 11, height: 11, color: '#00e5a0' }} /> : <Copy style={{ width: 11, height: 11 }} />}
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
 
                 {/* ── Tip section ── */}
                 {!isSelf && (
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.06)' }} />
-                      <span className="usm-title" style={{ fontSize: 11, fontWeight: 600, color: 'rgba(240,234,255,.25)', letterSpacing: '.14em', textTransform: 'uppercase' }}>Send Tip</span>
+                      <span className="usm-title" style={{ fontSize: 11, fontWeight: 600, color: 'rgba(240,234,255,.22)', letterSpacing: '.14em', textTransform: 'uppercase' }}>Send Tip</span>
                       <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.06)' }} />
                     </div>
 
@@ -324,15 +362,15 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
                           <button
                             className="usm-tip-btn"
                             onClick={handleTip}
-                            disabled={tipping || !tipAmount || parseInt(tipAmount) <= 0}
+                            disabled={tipping || !tipAmount || parseInt(tipAmount, 10) <= 0}
                           >
                             {tipping
-                              ? <><span style={{ width: 13, height: 13, border: '2px solid rgba(0,0,0,.3)', borderTopColor: '#000', borderRadius: '50%', display: 'inline-block', animation: 'spin .7s linear infinite' }} /> Sending</>
+                              ? <><span style={{ width: 13, height: 13, border: '2px solid rgba(0,0,0,.3)', borderTopColor: '#000', borderRadius: '50%', display: 'inline-block', animation: 'usm-spin .7s linear infinite' }} /> Sending</>
                               : <><Send style={{ width: 13, height: 13 }} /> Send</>}
                           </button>
                         </div>
                         <p style={{ fontSize: 11, color: 'rgba(240,234,255,.28)', fontWeight: 500, textAlign: 'right' }}>
-                          Your balance: <span style={{ color: '#f5c842', fontWeight: 700 }}>{(currentUser?.balance || 0).toLocaleString()}</span> coins
+                          Your balance: <span style={{ color: '#f5c842', fontWeight: 700 }}>{(liveMe?.balance || 0).toLocaleString()}</span> coins
                         </p>
                       </div>
                     )}
@@ -340,23 +378,14 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
                 )}
 
               </div>
-            ) : (
-              <p style={{ textAlign: 'center', color: 'rgba(240,234,255,.3)', fontSize: 13, padding: '20px 0' }}>Could not load profile</p>
             )}
           </div>
 
-          {/* Bottom accent */}
           <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, rgba(157,111,255,.2), transparent)' }} />
         </motion.div>
       </div>
 
-      {/* Toast */}
       <AnimatePresence>{toast && <Toast msg={toast.msg} type={toast.type} />}</AnimatePresence>
-
-      <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
-        @keyframes pulse { 0%,100% { opacity:.5; } 50% { opacity:.2; } }
-      `}</style>
     </Portal>
   );
 }
