@@ -16,17 +16,34 @@ Deno.serve(async (req) => {
       return Response.json({ error: 'Missing or invalid fields' }, { status: 400 });
     }
 
-    // Filter directly by email — avoids pagination issues with .list()
-    const matches = await base44.asServiceRole.entities.User.filter({ email: recipientEmail });
-    const recipient = matches?.[0];
+    // Prevent tipping yourself
+    if (user.email === recipientEmail) {
+      return Response.json({ error: 'Cannot tip yourself' }, { status: 400 });
+    }
+
+    // Find recipient — fetch all users and scan by email.
+    // This is the most reliable approach across all SDK versions.
+    let recipient = null;
+    let page = 1;
+    const pageSize = 100;
+
+    while (!recipient) {
+      const batch = await base44.asServiceRole.entities.User.list({
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+      });
+
+      if (!batch || batch.length === 0) break;
+
+      recipient = batch.find(u => u.email === recipientEmail) || null;
+
+      // If we got fewer results than pageSize we've reached the end
+      if (batch.length < pageSize) break;
+      page++;
+    }
 
     if (!recipient) {
       return Response.json({ error: 'Recipient not found' }, { status: 404 });
-    }
-
-    // Prevent tipping yourself (double-check server side)
-    if (recipient.email === user.email) {
-      return Response.json({ error: 'Cannot tip yourself' }, { status: 400 });
     }
 
     const newBalance = (recipient.balance || 0) + amount;
@@ -36,16 +53,16 @@ Deno.serve(async (req) => {
       balance: newBalance,
     });
 
-    // Log transaction for recipient
+    // Transaction record for recipient
     await base44.asServiceRole.entities.Transaction.create({
       user_email: recipientEmail,
       type: 'tip_received',
       amount,
-      description: `Tip from ${senderName || 'Anonymous'}`,
+      description: `Tip from ${senderName || 'Someone'}`,
       balance_after: newBalance,
     });
 
-    // Log transaction for sender
+    // Transaction record for sender
     await base44.asServiceRole.entities.Transaction.create({
       user_email: user.email,
       type: 'tip_sent',
