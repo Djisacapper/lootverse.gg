@@ -223,42 +223,24 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
       // 1. Deduct sender
       await base44.auth.updateMe({ balance: freshMe.balance - amount });
 
-      // 2. Credit recipient — remove auth check from server, handle it client side
+      // 2. Credit recipient via direct fetch to correct function URL
       try {
+        // userEmail prop is always the reliable recipient identifier
+        const recipientEmail = userEmail;
         const payload = {
-          recipientEmail: profileData?.email || userEmail,
-          amount: amount,
+          recipientEmail,
+          amount,
           senderName: freshMe.full_name || freshMe.email?.split('@')[0] || 'Someone',
           senderEmail: freshMe.email,
         };
 
-        // Try invoke first (works if base44 fixes the routing)
-        // Fall back to direct fetch with all possible auth methods
-        let result;
-        try {
-          result = await base44.functions.invoke('processTip', payload);
-        } catch {
-          // Fallback: direct fetch with cookie + any stored token
-          const token = Object.keys(localStorage).reduce((found, key) => {
-            if (found) return found;
-            const val = localStorage.getItem(key);
-            if (key.toLowerCase().includes('token') && val && val.length > 20) return val;
-            return null;
-          }, null);
-
-          const headers = { 'Content-Type': 'application/json' };
-          if (token) headers['Authorization'] = `Bearer ${token}`;
-
-          const resp = await fetch('https://practical-robo-rush-win.base44.app/api/functions/processTip', {
-            method: 'POST', headers,
-            body: JSON.stringify(payload),
-            credentials: 'include',
-          });
-          result = await resp.json();
-          if (!resp.ok) throw new Error(result?.error || `HTTP ${resp.status}`);
-        }
-
-        if (result?.error) throw new Error(result.error);
+        const resp = await fetch('https://practical-robo-rush-win.base44.app/api/functions/processTip', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const result = await resp.json();
+        if (!resp.ok || result?.error) throw new Error(result?.error || `HTTP ${resp.status}`);
       } catch (serverErr) {
         // Refund sender if server step failed
         await base44.auth.updateMe({ balance: freshMe.balance });
