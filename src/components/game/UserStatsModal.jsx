@@ -189,24 +189,26 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
 
     setTipping(true);
     try {
-      // 1. Deduct from sender first
-      await base44.auth.updateMe({ balance: (currentUser.balance || 0) - amount });
-
-      // 2. Send to recipient via server function (handles credit + transaction record)
-      await base44.functions.invoke('processTip', {
+      // 1. Server function first — credits recipient atomically.
+      //    Only deduct sender AFTER server confirms success.
+      const result = await base44.functions.invoke('processTip', {
         recipientEmail: stats.email,
         amount,
         senderName: currentUser.full_name || currentUser.email?.split('@')[0] || 'Someone',
       });
+
+      if (result?.error) throw new Error(result.error);
+
+      // 2. Server confirmed — now safely deduct from sender
+      await base44.auth.updateMe({ balance: (currentUser.balance || 0) - amount });
 
       showToast(`Sent ${amount.toLocaleString()} coins to ${userName}!`);
       setTipAmount('');
       setTimeout(onClose, 1600);
     } catch (err) {
       console.error(err);
-      // Refund sender if the server call failed
-      try { await base44.auth.updateMe({ balance: (currentUser.balance || 0) }); } catch {}
-      showToast('Failed to send tip — balance restored', 'error');
+      // Sender was never deducted since we failed before step 2
+      showToast('Failed to send tip — no coins were deducted', 'error');
     } finally {
       setTipping(false);
     }
