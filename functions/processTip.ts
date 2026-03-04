@@ -3,25 +3,19 @@ import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
-    const user = await base44.auth.me();
-
-    if (!user) {
-      return Response.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await req.json();
-    const { recipientEmail, senderName } = body;
+    const { recipientEmail, senderName, senderEmail } = body;
     const amount = Number(body.amount);
 
     if (!recipientEmail || !amount || isNaN(amount) || amount <= 0) {
       return Response.json({ error: 'Missing or invalid fields' }, { status: 400 });
     }
 
-    if (user.email === recipientEmail) {
+    if (senderEmail && senderEmail === recipientEmail) {
       return Response.json({ error: 'Cannot tip yourself' }, { status: 400 });
     }
 
-    // Use exact same pattern as getPlayerStats which works
+    // Find recipient — same pattern as getPlayerStats
     const users = await base44.asServiceRole.entities.User.filter({ email: recipientEmail }, '', 1);
     const recipient = users?.[0];
 
@@ -46,12 +40,14 @@ Deno.serve(async (req) => {
     });
 
     // Transaction for sender
-    await base44.asServiceRole.entities.Transaction.create({
-      user_email: user.email,
-      type: 'tip_sent',
-      amount: -amount,
-      description: `Tip sent to ${recipient.full_name || recipientEmail}`,
-    });
+    if (senderEmail) {
+      await base44.asServiceRole.entities.Transaction.create({
+        user_email: senderEmail,
+        type: 'tip_sent',
+        amount: -amount,
+        description: `Tip sent to ${recipient.full_name || recipientEmail}`,
+      });
+    }
 
     return Response.json({ success: true });
 
