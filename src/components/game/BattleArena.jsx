@@ -555,25 +555,7 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
         const u=res?.[0]; if(!u)return;
         const fc=(u.players||[]).filter(p=>p&&p.email).length, mp=u.max_players||2;
         if(fc!==lastFilled.current||u.status!==lastStatus.current){ lastFilled.current=fc; lastStatus.current=u.status; if(cbRef.current)cbRef.current(u); }
-        if(fc>=mp&&u.status==='waiting'){
-          // Generate one independent roll per player per round.
-          // We call rollItem separately for each (round, player) pair so that
-          // each player gets a different item even within the same round.
-          const numPlayers=(u.players||[]).length;
-          const rolls=selectedCases.map(c=>{
-            const items=c.items||[];
-            if(!items.length) return Array.from({length:numPlayers},()=>({item:{name:'Nothing',value:0,rarity:'common',image_url:null},isMagic:false}));
-            const top=items.filter(it=>['epic','legendary'].includes(it.rarity));
-            return Array.from({length:numPlayers},()=>{
-              const item=rollItem(items)||items[Math.floor(Math.random()*items.length)];
-              if(!isMagicSpin) return{item,isMagic:false};
-              const isMagic=top.length>0&&Math.random()<.20;
-              const magicItem=isMagic?(rollItem(top)||top[Math.floor(Math.random()*top.length)]||item):item;
-              return{item:magicItem,isMagic};
-            });
-          });
-          await base44.entities.CaseBattle.update(u.id,{status:'in_progress',rolled_results:JSON.stringify(rolls)});
-        }
+        if(fc>=mp&&u.status==='waiting') await base44.entities.CaseBattle.update(u.id,{status:'in_progress'});
       }catch{}
     };
     const id=setInterval(poll,2000); return()=>clearInterval(id);
@@ -602,31 +584,7 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
     return{item,isMagic:false};
   },[isMagicSpin]);
 
-  // Load rolls from battle record (set by creator when battle started).
-  // Poll until rolled_results is available, then lock in — all clients
-  // get the same predetermined results so spinners show identical outcomes.
-  useEffect(()=>{
-    if(isWaiting||!battle?.id)return;
-    // If the battle record already has rolls (passed in fresh), use them
-    if(battle.rolled_results){
-      try{ allRolled.current=JSON.parse(battle.rolled_results); return; }catch{}
-    }
-    // Otherwise poll until the creator has written them
-    let stopped=false;
-    const load=async()=>{
-      try{
-        const {base44}=await import('@/api/base44Client');
-        const res=await base44.entities.CaseBattle.filter({id:battle.id});
-        const u=res?.[0];
-        if(u?.rolled_results){
-          try{ allRolled.current=JSON.parse(u.rolled_results); stopped=true; return; }catch{}
-        }
-      }catch{}
-      if(!stopped) setTimeout(load,800);
-    };
-    load();
-    return()=>{ stopped=true; };
-  },[isWaiting,battle?.id]);
+  useEffect(()=>{ if(isWaiting)return; allRolled.current=selectedCases.map(c=>players.map(()=>rollWithMagic(c.items||[]))); },[]);
   useEffect(()=>{
     if(isWaiting||phase!=='countdown')return;
     if(countdown===0){setPhase('spinning');launchRound(0);return;}
