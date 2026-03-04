@@ -157,32 +157,50 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
     const load = async () => {
       setLoading(true);
       try {
-        // Try the getPlayerStats function first
-        const res = await base44.functions.invoke('getPlayerStats', { userEmail });
-        if (!cancelled && res?.data) {
-          setProfileData(res.data);
-          setLoading(false);
-          return;
+        // Try getUserStats by userName first (works even without email)
+        if (userName) {
+          const res = await base44.functions.invoke('getUserStats', { userName });
+          if (!cancelled && res?.data && res.data.email) {
+            setProfileData(res.data);
+            setLoading(false);
+            return;
+          }
         }
       } catch (e) {
-        console.warn('getPlayerStats failed, falling back to entity filter:', e);
+        console.warn('getUserStats failed:', e);
       }
 
-      // Fallback: fetch user directly from entity by email
       try {
-        const users = await base44.entities.User.filter({ email: userEmail });
-        if (!cancelled && users?.[0]) {
-          setProfileData(users[0]);
+        // Try getPlayerStats by email
+        if (userEmail) {
+          const res = await base44.functions.invoke('getPlayerStats', { userEmail });
+          if (!cancelled && res?.data) {
+            setProfileData(res.data);
+            setLoading(false);
+            return;
+          }
         }
       } catch (e) {
-        console.error('Fallback user fetch also failed:', e);
+        console.warn('getPlayerStats failed:', e);
+      }
+
+      // Final fallback: fetch directly from entity
+      try {
+        const filter = userEmail ? { email: userEmail } : {};
+        const users = await base44.entities.User.filter(filter);
+        const match = userEmail
+          ? users?.find(u => u.email === userEmail)
+          : users?.find(u => u.full_name === userName);
+        if (!cancelled && match) setProfileData(match);
+      } catch (e) {
+        console.error('All profile fetch methods failed:', e);
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
     load();
     return () => { cancelled = true; };
-  }, [userEmail]);
+  }, [userEmail, userName]);
 
   /* ── Always fetch fresh "me" so balance is live, not stale from props ── */
   useEffect(() => {
@@ -225,8 +243,8 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
 
       // 2. Credit recipient via direct fetch to correct function URL
       try {
-        // userEmail prop is always the reliable recipient identifier
-        const recipientEmail = userEmail;
+        // Use email from profileData (populated by getUserStats) — most reliable
+        const recipientEmail = profileData?.email || userEmail;
         const payload = {
           recipientEmail,
           amount,
