@@ -1,0 +1,498 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
+
+/* ─── CSS ─────────────────────────────────────────────────────────── */
+const CSS = `
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+.auth-root {
+  font-family: 'Outfit', sans-serif;
+  min-height: 100vh;
+  background: #03000d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+}
+
+.auth-title { font-family: 'Rajdhani', sans-serif; }
+
+/* ── Animated background orbs ── */
+.auth-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  animation: auth-orb-drift 12s ease-in-out infinite;
+}
+@keyframes auth-orb-drift {
+  0%,100% { transform: translate(0,0) scale(1); }
+  33%      { transform: translate(30px,-20px) scale(1.08); }
+  66%      { transform: translate(-20px,15px) scale(.94); }
+}
+
+/* ── Scan line ── */
+@keyframes auth-scan {
+  0%  { top:-1px; opacity:0; }
+  5%  { opacity:.5; } 95%{ opacity:.5; }
+  100%{ top:100%; opacity:0; }
+}
+.auth-scan {
+  position:absolute; left:0; right:0; height:1px; z-index:10; pointer-events:none;
+  background:linear-gradient(90deg,transparent,rgba(245,200,66,.2),transparent);
+  animation:auth-scan 8s linear infinite;
+}
+
+/* ── Noise texture ── */
+.auth-noise {
+  position:absolute; inset:0; pointer-events:none; z-index:1;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size:160px; mix-blend-mode:overlay; opacity:.04;
+}
+
+/* ── Particles ── */
+@keyframes auth-particle {
+  0%   { transform:translateY(0) translateX(0) scale(1); opacity:0; }
+  10%  { opacity:1; }
+  85%  { opacity:.3; }
+  100% { transform:translateY(-120px) translateX(var(--dx)) scale(0); opacity:0; }
+}
+.auth-pt {
+  position:absolute; border-radius:50%; pointer-events:none;
+  animation:auth-particle var(--d) ease-out infinite var(--delay);
+}
+
+/* ── Card ── */
+.auth-card {
+  position:relative; width:100%; max-width:420px;
+  border-radius:24px; overflow:hidden;
+  background:linear-gradient(160deg,#0d0a1e 0%,#080518 50%,#06030f 100%);
+  border:1px solid rgba(245,200,66,.18);
+  box-shadow:
+    0 0 0 1px rgba(245,200,66,.06),
+    0 0 100px rgba(157,111,255,.1),
+    0 30px 80px rgba(0,0,0,.8);
+  z-index:10;
+}
+
+/* ── Input ── */
+.auth-input-wrap {
+  position:relative; width:100%;
+}
+.auth-input {
+  width:100%; padding:13px 44px 13px 44px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:12px; outline:none;
+  color:#f0eaff; font-family:'Outfit',sans-serif;
+  font-size:14px; font-weight:600;
+  transition:border-color .2s, background .2s, box-shadow .2s;
+}
+.auth-input::placeholder { color:rgba(240,234,255,.2); }
+.auth-input:focus {
+  border-color:rgba(245,200,66,.4);
+  background:rgba(245,200,66,.04);
+  box-shadow:0 0 0 3px rgba(245,200,66,.06);
+}
+.auth-input.error {
+  border-color:rgba(255,78,106,.4);
+  background:rgba(255,78,106,.04);
+}
+.auth-input-icon {
+  position:absolute; left:14px; top:50%; transform:translateY(-50%);
+  color:rgba(240,234,255,.2); pointer-events:none;
+  transition:color .2s;
+}
+.auth-input:focus ~ .auth-input-icon,
+.auth-input-wrap:focus-within .auth-input-icon { color:rgba(245,200,66,.5); }
+.auth-eye-btn {
+  position:absolute; right:12px; top:50%; transform:translateY(-50%);
+  background:none; border:none; cursor:pointer; padding:4px;
+  color:rgba(240,234,255,.2); transition:color .2s;
+}
+.auth-eye-btn:hover { color:rgba(245,200,66,.6); }
+
+/* ── Submit button ── */
+.auth-submit {
+  width:100%; padding:14px; border:none; cursor:pointer;
+  border-radius:12px; font-family:'Outfit',sans-serif;
+  font-size:15px; font-weight:900; letter-spacing:.02em;
+  background:linear-gradient(135deg,#f5c842 0%,#e8a800 60%,#f5c842 100%);
+  background-size:200%;
+  color:#0a0600;
+  box-shadow:0 0 32px rgba(245,200,66,.35), 0 4px 20px rgba(0,0,0,.5);
+  transition:transform .18s, box-shadow .18s, background-position .4s;
+  display:flex; align-items:center; justify-content:center; gap:8px;
+}
+.auth-submit:hover:not(:disabled) {
+  transform:translateY(-2px) scale(1.02);
+  box-shadow:0 0 48px rgba(245,200,66,.5), 0 8px 24px rgba(0,0,0,.6);
+  background-position:100%;
+}
+.auth-submit:active:not(:disabled) { transform:scale(.98); }
+.auth-submit:disabled { opacity:.4; cursor:not-allowed; }
+
+/* ── Tab toggle ── */
+.auth-tab {
+  flex:1; padding:12px; border:none; cursor:pointer; background:transparent;
+  font-family:'Outfit',sans-serif; font-size:13px; font-weight:800;
+  transition:color .2s; position:relative;
+}
+.auth-tab::after {
+  content:''; position:absolute; bottom:0; left:20%; right:20%; height:2px;
+  border-radius:2px; transition:opacity .2s, background .2s;
+}
+.auth-tab.active { color:#f5c842; }
+.auth-tab.active::after { background:#f5c842; opacity:1; }
+.auth-tab.inactive { color:rgba(240,234,255,.25); }
+.auth-tab.inactive::after { opacity:0; }
+
+/* ── Divider ── */
+.auth-divider {
+  display:flex; align-items:center; gap:12; margin:20px 0;
+}
+.auth-divider-line { flex:1; height:1px; background:rgba(255,255,255,.06); }
+.auth-divider-text { font-size:10px; font-weight:700; color:rgba(240,234,255,.2); letter-spacing:.14em; text-transform:uppercase; white-space:nowrap; }
+
+/* ── Guest button ── */
+.auth-guest {
+  width:100%; padding:12px; border:1px solid rgba(255,255,255,.08); cursor:pointer;
+  border-radius:12px; font-family:'Outfit',sans-serif;
+  font-size:13px; font-weight:700;
+  background:rgba(255,255,255,.03); color:rgba(240,234,255,.4);
+  transition:all .2s;
+}
+.auth-guest:hover {
+  background:rgba(157,111,255,.08);
+  border-color:rgba(157,111,255,.25);
+  color:#c084fc;
+}
+
+/* ── Error toast ── */
+.auth-error {
+  padding:10px 14px; border-radius:10px;
+  background:rgba(255,78,106,.1); border:1px solid rgba(255,78,106,.25);
+  color:#ff4e6a; font-size:12px; font-weight:700;
+}
+
+/* ── Success state ── */
+@keyframes auth-success-pop {
+  0%  { transform:scale(.5) rotate(-10deg); opacity:0; }
+  60% { transform:scale(1.15) rotate(2deg); }
+  100%{ transform:scale(1) rotate(0); opacity:1; }
+}
+.auth-success-icon { animation:auth-success-pop .5s cubic-bezier(.34,1.56,.64,1) forwards; }
+
+@keyframes auth-spin { to { transform:rotate(360deg); } }
+.auth-spinner {
+  width:16px; height:16px; border-radius:50%;
+  border:2px solid rgba(0,0,0,.2); border-top-color:#000;
+  animation:auth-spin .7s linear infinite;
+}
+
+/* ── Logo pulse ── */
+@keyframes auth-logo-glow {
+  0%,100% { filter:drop-shadow(0 0 8px rgba(245,200,66,.4)); }
+  50%     { filter:drop-shadow(0 0 22px rgba(245,200,66,.8)) drop-shadow(0 0 40px rgba(245,200,66,.3)); }
+}
+.auth-logo { animation:auth-logo-glow 2.5s ease-in-out infinite; }
+
+/* ── Strength bar ── */
+.auth-strength-bar { height:3px; border-radius:3px; transition:width .3s, background .3s; }
+`;
+
+/* ─── Particles ──────────────────────────────────────────────────── */
+const Particles = ({ count = 14 }) => {
+  const pts = useRef(Array.from({ length: count }, (_, i) => ({
+    id: i,
+    left: `${5 + Math.random() * 90}%`,
+    bottom: `${Math.random() * 20}%`,
+    size: 1.2 + Math.random() * 2.4,
+    color: Math.random() > .5 ? '#f5c842' : '#9d6fff',
+    d: `${4 + Math.random() * 6}s`,
+    delay: `${-Math.random() * 8}s`,
+    dx: `${(Math.random() - .5) * 44}px`,
+  }))).current;
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+      {pts.map(p => (
+        <div key={p.id} className="auth-pt" style={{
+          left: p.left, bottom: p.bottom,
+          width: p.size, height: p.size,
+          background: p.color,
+          boxShadow: `0 0 ${p.size * 4}px ${p.color}`,
+          '--d': p.d, '--delay': p.delay, '--dx': p.dx,
+        }} />
+      ))}
+    </div>
+  );
+};
+
+/* ─── Password strength ──────────────────────────────────────────── */
+const getStrength = (pw) => {
+  let score = 0;
+  if (pw.length >= 8) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  return score;
+};
+const STRENGTH_LABELS = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+const STRENGTH_COLORS = ['', '#ff4e6a', '#fbbf24', '#34d399', '#00e5a0'];
+
+/* ─── Input Field ────────────────────────────────────────────────── */
+const Field = ({ icon: Icon, type = 'text', placeholder, value, onChange, error, showToggle, onToggle, showPw }) => (
+  <div className="auth-input-wrap">
+    <input
+      className={`auth-input${error ? ' error' : ''}`}
+      type={showToggle ? (showPw ? 'text' : 'password') : type}
+      placeholder={placeholder}
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      autoComplete="off"
+    />
+    <div className="auth-input-icon">
+      <Icon style={{ width: 15, height: 15 }} />
+    </div>
+    {showToggle && (
+      <button type="button" className="auth-eye-btn" onClick={onToggle}>
+        {showPw
+          ? <EyeOff style={{ width: 14, height: 14 }} />
+          : <Eye style={{ width: 14, height: 14 }} />}
+      </button>
+    )}
+  </div>
+);
+
+/* ─── Main ───────────────────────────────────────────────────────── */
+export default function AuthPage({ onSignIn, onSignUp, onGuest }) {
+  const [mode, setMode]       = useState('signin'); // 'signin' | 'signup'
+  const [email, setEmail]     = useState('');
+  const [password, setPw]     = useState('');
+  const [username, setUn]     = useState('');
+  const [showPw, setShowPw]   = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError]     = useState('');
+  const [success, setSuccess] = useState(false);
+
+  const strength = mode === 'signup' ? getStrength(password) : 0;
+
+  const switchMode = (m) => {
+    setMode(m); setError(''); setEmail(''); setPw(''); setUn(''); setSuccess(false);
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!email.trim()) { setError('Email is required'); return; }
+    if (!password) { setError('Password is required'); return; }
+    if (mode === 'signup' && !username.trim()) { setError('Username is required'); return; }
+    if (mode === 'signup' && strength < 2) { setError('Password is too weak'); return; }
+
+    setLoading(true);
+    try {
+      if (mode === 'signin') {
+        await onSignIn?.({ email, password });
+      } else {
+        await onSignUp?.({ email, password, username });
+        setSuccess(true);
+      }
+    } catch (err) {
+      setError(err?.message || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="auth-root">
+      <style>{CSS}</style>
+
+      {/* Background orbs */}
+      <div className="auth-orb" style={{ width: 500, height: 500, top: '-20%', left: '-15%', background: 'radial-gradient(circle,rgba(157,111,255,.12) 0%,transparent 70%)', animationDelay: '0s' }} />
+      <div className="auth-orb" style={{ width: 400, height: 400, bottom: '-15%', right: '-10%', background: 'radial-gradient(circle,rgba(245,200,66,.09) 0%,transparent 70%)', animationDelay: '-4s' }} />
+      <div className="auth-orb" style={{ width: 300, height: 300, top: '40%', right: '20%', background: 'radial-gradient(circle,rgba(157,111,255,.07) 0%,transparent 70%)', animationDelay: '-8s' }} />
+
+      <Particles />
+
+      {/* Card */}
+      <motion.div
+        className="auth-card"
+        initial={{ opacity: 0, y: 28, scale: .96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+      >
+        <div className="auth-scan" />
+        <div className="auth-noise" />
+
+        {/* Top accent bar */}
+        <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#f5c842,#9d6fff,transparent)' }} />
+
+        {/* Logo area */}
+        <div style={{ padding: '28px 28px 0', textAlign: 'center', position: 'relative', zIndex: 2 }}>
+          <div className="auth-logo" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 58, height: 58, borderRadius: 16, background: 'linear-gradient(135deg,rgba(245,200,66,.15),rgba(157,111,255,.1))', border: '1px solid rgba(245,200,66,.25)', marginBottom: 14 }}>
+            <Sparkles style={{ width: 26, height: 26, color: '#f5c842' }} />
+          </div>
+          <h1 className="auth-title" style={{ fontSize: 28, fontWeight: 700, color: '#f0eaff', letterSpacing: '.04em', marginBottom: 4 }}>
+            CASERIFT
+          </h1>
+          <p style={{ fontSize: 12, color: 'rgba(240,234,255,.3)', fontWeight: 600, letterSpacing: '.08em' }}>
+            {mode === 'signin' ? 'Welcome back, player' : 'Join the arena'}
+          </p>
+        </div>
+
+        {/* Tab toggle */}
+        <div style={{ display: 'flex', margin: '22px 28px 0', borderBottom: '1px solid rgba(255,255,255,.06)', position: 'relative', zIndex: 2 }}>
+          <button className={`auth-tab ${mode === 'signin' ? 'active' : 'inactive'}`} onClick={() => switchMode('signin')}>
+            Sign In
+          </button>
+          <button className={`auth-tab ${mode === 'signup' ? 'active' : 'inactive'}`} onClick={() => switchMode('signup')}>
+            Sign Up
+          </button>
+        </div>
+
+        {/* Form */}
+        <div style={{ padding: '24px 28px 28px', position: 'relative', zIndex: 2 }}>
+          <AnimatePresence mode="wait">
+            <motion.form
+              key={mode}
+              onSubmit={handleSubmit}
+              initial={{ opacity: 0, x: mode === 'signup' ? 18 : -18 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: mode === 'signup' ? -18 : 18 }}
+              transition={{ duration: .22 }}
+              style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+            >
+              {/* Username (signup only) */}
+              {mode === 'signup' && (
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                  <Field
+                    icon={User}
+                    placeholder="Username"
+                    value={username}
+                    onChange={setUn}
+                  />
+                </motion.div>
+              )}
+
+              {/* Email */}
+              <Field
+                icon={Mail}
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={setEmail}
+              />
+
+              {/* Password */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <Field
+                  icon={Lock}
+                  placeholder="Password"
+                  value={password}
+                  onChange={setPw}
+                  showToggle
+                  showPw={showPw}
+                  onToggle={() => setShowPw(v => !v)}
+                />
+
+                {/* Strength bar (signup only) */}
+                {mode === 'signup' && password.length > 0 && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {[1, 2, 3, 4].map(i => (
+                        <div key={i} style={{ flex: 1, height: 3, borderRadius: 3, background: i <= strength ? STRENGTH_COLORS[strength] : 'rgba(255,255,255,.07)', transition: 'background .3s' }} />
+                      ))}
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: STRENGTH_COLORS[strength] || 'rgba(240,234,255,.25)', letterSpacing: '.06em' }}>
+                      {STRENGTH_LABELS[strength] || 'Enter a password'}
+                    </span>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Forgot password (signin only) */}
+              {mode === 'signin' && (
+                <div style={{ textAlign: 'right' }}>
+                  <button type="button" style={{ fontSize: 11, fontWeight: 700, color: 'rgba(245,200,66,.5)', background: 'none', border: 'none', cursor: 'pointer', transition: 'color .2s' }}
+                    // @ts-ignore
+                    onMouseEnter={e => e.target.style.color = '#f5c842'}
+                    // @ts-ignore
+                    onMouseLeave={e => e.target.style.color = 'rgba(245,200,66,.5)'}>
+                    Forgot password?
+                  </button>
+                </div>
+              )}
+
+              {/* Error */}
+              <AnimatePresence>
+                {error && (
+                  <motion.div className="auth-error" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                    {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Success */}
+              <AnimatePresence>
+                {success && (
+                  <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(0,229,160,.08)', border: '1px solid rgba(0,229,160,.25)', color: '#00e5a0', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span className="auth-success-icon" style={{ fontSize: 16 }}>🎉</span>
+                    Account created! Welcome to the arena.
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Submit */}
+              <motion.button
+                type="submit"
+                className="auth-submit"
+                disabled={loading}
+                whileTap={{ scale: .98 }}
+                style={{ marginTop: 4 }}
+              >
+                {loading ? (
+                  <div className="auth-spinner" />
+                ) : (
+                  <>
+                    {mode === 'signin' ? 'Sign In' : 'Create Account'}
+                    <ArrowRight style={{ width: 16, height: 16 }} />
+                  </>
+                )}
+              </motion.button>
+
+              {/* Divider */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0' }}>
+                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.06)' }} />
+                <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(240,234,255,.2)', letterSpacing: '.14em', textTransform: 'uppercase' }}>or</span>
+                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.06)' }} />
+              </div>
+
+              {/* Guest */}
+              <button type="button" className="auth-guest" onClick={onGuest}>
+                👻 Continue as Guest
+              </button>
+
+              {/* Switch mode link */}
+              <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(240,234,255,.25)', fontWeight: 600, marginTop: 4 }}>
+                {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
+                <button type="button" onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f5c842', fontWeight: 800, fontFamily: 'Outfit,sans-serif', fontSize: 12 }}>
+                  {mode === 'signin' ? 'Sign up' : 'Sign in'}
+                </button>
+              </p>
+            </motion.form>
+          </AnimatePresence>
+        </div>
+
+        {/* Bottom accent */}
+        <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,rgba(157,111,255,.2),transparent)' }} />
+      </motion.div>
+    </div>
+  );
+}
