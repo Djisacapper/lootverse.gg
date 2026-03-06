@@ -6,6 +6,8 @@ import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
+import AuthPage from './pages/AuthPage';
+import { base44 } from '@/api/base44Client';
 
 const { Pages, Layout, mainPage } = pagesConfig;
 const mainPageKey = mainPage ?? Object.keys(Pages)[0];
@@ -21,8 +23,14 @@ const AuthenticatedApp = () => {
   // Show loading spinner while checking app public settings or auth
   if (isLoadingPublicSettings || isLoadingAuth) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center">
-        <div className="w-8 h-8 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div>
+      <div className="fixed inset-0 flex items-center justify-center" style={{ background: '#03000d' }}>
+        <div style={{
+          width: 36, height: 36, borderRadius: '50%',
+          border: '3px solid rgba(245,200,66,.15)',
+          borderTopColor: '#f5c842',
+          animation: 'spin .7s linear infinite',
+        }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
       </div>
     );
   }
@@ -32,9 +40,22 @@ const AuthenticatedApp = () => {
     if (authError.type === 'user_not_registered') {
       return <UserNotRegisteredError />;
     } else if (authError.type === 'auth_required') {
-      // Redirect to login automatically
-      navigateToLogin();
-      return null;
+      return (
+        <AuthPage
+          onSignIn={async ({ email, password }) => {
+            await base44.auth.signIn({ email, password });
+            window.location.reload();
+          }}
+          onSignUp={async ({ email, password, username }) => {
+            await base44.auth.signUp({ email, password, full_name: username });
+            window.location.reload();
+          }}
+          onGuest={async () => {
+            await base44.auth.signInAnonymously();
+            window.location.reload();
+          }}
+        />
+      );
     }
   }
 
@@ -64,7 +85,6 @@ const AuthenticatedApp = () => {
 
 
 function App() {
-
   return (
     <AuthProvider>
       <QueryClientProvider client={queryClientInstance}>
