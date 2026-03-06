@@ -61,7 +61,7 @@ import Referrals from './pages/Referrals';
 import Rewards from './pages/Rewards';
 import Upgrade from './pages/Upgrade';
 import __Layout from './Layout.jsx';
-
+import AuthPage from './pages/Authpage';
 
 export const PAGES = {
     "Admin": Admin,
