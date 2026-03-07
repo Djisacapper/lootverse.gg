@@ -24,7 +24,8 @@ async function syncBase44User({ email, full_name, username = '', referred_by = '
   } catch (_) {}
 
   if (existing) {
-    return Users.update(existing.id, { full_name });
+    // Always write username — this is the field the site displays
+    return Users.update(existing.id, { full_name, username: username || existing.username });
   }
 
   return Users.create({
