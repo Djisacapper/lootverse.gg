@@ -487,7 +487,7 @@ export default function Authpage() {
     if (!verifyCode.trim()) { setError('Please enter the verification code'); return; }
     setLoading(true);
     try {
-      await base44.auth.verifyEmail(verifyCode.trim());
+      await base44.auth.verifyOtp({ email: pendingEmail, otpCode: verifyCode.trim() });
       // Sync User entity now that account is verified
       await syncBase44User({
         email: pendingEmail,
