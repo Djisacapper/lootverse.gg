@@ -468,6 +468,8 @@ export default function Authpage() {
     if (isAuthenticated) navigate('/Home');
   }, [isAuthenticated]);
 
+
+
   const switchMode = (m) => {
     setMode(m);
     setError('');
@@ -494,15 +496,48 @@ export default function Authpage() {
       const { access_token } = await base44.auth.loginViaEmailPassword(pendingEmail, password);
       // Explicitly persist token to localStorage so it survives the reload
       base44.auth.setToken(access_token, true);
-      // Now the session is live — sync our User entity with game defaults
-      await syncBase44User({
-        email: pendingEmail,
-        full_name: username,  // base44 internal display name
-        username,             // our custom username field on the User entity
-        referred_by: referralCode,
-      });
+      // Session is now live — write username directly, no reload needed
+      try {
+        const me = await base44.auth.me();
+        if (me) {
+          const results = await Users.filter({ email: me.email });
+          if (results?.length > 0) {
+            await Users.update(results[0].id, {
+              username,
+              full_name: username,
+              referred_by: referralCode || '',
+            });
+          } else {
+            await Users.create({
+              email: me.email,
+              full_name: username,
+              username,
+              role: 'user',
+              balance: 1000,
+              xp: 0,
+              level: 1,
+              is_anonymous: false,
+              affiliate_code: generateAffiliateCode(),
+              referred_by: referralCode || '',
+              total_deposited: 0,
+              affiliate_earnings: 0,
+              affiliate_earnings_claimable: 0,
+              rakeback_instant: 0,
+              rakeback_daily: 0,
+              rakeback_weekly: 0,
+              rakeback_monthly: 0,
+              total_rakeback_claimed: 0,
+              rakeback_daily_claimed_at: '',
+              rakeback_weekly_claimed_at: '',
+              rakeback_monthly_claimed_at: '',
+            });
+          }
+        }
+      } catch (e) {
+        console.error('Username sync failed:', e);
+      }
       setSuccess(true);
-      setTimeout(() => window.location.reload(), 1800);
+      setTimeout(() => navigate('/Home'), 1800);
     } catch (err) {
       const msg = err?.message || err?.error || 'Invalid code. Please try again.';
       setError(msg);
@@ -539,9 +574,8 @@ export default function Authpage() {
       if (mode === 'signin') {
         // ── Sign in via base44 SDK ──────────────────────────────────
         const { access_token } = await base44.auth.loginViaEmailPassword(email, password);
-        // Explicitly persist token to localStorage so it survives the reload
         base44.auth.setToken(access_token, true);
-        window.location.reload();
+        navigate('/Home');
 
       } else {
         // ── Sign up via base44 SDK ──────────────────────────────────
