@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { base44 } from '@/api/base44Client';
-import LiveChat from './components/game/LiveChat';
-import ProfileModal from './components/game/ProfileModal';
+
 import {
   Box, Swords, Coins, TrendingUp, Gift, Award, Users,
   Menu, X, ChevronLeft, ChevronRight, Wallet,
