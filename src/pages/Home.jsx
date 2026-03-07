@@ -1,3 +1,4 @@
+import { useRequireAuth } from '@/components/useRequireAuth';
 import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
@@ -563,6 +564,7 @@ function SectionHead({ label, icon: Icon, accent = '#fbbf24', right }) {
 /* ─── Main ───────────────────────────────────────────────────── */
 export default function Home() {
   const { loading } = useWallet();
+  useRequireAuth();
   const [featuredCases, setFeaturedCases] = useState([]);
 
   useEffect(() => {
