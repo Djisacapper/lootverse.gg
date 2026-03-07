@@ -304,7 +304,7 @@ function HeroBanner() {
             WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
             filter: 'drop-shadow(0 0 20px rgba(251,191,36,.3))',
           }}>
-            Lootverse!
+            Amethystgg!
           </span>
         </motion.h1>
 
