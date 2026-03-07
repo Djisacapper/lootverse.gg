@@ -456,6 +456,9 @@ export default function Authpage() {
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState('');
   const [success, setSuccess]           = useState(false);
+  const [verifyStep, setVerifyStep]     = useState(false);
+  const [verifyCode, setVerifyCode]     = useState('');
+  const [pendingEmail, setPendingEmail] = useState('');
 
   const strength = mode === 'signup' ? getStrength(password) : 0;
 
@@ -473,6 +476,33 @@ export default function Authpage() {
     setReferral('');
     setShowReferral(false);
     setSuccess(false);
+    setVerifyStep(false);
+    setVerifyCode('');
+    setPendingEmail('');
+  };
+
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!verifyCode.trim()) { setError('Please enter the verification code'); return; }
+    setLoading(true);
+    try {
+      await base44.auth.verifyEmail(verifyCode.trim());
+      // Sync User entity now that account is verified
+      await syncBase44User({
+        email: pendingEmail,
+        full_name: username,
+        username,
+        referred_by: referralCode,
+      });
+      setSuccess(true);
+      setTimeout(() => window.location.reload(), 1800);
+    } catch (err) {
+      const msg = err?.message || err?.error || 'Invalid code. Please try again.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -500,15 +530,9 @@ export default function Authpage() {
           password,
           full_name: username,
         });
-        // Sync our User entity with game defaults
-        await syncBase44User({
-          email,
-          full_name: username,
-          username,
-          referred_by: referralCode,
-        });
-        setSuccess(true);
-        setTimeout(() => window.location.reload(), 1800);
+        // Registration sent a verification email — show code input step
+        setPendingEmail(email);
+        setVerifyStep(true);
       }
     } catch (err) {
       // base44 SDK throws an error object with a message field
@@ -593,6 +617,94 @@ export default function Authpage() {
         {/* Form */}
         <div style={{ padding: '24px 28px 28px', position: 'relative', zIndex: 2 }}>
           <AnimatePresence mode="wait">
+
+            {/* ── Verify email step ── */}
+            {verifyStep ? (
+              <motion.form
+                key="verify"
+                onSubmit={handleVerify}
+                initial={{ opacity: 0, x: 18 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -18 }}
+                transition={{ duration: .22 }}
+                style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+              >
+                <div style={{ textAlign: 'center', marginBottom: 4 }}>
+                  <div style={{ fontSize: 36, marginBottom: 8 }}>📧</div>
+                  <p style={{ fontSize: 14, fontWeight: 800, color: '#f0eaff', marginBottom: 4 }}>
+                    Check your email
+                  </p>
+                  <p style={{ fontSize: 12, color: 'rgba(240,234,255,.35)', fontWeight: 600 }}>
+                    We sent a verification code to
+                  </p>
+                  <p style={{ fontSize: 12, color: '#f5c842', fontWeight: 800, marginTop: 2 }}>
+                    {pendingEmail}
+                  </p>
+                </div>
+
+                {/* Code input */}
+                <div className="auth-input-wrap">
+                  <input
+                    className="auth-input"
+                    type="text"
+                    placeholder="Enter verification code"
+                    value={verifyCode}
+                    onChange={e => setVerifyCode(e.target.value)}
+                    autoComplete="one-time-code"
+                    maxLength={8}
+                    style={{ textAlign: 'center', fontSize: 20, fontWeight: 900, letterSpacing: '.3em' }}
+                  />
+                </div>
+
+                {/* Error */}
+                <AnimatePresence>
+                  {error && (
+                    <motion.div
+                      className="auth-error"
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0 }}
+                    >
+                      {error}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Success */}
+                <AnimatePresence>
+                  {success && (
+                    <motion.div
+                      className="auth-success"
+                      initial={{ opacity: 0, y: -6 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      <span style={{ fontSize: 16 }}>🎉</span>
+                      Account verified! Welcome to the arena.
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                {/* Submit */}
+                <motion.button
+                  type="submit"
+                  className="auth-submit"
+                  disabled={loading}
+                  whileTap={{ scale: .98 }}
+                  style={{ marginTop: 4 }}
+                >
+                  {loading ? <div className="auth-spinner" /> : <>Verify Email <ArrowRight style={{ width: 16, height: 16 }} /></>}
+                </motion.button>
+
+                <button
+                  type="button"
+                  onClick={() => { setVerifyStep(false); setError(''); setVerifyCode(''); }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(240,234,255,.25)', fontWeight: 700, fontSize: 12, fontFamily: 'Outfit,sans-serif' }}
+                >
+                  ← Back
+                </button>
+              </motion.form>
+            ) : (
+
             <motion.form
               key={mode}
               onSubmit={handleSubmit}
@@ -777,6 +889,7 @@ export default function Authpage() {
               <p className="auth-badge">🔐 Secured by base44</p>
 
             </motion.form>
+            )} {/* end verifyStep ternary */}
           </AnimatePresence>
         </div>
 
