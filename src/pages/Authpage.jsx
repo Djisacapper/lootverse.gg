@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
 import { base44 } from '@/api/base44Client';
@@ -8,47 +8,40 @@ const Users = base44.entities.User;
 
 /* ─── Clerk config ───────────────────────────────────────────────── */
 const CLERK_PUBLISHABLE_KEY = 'pk_test_bWF0dXJlLWtvaS0xLmNsZXJrLmFjY291bnRzLmRldiQ';
-const CLERK_FRONTEND_API = (() => {
-  try {
-    const b64 = CLERK_PUBLISHABLE_KEY.replace('pk_test_', '').replace('pk_live_', '');
-    const domain = atob(b64).replace(/\$$/, '');
-    return `https://${domain}`;
-  } catch {
-    return 'https://mature-koi-1.clerk.accounts.dev';
-  }
-})();
 
-/* ─── Clerk API helpers (pure fetch — no npm needed) ─────────────── */
-async function clerkSignUp({ emailAddress, password, username }) {
-  const res = await fetch(`${CLERK_FRONTEND_API}/v1/client/sign_ups`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ email_address: emailAddress, password, username }),
+/* ─── Load Clerk JS SDK via script tag ───────────────────────────── */
+// Loading via script tag avoids CORS issues that occur when calling
+// Clerk's API directly via fetch from a different origin.
+function loadClerkScript() {
+  return new Promise((resolve, reject) => {
+    // Already loaded
+    if (window.Clerk) {
+      resolve(window.Clerk);
+      return;
+    }
+    // Script tag already injected but not yet loaded
+    const existing = document.getElementById('clerk-js');
+    if (existing) {
+      existing.addEventListener('load', () => resolve(window.Clerk));
+      return;
+    }
+    // Inject the script tag
+    const script = document.createElement('script');
+    script.id = 'clerk-js';
+    script.src = `https://mature-koi-1.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js`;
+    script.setAttribute('data-clerk-publishable-key', CLERK_PUBLISHABLE_KEY);
+    script.crossOrigin = 'anonymous';
+    script.onload = async () => {
+      try {
+        await window.Clerk.load({ publishableKey: CLERK_PUBLISHABLE_KEY });
+        resolve(window.Clerk);
+      } catch (e) {
+        reject(e);
+      }
+    };
+    script.onerror = () => reject(new Error('Failed to load Clerk script'));
+    document.head.appendChild(script);
   });
-  const data = await res.json();
-  if (!res.ok) {
-    const msg = data?.errors?.[0]?.long_message || data?.errors?.[0]?.message || 'Sign-up failed';
-    throw new Error(msg);
-  }
-  return data;
-}
-
-async function clerkSignIn({ identifier, password }) {
-  const res = await fetch(`${CLERK_FRONTEND_API}/v1/client/sign_ins`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    credentials: 'include',
-    body: JSON.stringify({ identifier, password, strategy: 'password' }),
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    const msg = data?.errors?.[0]?.long_message || data?.errors?.[0]?.message || 'Sign-in failed';
-    throw new Error(msg);
-  }
-  const token = data?.client?.sessions?.[0]?.last_active_token?.jwt;
-  if (token) localStorage.setItem('clerk_session_token', token);
-  return data;
 }
 
 /* ─── base44 helpers ─────────────────────────────────────────────── */
@@ -59,7 +52,14 @@ function generateAffiliateCode() {
   return code;
 }
 
-async function syncBase44User({ email, full_name, username = '', avatar_url = '', referred_by = '', is_anonymous = false }) {
+async function syncBase44User({
+  email,
+  full_name,
+  username = '',
+  avatar_url = '',
+  referred_by = '',
+  is_anonymous = false,
+}) {
   let existing = null;
   try {
     const results = await Users.filter({ email });
@@ -138,16 +138,26 @@ const CSS = `
   100%{ top:100%; opacity:0; }
 }
 .auth-scan {
-  position: absolute; left: 0; right: 0; height: 1px; z-index: 10; pointer-events: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  z-index: 10;
+  pointer-events: none;
   background: linear-gradient(90deg, transparent, rgba(245,200,66,.2), transparent);
   animation: auth-scan 8s linear infinite;
 }
 
 /* ── Noise texture ── */
 .auth-noise {
-  position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
   background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 160px; mix-blend-mode: overlay; opacity: .04;
+  background-size: 160px;
+  mix-blend-mode: overlay;
+  opacity: .04;
 }
 
 /* ── Particles ── */
@@ -158,14 +168,19 @@ const CSS = `
   100% { transform: translateY(-120px) translateX(var(--dx)) scale(0); opacity: 0; }
 }
 .auth-pt {
-  position: absolute; border-radius: 50%; pointer-events: none;
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
   animation: auth-particle var(--d) ease-out infinite var(--delay);
 }
 
 /* ── Card ── */
 .auth-card {
-  position: relative; width: 100%; max-width: 420px;
-  border-radius: 24px; overflow: hidden;
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  border-radius: 24px;
+  overflow: hidden;
   background: linear-gradient(160deg, #0d0a1e 0%, #080518 50%, #06030f 100%);
   border: 1px solid rgba(245,200,66,.18);
   box-shadow:
@@ -177,15 +192,20 @@ const CSS = `
 
 /* ── Input ── */
 .auth-input-wrap {
-  position: relative; width: 100%;
+  position: relative;
+  width: 100%;
 }
 .auth-input {
-  width: 100%; padding: 13px 44px 13px 44px;
+  width: 100%;
+  padding: 13px 44px 13px 44px;
   background: rgba(255,255,255,.04);
   border: 1px solid rgba(255,255,255,.08);
-  border-radius: 12px; outline: none;
-  color: #f0eaff; font-family: 'Outfit', sans-serif;
-  font-size: 14px; font-weight: 600;
+  border-radius: 12px;
+  outline: none;
+  color: #f0eaff;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
   transition: border-color .2s, background .2s, box-shadow .2s;
 }
 .auth-input::placeholder { color: rgba(240,234,255,.2); }
@@ -199,29 +219,50 @@ const CSS = `
   background: rgba(255,78,106,.04);
 }
 .auth-input-icon {
-  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
-  color: rgba(240,234,255,.2); pointer-events: none; transition: color .2s;
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(240,234,255,.2);
+  pointer-events: none;
+  transition: color .2s;
 }
 .auth-input:focus ~ .auth-input-icon,
 .auth-input-wrap:focus-within .auth-input-icon { color: rgba(245,200,66,.5); }
 .auth-eye-btn {
-  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
-  background: none; border: none; cursor: pointer; padding: 4px;
-  color: rgba(240,234,255,.2); transition: color .2s;
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: rgba(240,234,255,.2);
+  transition: color .2s;
 }
 .auth-eye-btn:hover { color: rgba(245,200,66,.6); }
 
 /* ── Submit button ── */
 .auth-submit {
-  width: 100%; padding: 14px; border: none; cursor: pointer;
-  border-radius: 12px; font-family: 'Outfit', sans-serif;
-  font-size: 15px; font-weight: 900; letter-spacing: .02em;
+  width: 100%;
+  padding: 14px;
+  border: none;
+  cursor: pointer;
+  border-radius: 12px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: .02em;
   background: linear-gradient(135deg, #f5c842 0%, #e8a800 60%, #f5c842 100%);
   background-size: 200%;
   color: #0a0600;
   box-shadow: 0 0 32px rgba(245,200,66,.35), 0 4px 20px rgba(0,0,0,.5);
   transition: transform .18s, box-shadow .18s, background-position .4s;
-  display: flex; align-items: center; justify-content: center; gap: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 .auth-submit:hover:not(:disabled) {
   transform: translateY(-2px) scale(1.02);
@@ -233,13 +274,26 @@ const CSS = `
 
 /* ── Tab toggle ── */
 .auth-tab {
-  flex: 1; padding: 12px; border: none; cursor: pointer; background: transparent;
-  font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 800;
-  transition: color .2s; position: relative;
+  flex: 1;
+  padding: 12px;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  transition: color .2s;
+  position: relative;
 }
 .auth-tab::after {
-  content: ''; position: absolute; bottom: 0; left: 20%; right: 20%; height: 2px;
-  border-radius: 2px; transition: opacity .2s, background .2s;
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  border-radius: 2px;
+  transition: opacity .2s, background .2s;
 }
 .auth-tab.active { color: #f5c842; }
 .auth-tab.active::after { background: #f5c842; opacity: 1; }
@@ -248,10 +302,16 @@ const CSS = `
 
 /* ── Guest button ── */
 .auth-guest {
-  width: 100%; padding: 12px; border: 1px solid rgba(255,255,255,.08); cursor: pointer;
-  border-radius: 12px; font-family: 'Outfit', sans-serif;
-  font-size: 13px; font-weight: 700;
-  background: rgba(255,255,255,.03); color: rgba(240,234,255,.4);
+  width: 100%;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  cursor: pointer;
+  border-radius: 12px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  background: rgba(255,255,255,.03);
+  color: rgba(240,234,255,.4);
   transition: all .2s;
 }
 .auth-guest:hover {
@@ -262,9 +322,13 @@ const CSS = `
 
 /* ── Error toast ── */
 .auth-error {
-  padding: 10px 14px; border-radius: 10px;
-  background: rgba(255,78,106,.1); border: 1px solid rgba(255,78,106,.25);
-  color: #ff4e6a; font-size: 12px; font-weight: 700;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255,78,106,.1);
+  border: 1px solid rgba(255,78,106,.25);
+  color: #ff4e6a;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 /* ── Success state ── */
@@ -278,8 +342,11 @@ const CSS = `
 /* ── Spinner ── */
 @keyframes auth-spin { to { transform: rotate(360deg); } }
 .auth-spinner {
-  width: 16px; height: 16px; border-radius: 50%;
-  border: 2px solid rgba(0,0,0,.2); border-top-color: #000;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,0,0,.2);
+  border-top-color: #000;
   animation: auth-spin .7s linear infinite;
 }
 
@@ -292,16 +359,25 @@ const CSS = `
 
 /* ── Referral toggle ── */
 .auth-referral-toggle {
-  font-size: 11px; font-weight: 700; color: rgba(245,200,66,.4);
-  background: none; border: none; cursor: pointer; padding: 0;
-  transition: color .2s; text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(245,200,66,.4);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color .2s;
+  text-align: left;
 }
 .auth-referral-toggle:hover { color: rgba(245,200,66,.8); }
 
 /* ── Clerk badge ── */
 .clerk-badge {
-  text-align: center; font-size: 10px;
-  color: rgba(240,234,255,.12); font-weight: 600; margin-top: 2px;
+  text-align: center;
+  font-size: 10px;
+  color: rgba(240,234,255,.12);
+  font-weight: 600;
+  margin-top: 2px;
 }
 `;
 
@@ -322,11 +398,15 @@ const Particles = ({ count = 14 }) => {
     <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
       {pts.map(p => (
         <div key={p.id} className="auth-pt" style={{
-          left: p.left, bottom: p.bottom,
-          width: p.size, height: p.size,
+          left: p.left,
+          bottom: p.bottom,
+          width: p.size,
+          height: p.size,
           background: p.color,
           boxShadow: `0 0 ${p.size * 4}px ${p.color}`,
-          '--d': p.d, '--delay': p.delay, '--dx': p.dx,
+          '--d': p.d,
+          '--delay': p.delay,
+          '--dx': p.dx,
         }} />
       ))}
     </div>
@@ -381,18 +461,33 @@ export default function AuthPage() {
   const [loading, setLoading]           = useState(false);
   const [error, setError]               = useState('');
   const [success, setSuccess]           = useState(false);
+  const [clerkReady, setClerkReady]     = useState(false);
 
   const strength = mode === 'signup' ? getStrength(password) : 0;
 
+  // Load Clerk SDK on mount
+  useEffect(() => {
+    loadClerkScript()
+      .then(() => setClerkReady(true))
+      .catch(() => setError('Failed to load auth system. Please refresh.'));
+  }, []);
+
   const switchMode = (m) => {
-    setMode(m); setError(''); setEmail(''); setPw(''); setUn('');
-    setReferral(''); setShowReferral(false); setSuccess(false);
+    setMode(m);
+    setError('');
+    setEmail('');
+    setPw('');
+    setUn('');
+    setReferral('');
+    setShowReferral(false);
+    setSuccess(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
 
+    if (!clerkReady)                                { setError('Auth system still loading, please wait...'); return; }
     if (!email.trim())                              { setError('Email is required'); return; }
     if (!password)                                  { setError('Password is required'); return; }
     if (mode === 'signup' && !username.trim())      { setError('Username is required'); return; }
@@ -400,33 +495,60 @@ export default function AuthPage() {
 
     setLoading(true);
     try {
+      const clerk = window.Clerk;
+
       if (mode === 'signin') {
-        // 1. Auth with Clerk
-        await clerkSignIn({ identifier: email, password });
-        // 2. Pull base44 user record (create if somehow missing)
-        const results = await Users.filter({ email });
-        if (!results?.[0]) {
-          await syncBase44User({ email, full_name: email.split('@')[0] });
+        // 1. Sign in via Clerk SDK
+        const signIn = await clerk.client.signIn.create({
+          identifier: email,
+          password,
+        });
+
+        if (signIn.status === 'complete') {
+          await clerk.setActive({ session: signIn.createdSessionId });
+          // 2. Pull base44 user record, create if missing
+          const results = await Users.filter({ email });
+          if (!results?.[0]) {
+            await syncBase44User({ email, full_name: email.split('@')[0] });
+          }
+          // 3. Reload so base44 AuthContext re-checks and lets the user through
+          window.location.reload();
+        } else {
+          throw new Error('Sign-in incomplete. Please try again.');
         }
-        // 3. Reload so base44's AuthContext re-checks and lets the user through
-        window.location.reload();
 
       } else {
-        // 1. Create Clerk account
-        await clerkSignUp({ emailAddress: email, password, username });
-        // 2. Create base44 record with all game defaults
-        await syncBase44User({
-          email,
-          full_name: username,
+        // 1. Sign up via Clerk SDK
+        const signUp = await clerk.client.signUp.create({
+          emailAddress: email,
+          password,
           username,
-          referred_by: referralCode,
         });
-        // 3. Show success banner then reload
-        setSuccess(true);
-        setTimeout(() => window.location.reload(), 1800);
+
+        if (signUp.status === 'complete') {
+          await clerk.setActive({ session: signUp.createdSessionId });
+          // 2. Create base44 record with all game defaults
+          await syncBase44User({
+            email,
+            full_name: username,
+            username,
+            referred_by: referralCode,
+          });
+          // 3. Show success then reload
+          setSuccess(true);
+          setTimeout(() => window.location.reload(), 1800);
+
+        } else if (signUp.status === 'missing_requirements') {
+          // Email verification required
+          await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
+          throw new Error('Check your email for a verification code, then sign in.');
+        } else {
+          throw new Error('Sign-up incomplete. Please try again.');
+        }
       }
     } catch (err) {
-      setError(err.message || 'Something went wrong');
+      const clerkMsg = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message;
+      setError(clerkMsg || err?.message || 'Something went wrong');
     } finally {
       setLoading(false);
     }
@@ -442,6 +564,7 @@ export default function AuthPage() {
         is_anonymous: true,
       });
     } catch (_) {}
+    // Reload so base44 AuthContext picks up the guest session
     window.location.reload();
   };
 
@@ -472,10 +595,15 @@ export default function AuthPage() {
         {/* Logo area */}
         <div style={{ padding: '28px 28px 0', textAlign: 'center', position: 'relative', zIndex: 2 }}>
           <div className="auth-logo" style={{
-            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-            width: 58, height: 58, borderRadius: 16,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 58,
+            height: 58,
+            borderRadius: 16,
             background: 'linear-gradient(135deg,rgba(245,200,66,.15),rgba(157,111,255,.1))',
-            border: '1px solid rgba(245,200,66,.25)', marginBottom: 14,
+            border: '1px solid rgba(245,200,66,.25)',
+            marginBottom: 14,
           }}>
             <Sparkles style={{ width: 26, height: 26, color: '#f5c842' }} />
           </div>
@@ -516,12 +644,23 @@ export default function AuthPage() {
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
                 >
-                  <Field icon={User} placeholder="Username" value={username} onChange={setUn} />
+                  <Field
+                    icon={User}
+                    placeholder="Username"
+                    value={username}
+                    onChange={setUn}
+                  />
                 </motion.div>
               )}
 
               {/* Email */}
-              <Field icon={Mail} type="email" placeholder="Email address" value={email} onChange={setEmail} />
+              <Field
+                icon={Mail}
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={setEmail}
+              />
 
               {/* Password + strength bar */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -544,7 +683,9 @@ export default function AuthPage() {
                     <div style={{ display: 'flex', gap: 4 }}>
                       {[1, 2, 3, 4].map(i => (
                         <div key={i} style={{
-                          flex: 1, height: 3, borderRadius: 3,
+                          flex: 1,
+                          height: 3,
+                          borderRadius: 3,
                           background: i <= strength ? STRENGTH_COLORS[strength] : 'rgba(255,255,255,.07)',
                           transition: 'background .3s',
                         }} />
@@ -624,7 +765,18 @@ export default function AuthPage() {
                   <motion.div
                     initial={{ opacity: 0, y: -6 }}
                     animate={{ opacity: 1, y: 0 }}
-                    style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(0,229,160,.08)', border: '1px solid rgba(0,229,160,.25)', color: '#00e5a0', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}
+                    style={{
+                      padding: '10px 14px',
+                      borderRadius: 10,
+                      background: 'rgba(0,229,160,.08)',
+                      border: '1px solid rgba(0,229,160,.25)',
+                      color: '#00e5a0',
+                      fontSize: 12,
+                      fontWeight: 700,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                    }}
                   >
                     <span className="auth-success-icon" style={{ fontSize: 16 }}>🎉</span>
                     Account created! Welcome to the arena.
@@ -636,12 +788,14 @@ export default function AuthPage() {
               <motion.button
                 type="submit"
                 className="auth-submit"
-                disabled={loading}
+                disabled={loading || !clerkReady}
                 whileTap={{ scale: .98 }}
                 style={{ marginTop: 4 }}
               >
                 {loading ? (
                   <div className="auth-spinner" />
+                ) : !clerkReady ? (
+                  <>Loading auth...</>
                 ) : (
                   <>
                     {mode === 'signin' ? 'Sign In' : 'Create Account'}
