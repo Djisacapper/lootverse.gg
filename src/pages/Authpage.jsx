@@ -47,7 +47,7 @@ const CSS = `
 .am-root {
   font-family: 'DM Sans', sans-serif;
   min-height: 100vh;
-  background: var(--am-darker);
+  background: #030008;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -70,10 +70,11 @@ const CSS = `
   inset: 0;
   z-index: 0;
   background:
-    radial-gradient(ellipse 60% 50% at 15% 20%, rgba(109,40,217,.25) 0%, transparent 70%),
-    radial-gradient(ellipse 50% 60% at 85% 80%, rgba(147,51,234,.2) 0%, transparent 70%),
-    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(76,29,149,.15) 0%, transparent 60%),
-    radial-gradient(ellipse 80% 30% at 50% 0%, rgba(124,58,237,.12) 0%, transparent 70%);
+    radial-gradient(ellipse 60% 50% at 15% 20%, rgba(109,40,217,.22) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 60% at 85% 80%, rgba(147,51,234,.18) 0%, transparent 70%),
+    radial-gradient(ellipse 40% 40% at 50% 50%, rgba(76,29,149,.12) 0%, transparent 60%),
+    radial-gradient(ellipse 50% 30% at 80% 10%, rgba(245,200,66,.07) 0%, transparent 60%),
+    radial-gradient(ellipse 40% 30% at 10% 85%, rgba(245,200,66,.05) 0%, transparent 60%);
 }
 
 /* ── Crystal shards in background ── */
@@ -142,7 +143,7 @@ const CSS = `
   position: absolute;
   left: 0; right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(192,132,252,.3), transparent);
+  background: linear-gradient(90deg, transparent, rgba(245,200,66,.2), transparent);
   animation: am-scan 10s linear infinite;
   z-index: 10;
   pointer-events: none;
@@ -155,14 +156,14 @@ const CSS = `
   max-width: 400px;
   border-radius: 28px;
   overflow: hidden;
-  background: linear-gradient(170deg, rgba(18,8,36,.95) 0%, rgba(14,6,32,.98) 60%, rgba(6,0,16,1) 100%);
-  border: 1px solid rgba(168,85,247,.22);
+  background: linear-gradient(170deg, rgba(12,4,24,.97) 0%, rgba(8,2,16,.99) 60%, rgba(3,0,8,1) 100%);
+  border: 1px solid rgba(168,85,247,.2);
   box-shadow:
-    0 0 0 1px rgba(168,85,247,.07),
-    0 0 80px rgba(124,58,237,.18),
-    0 0 160px rgba(109,40,217,.1),
-    inset 0 1px 0 rgba(192,132,252,.1),
-    0 40px 100px rgba(0,0,0,.9);
+    0 0 0 1px rgba(245,200,66,.04),
+    0 0 80px rgba(124,58,237,.15),
+    0 0 160px rgba(109,40,217,.08),
+    inset 0 1px 0 rgba(245,200,66,.08),
+    0 40px 100px rgba(0,0,0,.95);
   z-index: 10;
   backdrop-filter: blur(20px);
 }
@@ -181,10 +182,10 @@ const CSS = `
 /* ── Logo gem ── */
 @keyframes am-gem-pulse {
   0%,100% {
-    filter: drop-shadow(0 0 8px rgba(168,85,247,.5)) drop-shadow(0 0 20px rgba(124,58,237,.3));
+    filter: drop-shadow(0 0 8px rgba(245,200,66,.4)) drop-shadow(0 0 20px rgba(168,85,247,.3));
   }
   50% {
-    filter: drop-shadow(0 0 16px rgba(192,132,252,.8)) drop-shadow(0 0 40px rgba(168,85,247,.5)) drop-shadow(0 0 60px rgba(124,58,237,.2));
+    filter: drop-shadow(0 0 16px rgba(245,200,66,.7)) drop-shadow(0 0 40px rgba(245,200,66,.3)) drop-shadow(0 0 60px rgba(168,85,247,.2));
   }
 }
 .am-gem { animation: am-gem-pulse 3s ease-in-out infinite; }
@@ -210,9 +211,9 @@ const CSS = `
 }
 .am-input::placeholder { color: rgba(196,168,232,.25); }
 .am-input:focus {
-  border-color: rgba(168,85,247,.5);
-  background: rgba(168,85,247,.08);
-  box-shadow: 0 0 0 3px rgba(168,85,247,.08), 0 0 20px rgba(124,58,237,.15);
+  border-color: rgba(245,200,66,.4);
+  background: rgba(245,200,66,.04);
+  box-shadow: 0 0 0 3px rgba(245,200,66,.06), 0 0 20px rgba(245,200,66,.08);
 }
 .am-input-icon {
   position: absolute;
@@ -223,7 +224,7 @@ const CSS = `
   pointer-events: none;
   transition: color .2s;
 }
-.am-field:focus-within .am-input-icon { color: rgba(192,132,252,.6); }
+.am-field:focus-within .am-input-icon { color: rgba(245,200,66,.5); }
 .am-eye {
   position: absolute;
   right: 12px;
@@ -236,7 +237,7 @@ const CSS = `
   color: rgba(196,168,232,.2);
   transition: color .2s;
 }
-.am-eye:hover { color: rgba(192,132,252,.7); }
+.am-eye:hover { color: rgba(245,200,66,.6); }
 
 /* ── Submit button ── */
 .am-submit {
@@ -251,10 +252,10 @@ const CSS = `
   letter-spacing: .02em;
   position: relative;
   overflow: hidden;
-  background: linear-gradient(135deg, #7c3aed 0%, #9333ea 40%, #a855f7 70%, #7c3aed 100%);
+  background: linear-gradient(135deg, #f5c842 0%, #e8a800 40%, #f5c842 70%, #c9871a 100%);
   background-size: 200%;
-  color: #f3e8ff;
-  box-shadow: 0 0 0 1px rgba(192,132,252,.2), 0 4px 24px rgba(124,58,237,.5), 0 0 60px rgba(124,58,237,.2);
+  color: #0a0600;
+  box-shadow: 0 0 0 1px rgba(245,200,66,.2), 0 4px 24px rgba(245,200,66,.35), 0 0 60px rgba(245,200,66,.1);
   transition: transform .18s, box-shadow .18s, background-position .5s;
   display: flex;
   align-items: center;
@@ -265,14 +266,14 @@ const CSS = `
   content: '';
   position: absolute;
   inset: 0;
-  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.08) 50%, transparent 100%);
+  background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.15) 50%, transparent 100%);
   transform: translateX(-100%);
   transition: transform .4s;
 }
 .am-submit:hover:not(:disabled)::before { transform: translateX(100%); }
 .am-submit:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 0 0 1px rgba(192,132,252,.3), 0 8px 32px rgba(124,58,237,.7), 0 0 80px rgba(168,85,247,.3);
+  box-shadow: 0 0 0 1px rgba(245,200,66,.3), 0 8px 32px rgba(245,200,66,.55), 0 0 80px rgba(245,200,66,.2);
   background-position: 100%;
 }
 .am-submit:active:not(:disabled) { transform: scale(.98); }
@@ -304,8 +305,8 @@ const CSS = `
   background: linear-gradient(90deg, #7c3aed, #c084fc);
   transform-origin: center;
 }
-.am-tab.active { color: #c084fc; }
-.am-tab.active::after { opacity: 1; transform: scaleX(1); }
+.am-tab.active { color: #f5c842; }
+.am-tab.active::after { opacity: 1; transform: scaleX(1); background: linear-gradient(90deg, #c9871a, #f5c842); }
 .am-tab.inactive { color: rgba(196,168,232,.2); }
 .am-tab.inactive::after { opacity: 0; transform: scaleX(0); }
 
@@ -340,8 +341,8 @@ const CSS = `
   width: 16px;
   height: 16px;
   border-radius: 50%;
-  border: 2px solid rgba(243,232,255,.2);
-  border-top-color: #f3e8ff;
+  border: 2px solid rgba(0,0,0,.2);
+  border-top-color: #0a0600;
   animation: am-spin .7s linear infinite;
 }
 
@@ -354,7 +355,7 @@ const CSS = `
 .am-ref-toggle {
   font-size: 11px;
   font-weight: 600;
-  color: rgba(192,132,252,.35);
+  color: rgba(245,200,66,.35);
   background: none;
   border: none;
   cursor: pointer;
@@ -362,13 +363,13 @@ const CSS = `
   transition: color .2s;
   font-family: 'DM Sans', sans-serif;
 }
-.am-ref-toggle:hover { color: rgba(192,132,252,.75); }
+.am-ref-toggle:hover { color: rgba(245,200,66,.75); }
 
 /* ── Forgot ── */
 .am-forgot {
   font-size: 11px;
   font-weight: 600;
-  color: rgba(192,132,252,.4);
+  color: rgba(245,200,66,.4);
   background: none;
   border: none;
   cursor: pointer;
@@ -376,14 +377,14 @@ const CSS = `
   transition: color .2s;
   font-family: 'DM Sans', sans-serif;
 }
-.am-forgot:hover { color: rgba(192,132,252,.8); }
+.am-forgot:hover { color: rgba(245,200,66,.8); }
 
 
 
 /* ── Top gradient bar ── */
 .am-topbar {
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(124,58,237,.6), rgba(192,132,252,.8), rgba(124,58,237,.6), transparent);
+  background: linear-gradient(90deg, transparent, rgba(124,58,237,.5), rgba(245,200,66,.7), rgba(124,58,237,.5), transparent);
 }
 
 /* ── Crystal decorative lines ── */
@@ -636,13 +637,12 @@ export default function Authpage() {
             width: 62,
             height: 62,
             borderRadius: 18,
-            background: 'linear-gradient(135deg, rgba(124,58,237,.2), rgba(76,29,149,.15))',
-            border: '1px solid rgba(168,85,247,.25)',
+            background: 'linear-gradient(135deg, rgba(245,200,66,.1), rgba(124,58,237,.12))',
+            border: '1px solid rgba(245,200,66,.2)',
             marginBottom: 14,
             position: 'relative',
           }}>
-            {/* Corner gem glints */}
-            <div style={{ position: 'absolute', top: 6, right: 6, width: 3, height: 3, borderRadius: '50%', background: '#c084fc', boxShadow: '0 0 6px #c084fc' }}/>
+            <div style={{ position: 'absolute', top: 6, right: 6, width: 3, height: 3, borderRadius: '50%', background: '#f5c842', boxShadow: '0 0 6px #f5c842' }}/>
             <GemLogo />
           </div>
 
@@ -653,7 +653,7 @@ export default function Authpage() {
               fontSize: 26,
               fontWeight: 700,
               letterSpacing: '.12em',
-              background: 'linear-gradient(135deg, #ddd6fe 0%, #c084fc 40%, #a855f7 70%, #ddd6fe 100%)',
+              background: 'linear-gradient(135deg, #f5c842 0%, #e8a800 35%, #c084fc 65%, #f5c842 100%)',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
               backgroundClip: 'text',
@@ -674,7 +674,7 @@ export default function Authpage() {
           </div>
 
           <p style={{ fontSize: 11, color: 'rgba(196,168,232,.28)', fontWeight: 500, letterSpacing: '.1em', textTransform: 'uppercase' }}>
-            {mode === 'signin' ? 'Welcome back, summoner' : 'Enter the crystal arena'}
+            {mode === 'signin' ? 'Welcome back, player' : 'Enter the crystal arena'}
           </p>
         </div>
 
@@ -804,7 +804,7 @@ export default function Authpage() {
                   <button
                     type="button"
                     onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#a855f7', fontWeight: 700, fontFamily: "'DM Sans',sans-serif", fontSize: 12 }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f5c842', fontWeight: 700, fontFamily: "'DM Sans',sans-serif", fontSize: 12 }}
                   >
                     {mode === 'signin' ? 'Sign up' : 'Sign in'}
                   </button>
@@ -817,7 +817,7 @@ export default function Authpage() {
         </div>
 
         {/* Bottom accent */}
-        <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, rgba(124,58,237,.3), rgba(168,85,247,.4), rgba(124,58,237,.3), transparent)' }}/>
+        <div style={{ height: 1, background: 'linear-gradient(90deg, transparent, rgba(124,58,237,.4), rgba(245,200,66,.5), rgba(124,58,237,.4), transparent)' }}/>
       </motion.div>
     </div>
   );
