@@ -7,7 +7,7 @@ import { base44 } from '@/api/base44Client';
 const Users = base44.entities.User;
 
 /* ─── Clerk config ───────────────────────────────────────────────── */
-const CLERK_PUBLISHABLE_KEY = 'pk_test_bWF0dXJlLWtvaS0xLmNsZXJrLmFjY291bnRzLmRldiQ';
+const CLERK_PUBLISHABLE_KEY = 'pk_live_Y2xlcmsuYmFzZTQ0LmFwcCQ';
 
 /* ─── Load Clerk JS SDK via script tag ───────────────────────────── */
 // Loading via script tag avoids CORS issues that occur when calling
@@ -28,7 +28,7 @@ function loadClerkScript() {
     // Inject the script tag
     const script = document.createElement('script');
     script.id = 'clerk-js';
-    script.src = `https://mature-koi-1.clerk.accounts.dev/npm/@clerk/clerk-js@latest/dist/clerk.browser.js`;
+    script.src = `https://clerk.base44.app/npm/@clerk/clerk-js@latest/dist/clerk.browser.js`;
     script.setAttribute('data-clerk-publishable-key', CLERK_PUBLISHABLE_KEY);
     script.crossOrigin = 'anonymous';
     script.onload = async () => {
