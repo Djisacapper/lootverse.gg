@@ -28,7 +28,7 @@ function loadClerkScript() {
     // Inject the script tag
     const script = document.createElement('script');
     script.id = 'clerk-js';
-    script.src = `https://clerk.base44.app/npm/@clerk/clerk-js@latest/dist/clerk.browser.js`;
+    script.src = `https://cdnjs.cloudflare.com/ajax/libs/clerk-js/5.58.0-canary.v20250326115904/clerk.browser.js`;
     script.setAttribute('data-clerk-publishable-key', CLERK_PUBLISHABLE_KEY);
     script.crossOrigin = 'anonymous';
     script.onload = async () => {
