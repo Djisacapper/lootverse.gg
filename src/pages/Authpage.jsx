@@ -1,17 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 
-/* ─── base44 entity shorthand ────────────────────────────────────── */
 const Users = base44.entities.User;
 
-/* ─── helpers ────────────────────────────────────────────────────── */
 function generateAffiliateCode() {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = 'CR-';
+  let code = 'AM-';
   for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
   return code;
 }
@@ -22,37 +20,17 @@ async function syncBase44User({ email, full_name, username = '', referred_by = '
     const results = await Users.filter({ email });
     if (results?.length > 0) existing = results[0];
   } catch (_) {}
-
-  if (existing) {
-    return Users.update(existing.id, { full_name });
-  }
-
+  if (existing) return Users.update(existing.id, { full_name });
   return Users.create({
-    email,
-    full_name,
-    username,
-    role: 'user',
-    balance: 1000,
-    xp: 0,
-    level: 1,
-    is_anonymous: false,
-    affiliate_code: generateAffiliateCode(),
-    referred_by,
-    total_deposited: 0,
-    affiliate_earnings: 0,
-    affiliate_earnings_claimable: 0,
-    rakeback_instant: 0,
-    rakeback_daily: 0,
-    rakeback_weekly: 0,
-    rakeback_monthly: 0,
-    total_rakeback_claimed: 0,
-    rakeback_daily_claimed_at: '',
-    rakeback_weekly_claimed_at: '',
+    email, full_name, username, role: 'user', balance: 1000, xp: 0, level: 1,
+    is_anonymous: false, affiliate_code: generateAffiliateCode(), referred_by,
+    total_deposited: 0, affiliate_earnings: 0, affiliate_earnings_claimable: 0,
+    rakeback_instant: 0, rakeback_daily: 0, rakeback_weekly: 0, rakeback_monthly: 0,
+    total_rakeback_claimed: 0, rakeback_daily_claimed_at: '', rakeback_weekly_claimed_at: '',
     rakeback_monthly_claimed_at: '',
   });
 }
 
-/* ─── password strength ──────────────────────────────────────────── */
 const getStrength = (pw) => {
   let s = 0;
   if (pw.length >= 8) s++;
@@ -62,18 +40,134 @@ const getStrength = (pw) => {
   return s;
 };
 const STRENGTH_LABELS = ['', 'Weak', 'Fair', 'Good', 'Strong'];
-const STRENGTH_COLORS = ['', '#ff4e6a', '#fbbf24', '#34d399', '#00e5a0'];
+const STRENGTH_COLORS = ['', '#ff4e6a', '#fbbf24', '#a78bfa', '#f5c842'];
 
-/* ─── CSS ─────────────────────────────────────────────────────────── */
+/* ── Gem SVG shapes ── */
+const GemShapes = {
+  diamond: ({ size, color, glow }) => (
+    <svg width={size} height={size} viewBox="0 0 100 100" style={{ filter: `drop-shadow(0 0 ${size * 0.3}px ${glow})` }}>
+      <defs>
+        <linearGradient id={`dg-${color}`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#fff" stopOpacity="0.6" />
+          <stop offset="40%" stopColor={color} stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#1a0033" stopOpacity="0.8" />
+        </linearGradient>
+      </defs>
+      <polygon points="50,5 90,35 70,95 30,95 10,35" fill={`url(#dg-${color})`} stroke={color} strokeWidth="1.5" strokeOpacity="0.5" />
+      <polygon points="50,5 90,35 50,50" fill="white" fillOpacity="0.15" />
+      <polygon points="10,35 50,50 30,95" fill="black" fillOpacity="0.1" />
+    </svg>
+  ),
+  hexagon: ({ size, color, glow }) => (
+    <svg width={size} height={size} viewBox="0 0 100 100" style={{ filter: `drop-shadow(0 0 ${size * 0.3}px ${glow})` }}>
+      <defs>
+        <linearGradient id={`hg-${color}`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#fff" stopOpacity="0.5" />
+          <stop offset="50%" stopColor={color} stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#0d0020" stopOpacity="0.9" />
+        </linearGradient>
+      </defs>
+      <polygon points="50,3 93,26 93,74 50,97 7,74 7,26" fill={`url(#hg-${color})`} stroke={color} strokeWidth="1.5" strokeOpacity="0.4" />
+      <polygon points="50,3 93,26 50,50" fill="white" fillOpacity="0.12" />
+      <line x1="50" y1="3" x2="50" y2="97" stroke="white" strokeWidth="0.5" strokeOpacity="0.1" />
+    </svg>
+  ),
+  octagon: ({ size, color, glow }) => (
+    <svg width={size} height={size} viewBox="0 0 100 100" style={{ filter: `drop-shadow(0 0 ${size * 0.3}px ${glow})` }}>
+      <defs>
+        <linearGradient id={`og-${color}`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#fff" stopOpacity="0.55" />
+          <stop offset="45%" stopColor={color} stopOpacity="0.88" />
+          <stop offset="100%" stopColor="#0a001e" stopOpacity="0.85" />
+        </linearGradient>
+      </defs>
+      <polygon points="35,5 65,5 95,35 95,65 65,95 35,95 5,65 5,35" fill={`url(#og-${color})`} stroke={color} strokeWidth="1.5" strokeOpacity="0.45" />
+      <polygon points="35,5 65,5 95,35 50,50" fill="white" fillOpacity="0.1" />
+    </svg>
+  ),
+  shield: ({ size, color, glow }) => (
+    <svg width={size} height={size} viewBox="0 0 100 100" style={{ filter: `drop-shadow(0 0 ${size * 0.3}px ${glow})` }}>
+      <defs>
+        <linearGradient id={`sg-${color}`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#fff" stopOpacity="0.5" />
+          <stop offset="50%" stopColor={color} stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#050010" stopOpacity="0.8" />
+        </linearGradient>
+      </defs>
+      <path d="M50,5 L90,20 L90,55 Q90,80 50,95 Q10,80 10,55 L10,20 Z" fill={`url(#sg-${color})`} stroke={color} strokeWidth="1.5" strokeOpacity="0.4" />
+      <path d="M50,5 L90,20 L50,50 Z" fill="white" fillOpacity="0.13" />
+    </svg>
+  ),
+};
+
+/* ── Floating Gem ── */
+const FloatingGem = ({ shape, size, color, glow, x, y, duration, delay, rotateRange, driftX, driftY }) => {
+  const ShapeComp = GemShapes[shape];
+  return (
+    <motion.div
+      style={{ position: 'fixed', left: x, top: y, pointerEvents: 'none', zIndex: 0, opacity: 0 }}
+      animate={{
+        y: [0, driftY, 0, -driftY * 0.5, 0],
+        x: [0, driftX, 0, -driftX * 0.6, 0],
+        rotate: [0, rotateRange, -rotateRange * 0.5, rotateRange * 0.3, 0],
+        opacity: [0, 0.7, 0.85, 0.6, 0],
+      }}
+      transition={{
+        duration,
+        delay,
+        repeat: Infinity,
+        ease: 'easeInOut',
+      }}
+    >
+      <ShapeComp size={size} color={color} glow={glow} />
+    </motion.div>
+  );
+};
+
+/* ── Generate gems ── */
+const GEMS_DATA = [
+  { shape: 'diamond', size: 52, color: '#9d4edd', glow: '#9d4edd', x: '5%', y: '8%', duration: 14, delay: 0, rotateRange: 22, driftX: 18, driftY: -30 },
+  { shape: 'hexagon', size: 34, color: '#f5c842', glow: '#f5c842', x: '88%', y: '5%', duration: 11, delay: 1.5, rotateRange: 35, driftX: -12, driftY: 25 },
+  { shape: 'octagon', size: 44, color: '#7b2ff7', glow: '#7b2ff7', x: '92%', y: '55%', duration: 16, delay: 0.8, rotateRange: 18, driftX: -20, driftY: -28 },
+  { shape: 'diamond', size: 28, color: '#f5c842', glow: '#d4a800', x: '3%', y: '70%', duration: 12, delay: 2.2, rotateRange: 40, driftX: 15, driftY: -18 },
+  { shape: 'shield', size: 56, color: '#c084fc', glow: '#c084fc', x: '78%', y: '80%', duration: 18, delay: 0.4, rotateRange: 14, driftX: -14, driftY: 22 },
+  { shape: 'hexagon', size: 38, color: '#9d4edd', glow: '#9d4edd', x: '15%', y: '45%', duration: 13, delay: 3.1, rotateRange: 28, driftX: 22, driftY: 20 },
+  { shape: 'octagon', size: 24, color: '#fde68a', glow: '#f5c842', x: '50%', y: '3%', duration: 10, delay: 1.0, rotateRange: 50, driftX: 10, driftY: 18 },
+  { shape: 'diamond', size: 40, color: '#6d28d9', glow: '#7b2ff7', x: '60%', y: '88%', duration: 15, delay: 2.8, rotateRange: 20, driftX: -18, driftY: -24 },
+  { shape: 'shield', size: 30, color: '#f5c842', glow: '#f5c842', x: '35%', y: '92%', duration: 11, delay: 0.6, rotateRange: 32, driftX: 12, driftY: -16 },
+  { shape: 'hexagon', size: 20, color: '#c084fc', glow: '#c084fc', x: '70%', y: '20%', duration: 9, delay: 4.0, rotateRange: 60, driftX: -8, driftY: 14 },
+  { shape: 'diamond', size: 18, color: '#f5c842', glow: '#f5c842', x: '22%', y: '18%', duration: 8, delay: 1.8, rotateRange: 55, driftX: 16, driftY: 12 },
+  { shape: 'octagon', size: 32, color: '#9d4edd', glow: '#9d4edd', x: '82%', y: '38%', duration: 17, delay: 3.5, rotateRange: 24, driftX: -10, driftY: -20 },
+];
+
+/* ── AmethystLogo SVG ── */
+const AmethystLogo = () => (
+  <svg width="44" height="44" viewBox="0 0 100 100" style={{ filter: 'drop-shadow(0 0 12px #9d4edd) drop-shadow(0 0 28px rgba(157,78,221,0.5))' }}>
+    <defs>
+      <linearGradient id="logo-g" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#f5c842" />
+        <stop offset="50%" stopColor="#c084fc" />
+        <stop offset="100%" stopColor="#7b2ff7" />
+      </linearGradient>
+    </defs>
+    <polygon points="50,4 88,28 88,72 50,96 12,72 12,28" fill="url(#logo-g)" opacity="0.95" />
+    <polygon points="50,4 88,28 50,50" fill="white" fillOpacity="0.2" />
+    <polygon points="12,28 50,50 12,72" fill="black" fillOpacity="0.15" />
+    <line x1="50" y1="4" x2="50" y2="96" stroke="white" strokeWidth="1" strokeOpacity="0.12" />
+    <line x1="12" y1="50" x2="88" y2="50" stroke="white" strokeWidth="1" strokeOpacity="0.1" />
+  </svg>
+);
+
+/* ── CSS ── */
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;900&family=DM+Sans:wght@400;500;600;700;800&display=swap');
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-.auth-root {
-  font-family: 'Outfit', sans-serif;
+.am-root {
+  font-family: 'DM Sans', sans-serif;
   min-height: 100vh;
-  background: #03000d;
+  background: transparent;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -82,438 +176,247 @@ const CSS = `
   padding: 20px;
 }
 
-.auth-title { font-family: 'Rajdhani', sans-serif; }
+.am-title { font-family: 'Cinzel', serif; }
 
-/* ── Animated background orbs ── */
-.auth-orb {
-  position: absolute;
-  border-radius: 50%;
-  filter: blur(80px);
-  pointer-events: none;
-  animation: auth-orb-drift 12s ease-in-out infinite;
-}
-@keyframes auth-orb-drift {
-  0%,100% { transform: translate(0,0) scale(1); }
-  33%      { transform: translate(30px,-20px) scale(1.08); }
-  66%      { transform: translate(-20px,15px) scale(.94); }
-}
-
-/* ── Scan line ── */
-@keyframes auth-scan {
-  0%  { top:-1px; opacity:0; }
-  5%  { opacity:.5; }
-  95% { opacity:.5; }
-  100%{ top:100%; opacity:0; }
-}
-.auth-scan {
-  position: absolute;
-  left: 0;
-  right: 0;
-  height: 1px;
-  z-index: 10;
-  pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(245,200,66,.2), transparent);
-  animation: auth-scan 8s linear infinite;
-}
-
-/* ── Noise texture ── */
-.auth-noise {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  z-index: 1;
-  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size: 160px;
-  mix-blend-mode: overlay;
-  opacity: .04;
-}
-
-/* ── Particles ── */
-@keyframes auth-particle {
-  0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
-  10%  { opacity: 1; }
-  85%  { opacity: .3; }
-  100% { transform: translateY(-120px) translateX(var(--dx)) scale(0); opacity: 0; }
-}
-.auth-pt {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  animation: auth-particle var(--d) ease-out infinite var(--delay);
-}
-
-/* ── Card ── */
-.auth-card {
+.am-card {
   position: relative;
   width: 100%;
-  max-width: 420px;
-  border-radius: 24px;
+  max-width: 410px;
+  border-radius: 20px;
   overflow: hidden;
-  background: linear-gradient(160deg, #0d0a1e 0%, #080518 50%, #06030f 100%);
-  border: 1px solid rgba(245,200,66,.18);
+  background: rgba(8, 2, 20, 0.82);
+  backdrop-filter: blur(28px) saturate(1.4);
+  -webkit-backdrop-filter: blur(28px) saturate(1.4);
+  border: 1px solid rgba(157, 78, 221, 0.28);
   box-shadow:
-    0 0 0 1px rgba(245,200,66,.06),
-    0 0 100px rgba(157,111,255,.1),
-    0 30px 80px rgba(0,0,0,.8);
+    0 0 0 1px rgba(245,200,66,.07),
+    0 0 80px rgba(123,47,247,.18),
+    0 0 160px rgba(157,78,221,.08),
+    0 40px 100px rgba(0,0,0,.7);
   z-index: 10;
 }
 
-/* ── Inputs ── */
-.auth-input-wrap {
-  position: relative;
-  width: 100%;
-}
-.auth-input {
+.am-input-wrap { position: relative; width: 100%; }
+.am-input {
   width: 100%;
   padding: 13px 44px 13px 44px;
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 12px;
+  background: rgba(157,78,221,.06);
+  border: 1px solid rgba(157,78,221,.18);
+  border-radius: 11px;
   outline: none;
   color: #f0eaff;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'DM Sans', sans-serif;
   font-size: 14px;
   font-weight: 600;
   transition: border-color .2s, background .2s, box-shadow .2s;
 }
-.auth-input::placeholder { color: rgba(240,234,255,.2); }
-.auth-input:focus {
-  border-color: rgba(245,200,66,.4);
+.am-input::placeholder { color: rgba(192,132,252,.25); }
+.am-input:focus {
+  border-color: rgba(245,200,66,.45);
   background: rgba(245,200,66,.04);
-  box-shadow: 0 0 0 3px rgba(245,200,66,.06);
+  box-shadow: 0 0 0 3px rgba(245,200,66,.07), 0 0 20px rgba(157,78,221,.1);
 }
-.auth-input.error {
-  border-color: rgba(255,78,106,.4);
-  background: rgba(255,78,106,.04);
+.am-input-icon {
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  color: rgba(157,78,221,.4); pointer-events: none; transition: color .2s;
 }
-.auth-input-icon {
-  position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: rgba(240,234,255,.2);
-  pointer-events: none;
-  transition: color .2s;
+.am-input-wrap:focus-within .am-input-icon { color: rgba(245,200,66,.6); }
+.am-eye-btn {
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; padding: 4px;
+  color: rgba(157,78,221,.35); transition: color .2s;
 }
-.auth-input-wrap:focus-within .auth-input-icon { color: rgba(245,200,66,.5); }
-.auth-eye-btn {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  color: rgba(240,234,255,.2);
-  transition: color .2s;
-}
-.auth-eye-btn:hover { color: rgba(245,200,66,.6); }
+.am-eye-btn:hover { color: rgba(245,200,66,.7); }
 
-/* ── Submit button ── */
-.auth-submit {
-  width: 100%;
-  padding: 14px;
-  border: none;
-  cursor: pointer;
-  border-radius: 12px;
-  font-family: 'Outfit', sans-serif;
-  font-size: 15px;
-  font-weight: 900;
-  letter-spacing: .02em;
-  background: linear-gradient(135deg, #f5c842 0%, #e8a800 60%, #f5c842 100%);
-  background-size: 200%;
+.am-submit {
+  width: 100%; padding: 14px; border: none; cursor: pointer;
+  border-radius: 11px; font-family: 'DM Sans', sans-serif;
+  font-size: 15px; font-weight: 800; letter-spacing: .04em;
+  background: linear-gradient(135deg, #f5c842 0%, #d4a200 40%, #9d4edd 100%);
+  background-size: 220%;
   color: #0a0600;
-  box-shadow: 0 0 32px rgba(245,200,66,.35), 0 4px 20px rgba(0,0,0,.5);
-  transition: transform .18s, box-shadow .18s, background-position .4s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  box-shadow: 0 0 36px rgba(245,200,66,.3), 0 0 80px rgba(157,78,221,.15), 0 4px 24px rgba(0,0,0,.5);
+  transition: transform .18s, box-shadow .2s, background-position .5s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
 }
-.auth-submit:hover:not(:disabled) {
+.am-submit:hover:not(:disabled) {
   transform: translateY(-2px) scale(1.02);
-  box-shadow: 0 0 48px rgba(245,200,66,.5), 0 8px 24px rgba(0,0,0,.6);
+  box-shadow: 0 0 56px rgba(245,200,66,.45), 0 0 100px rgba(157,78,221,.25), 0 8px 28px rgba(0,0,0,.6);
   background-position: 100%;
 }
-.auth-submit:active:not(:disabled) { transform: scale(.98); }
-.auth-submit:disabled { opacity: .4; cursor: not-allowed; }
+.am-submit:active:not(:disabled) { transform: scale(.98); }
+.am-submit:disabled { opacity: .35; cursor: not-allowed; }
 
-/* ── Tab toggle ── */
-.auth-tab {
-  flex: 1;
-  padding: 12px;
-  border: none;
-  cursor: pointer;
-  background: transparent;
-  font-family: 'Outfit', sans-serif;
-  font-size: 13px;
-  font-weight: 800;
+.am-tab {
+  flex: 1; padding: 12px; border: none; cursor: pointer;
+  background: transparent; font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 800; position: relative;
   transition: color .2s;
-  position: relative;
 }
-.auth-tab::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 20%;
-  right: 20%;
-  height: 2px;
-  border-radius: 2px;
-  transition: opacity .2s, background .2s;
+.am-tab::after {
+  content: ''; position: absolute; bottom: 0; left: 20%; right: 20%;
+  height: 2px; border-radius: 2px; transition: opacity .25s, transform .25s;
+  transform: scaleX(0);
 }
-.auth-tab.active { color: #f5c842; }
-.auth-tab.active::after { background: #f5c842; opacity: 1; }
-.auth-tab.inactive { color: rgba(240,234,255,.25); }
-.auth-tab.inactive::after { opacity: 0; }
+.am-tab.active { color: #f5c842; }
+.am-tab.active::after { background: linear-gradient(90deg,#f5c842,#c084fc); opacity: 1; transform: scaleX(1); }
+.am-tab.inactive { color: rgba(192,132,252,.3); }
+.am-tab.inactive::after { opacity: 0; transform: scaleX(0); }
 
-/* ── Guest button ── */
-.auth-guest {
-  width: 100%;
-  padding: 12px;
-  border: 1px solid rgba(255,255,255,.08);
-  cursor: pointer;
-  border-radius: 12px;
-  font-family: 'Outfit', sans-serif;
-  font-size: 13px;
-  font-weight: 700;
-  background: rgba(255,255,255,.03);
-  color: rgba(240,234,255,.4);
+.am-guest {
+  width: 100%; padding: 12px; cursor: pointer;
+  border: 1px solid rgba(157,78,221,.18);
+  border-radius: 11px; font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 700;
+  background: rgba(157,78,221,.05); color: rgba(192,132,252,.45);
   transition: all .2s;
 }
-.auth-guest:hover {
-  background: rgba(157,111,255,.08);
-  border-color: rgba(157,111,255,.25);
-  color: #c084fc;
+.am-guest:hover {
+  background: rgba(157,78,221,.12); border-color: rgba(157,78,221,.4); color: #c084fc;
+  box-shadow: 0 0 20px rgba(157,78,221,.1);
 }
 
-/* ── Error / success toasts ── */
-.auth-error {
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: rgba(255,78,106,.1);
-  border: 1px solid rgba(255,78,106,.25);
-  color: #ff4e6a;
-  font-size: 12px;
-  font-weight: 700;
+.am-error {
+  padding: 10px 14px; border-radius: 10px;
+  background: rgba(255,78,106,.08); border: 1px solid rgba(255,78,106,.25);
+  color: #ff4e6a; font-size: 12px; font-weight: 700;
 }
-.auth-success {
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: rgba(0,229,160,.08);
-  border: 1px solid rgba(0,229,160,.25);
-  color: #00e5a0;
-  font-size: 12px;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.am-success {
+  padding: 10px 14px; border-radius: 10px;
+  background: rgba(157,78,221,.1); border: 1px solid rgba(157,78,221,.3);
+  color: #c084fc; font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; gap: 8px;
 }
 
-/* ── Spinner ── */
-@keyframes auth-spin { to { transform: rotate(360deg); } }
-.auth-spinner {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid rgba(0,0,0,.2);
-  border-top-color: #000;
-  animation: auth-spin .7s linear infinite;
+@keyframes am-spin { to { transform: rotate(360deg); } }
+.am-spinner {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(10,6,0,.2); border-top-color: #0a0600;
+  animation: am-spin .7s linear infinite;
 }
 
-/* ── Logo pulse ── */
-@keyframes auth-logo-glow {
-  0%,100% { filter: drop-shadow(0 0 8px rgba(245,200,66,.4)); }
-  50%     { filter: drop-shadow(0 0 22px rgba(245,200,66,.8)) drop-shadow(0 0 40px rgba(245,200,66,.3)); }
+.am-referral-toggle {
+  font-size: 11px; font-weight: 700; color: rgba(245,200,66,.4);
+  background: none; border: none; cursor: pointer; padding: 0; transition: color .2s;
 }
-.auth-logo { animation: auth-logo-glow 2.5s ease-in-out infinite; }
+.am-referral-toggle:hover { color: rgba(245,200,66,.8); }
 
-/* ── Referral toggle ── */
-.auth-referral-toggle {
-  font-size: 11px;
-  font-weight: 700;
-  color: rgba(245,200,66,.4);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: color .2s;
-  text-align: left;
-}
-.auth-referral-toggle:hover { color: rgba(245,200,66,.8); }
+.am-divider { display: flex; align-items: center; gap: 12px; margin: 4px 0; }
+.am-divider-line { flex: 1; height: 1px; background: rgba(157,78,221,.12); }
+.am-divider-text { font-size: 10px; font-weight: 700; color: rgba(192,132,252,.2); letter-spacing: .14em; text-transform: uppercase; }
 
-/* ── Divider ── */
-.auth-divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 4px 0;
+.am-forgot {
+  font-size: 11px; font-weight: 700; color: rgba(245,200,66,.45);
+  background: none; border: none; cursor: pointer; padding: 0; transition: color .2s;
 }
-.auth-divider-line {
-  flex: 1;
-  height: 1px;
-  background: rgba(255,255,255,.06);
+.am-forgot:hover { color: #f5c842; }
+
+@keyframes am-scan {
+  0%  { top: -1px; opacity: 0; }
+  5%  { opacity: .4; }
+  95% { opacity: .3; }
+  100%{ top: 100%; opacity: 0; }
 }
-.auth-divider-text {
-  font-size: 10px;
-  font-weight: 700;
-  color: rgba(240,234,255,.2);
-  letter-spacing: .14em;
-  text-transform: uppercase;
+.am-scan {
+  position: absolute; left: 0; right: 0; height: 1px; z-index: 20; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(157,78,221,.35), rgba(245,200,66,.2), transparent);
+  animation: am-scan 10s linear infinite;
 }
 
-/* ── Clerk badge ── */
-.auth-badge {
-  text-align: center;
-  font-size: 10px;
-  color: rgba(240,234,255,.12);
-  font-weight: 600;
-  margin-top: 2px;
+/* Gem sparkle inside card */
+@keyframes am-sparkle {
+  0%,100% { opacity: 0; transform: scale(0) rotate(0deg); }
+  50% { opacity: 1; transform: scale(1) rotate(180deg); }
 }
-
-/* ── Forgot password link ── */
-.auth-forgot {
-  font-size: 11px;
-  font-weight: 700;
-  color: rgba(245,200,66,.5);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: color .2s;
-}
-.auth-forgot:hover { color: #f5c842; }
 `;
 
-/* ─── Particles ──────────────────────────────────────────────────── */
-const Particles = ({ count = 14 }) => {
-  const pts = useRef(Array.from({ length: count }, (_, i) => ({
-    id: i,
-    left: `${5 + Math.random() * 90}%`,
-    bottom: `${Math.random() * 20}%`,
-    size: 1.2 + Math.random() * 2.4,
-    color: Math.random() > .5 ? '#f5c842' : '#9d6fff',
-    d: `${4 + Math.random() * 6}s`,
-    delay: `${-Math.random() * 8}s`,
-    dx: `${(Math.random() - .5) * 44}px`,
-  }))).current;
-
-  return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-      {pts.map(p => (
-        <div key={p.id} className="auth-pt" style={{
-          left: p.left,
-          bottom: p.bottom,
-          width: p.size,
-          height: p.size,
-          background: p.color,
-          boxShadow: `0 0 ${p.size * 4}px ${p.color}`,
-          '--d': p.d,
-          '--delay': p.delay,
-          '--dx': p.dx,
-        }} />
-      ))}
-    </div>
-  );
-};
-
-/* ─── Field component ────────────────────────────────────────────── */
 const Field = ({ icon: Icon, type = 'text', placeholder, value, onChange, showToggle, onToggle, showPw }) => (
-  <div className="auth-input-wrap">
+  <div className="am-input-wrap">
     <input
-      className="auth-input"
+      className="am-input"
       type={showToggle ? (showPw ? 'text' : 'password') : type}
       placeholder={placeholder}
       value={value}
       onChange={e => onChange(e.target.value)}
       autoComplete="off"
     />
-    <div className="auth-input-icon">
-      <Icon style={{ width: 15, height: 15 }} />
-    </div>
+    <div className="am-input-icon"><Icon style={{ width: 15, height: 15 }} /></div>
     {showToggle && (
-      <button type="button" className="auth-eye-btn" onClick={onToggle}>
-        {showPw
-          ? <EyeOff style={{ width: 14, height: 14 }} />
-          : <Eye style={{ width: 14, height: 14 }} />}
+      <button type="button" className="am-eye-btn" onClick={onToggle}>
+        {showPw ? <EyeOff style={{ width: 14, height: 14 }} /> : <Eye style={{ width: 14, height: 14 }} />}
       </button>
     )}
   </div>
 );
 
-/* ─── Main ───────────────────────────────────────────────────────── */
+/* ── Tiny sparkle dots inside card header ── */
+const CardSparkles = () => {
+  const sparks = [
+    { x: '12%', y: '18%', size: 6, delay: 0, color: '#f5c842' },
+    { x: '88%', y: '12%', size: 4, delay: 1.2, color: '#c084fc' },
+    { x: '75%', y: '72%', size: 5, delay: 2.5, color: '#f5c842' },
+    { x: '8%', y: '65%', size: 4, delay: 0.7, color: '#9d4edd' },
+    { x: '50%', y: '8%', size: 3, delay: 1.9, color: '#f5c842' },
+  ];
+  return (
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden', zIndex: 1 }}>
+      {sparks.map((s, i) => (
+        <motion.div
+          key={i}
+          style={{ position: 'absolute', left: s.x, top: s.y, width: s.size, height: s.size, background: s.color, borderRadius: '50%', boxShadow: `0 0 ${s.size * 3}px ${s.color}` }}
+          animate={{ opacity: [0, 1, 0], scale: [0, 1.3, 0] }}
+          transition={{ duration: 2.4, delay: s.delay, repeat: Infinity, ease: 'easeInOut' }}
+        />
+      ))}
+    </div>
+  );
+};
+
 export default function Authpage() {
   const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  const [mode, setMode]                 = useState('signin');
-  const [email, setEmail]               = useState('');
-  const [password, setPw]               = useState('');
-  const [username, setUn]               = useState('');
-  const [referralCode, setReferral]     = useState('');
+  const [mode, setMode] = useState('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPw] = useState('');
+  const [username, setUn] = useState('');
+  const [referralCode, setReferral] = useState('');
   const [showReferral, setShowReferral] = useState(false);
-  const [showPw, setShowPw]             = useState(false);
-  const [loading, setLoading]           = useState(false);
-  const [error, setError]               = useState('');
-  const [success, setSuccess]           = useState(false);
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState(false);
 
   const strength = mode === 'signup' ? getStrength(password) : 0;
 
-  // Already logged in → go home
-  useEffect(() => {
-    if (isAuthenticated) navigate('/Home');
-  }, [isAuthenticated]);
+  useEffect(() => { if (isAuthenticated) navigate('/Home'); }, [isAuthenticated]);
 
   const switchMode = (m) => {
-    setMode(m);
-    setError('');
-    setEmail('');
-    setPw('');
-    setUn('');
-    setReferral('');
-    setShowReferral(false);
-    setSuccess(false);
+    setMode(m); setError(''); setEmail(''); setPw(''); setUn('');
+    setReferral(''); setShowReferral(false); setSuccess(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-
-    // Basic validation
-    if (!email.trim())                         { setError('Email is required'); return; }
-    if (!password)                             { setError('Password is required'); return; }
+    if (!email.trim()) { setError('Email is required'); return; }
+    if (!password) { setError('Password is required'); return; }
     if (mode === 'signup' && !username.trim()) { setError('Username is required'); return; }
-    if (mode === 'signup' && strength < 2)     { setError('Password is too weak'); return; }
+    if (mode === 'signup' && strength < 2) { setError('Password is too weak'); return; }
 
     setLoading(true);
     try {
       if (mode === 'signin') {
-        // ── Sign in via base44 SDK ──────────────────────────────────
         await base44.auth.loginViaEmailPassword(email, password);
-        // Token is automatically set — reload so AuthContext picks it up
         window.location.reload();
-
       } else {
-        // ── Sign up via base44 SDK ──────────────────────────────────
-        await base44.auth.register({
-          email,
-          password,
-          full_name: username,
-        });
-        // Sync our User entity with game defaults
-        await syncBase44User({
-          email,
-          full_name: username,
-          username,
-          referred_by: referralCode,
-        });
+        await base44.auth.register({ email, password, full_name: username });
+        await syncBase44User({ email, full_name: username, username, referred_by: referralCode });
         setSuccess(true);
         setTimeout(() => window.location.reload(), 1800);
       }
     } catch (err) {
-      // base44 SDK throws an error object with a message field
       const msg = err?.message || err?.error || 'Something went wrong. Please try again.';
-      // Clean up common base44 error messages
       if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('credentials')) {
         setError('Incorrect email or password.');
       } else if (msg.toLowerCase().includes('exists') || msg.toLowerCase().includes('already')) {
@@ -528,66 +431,74 @@ export default function Authpage() {
     }
   };
 
-  const handleGuest = () => {
-    // Skip auth — go straight to Home
-    navigate('/Home');
-  };
+  const handleGuest = () => navigate('/Home');
 
   return (
-    <div className="auth-root">
+    <div className="am-root">
       <style>{CSS}</style>
 
-      {/* Background orbs */}
-      <div className="auth-orb" style={{ width: 500, height: 500, top: '-20%', left: '-15%', background: 'radial-gradient(circle,rgba(157,111,255,.12) 0%,transparent 70%)', animationDelay: '0s' }} />
-      <div className="auth-orb" style={{ width: 400, height: 400, bottom: '-15%', right: '-10%', background: 'radial-gradient(circle,rgba(245,200,66,.09) 0%,transparent 70%)', animationDelay: '-4s' }} />
-      <div className="auth-orb" style={{ width: 300, height: 300, top: '40%', right: '20%', background: 'radial-gradient(circle,rgba(157,111,255,.07) 0%,transparent 70%)', animationDelay: '-8s' }} />
-
-      <Particles />
+      {/* Floating gems — fixed to page, behind card */}
+      {GEMS_DATA.map((gem, i) => (
+        <FloatingGem key={i} {...gem} />
+      ))}
 
       {/* Card */}
       <motion.div
-        className="auth-card"
-        initial={{ opacity: 0, y: 28, scale: .96 }}
+        className="am-card"
+        initial={{ opacity: 0, y: 32, scale: .94 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+        transition={{ type: 'spring', stiffness: 260, damping: 24, delay: 0.1 }}
       >
-        <div className="auth-scan" />
-        <div className="auth-noise" />
+        <div className="am-scan" />
+        <CardSparkles />
 
-        {/* Top accent bar */}
-        <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#f5c842,#9d6fff,transparent)' }} />
+        {/* Top accent */}
+        <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#9d4edd,#f5c842,#9d4edd,transparent)' }} />
 
-        {/* Logo */}
-        <div style={{ padding: '28px 28px 0', textAlign: 'center', position: 'relative', zIndex: 2 }}>
-          <div className="auth-logo" style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            width: 58,
-            height: 58,
-            borderRadius: 16,
-            background: 'linear-gradient(135deg,rgba(245,200,66,.15),rgba(157,111,255,.1))',
-            border: '1px solid rgba(245,200,66,.25)',
-            marginBottom: 14,
-          }}>
-            <Sparkles style={{ width: 26, height: 26, color: '#f5c842' }} />
-          </div>
-          <h1 className="auth-title" style={{ fontSize: 28, fontWeight: 700, color: '#f0eaff', letterSpacing: '.04em', marginBottom: 4 }}>
-            CASERIFT
-          </h1>
-          <p style={{ fontSize: 12, color: 'rgba(240,234,255,.3)', fontWeight: 600, letterSpacing: '.08em' }}>
-            {mode === 'signin' ? 'Welcome back, player' : 'Join the arena'}
-          </p>
+        {/* Header */}
+        <div style={{ padding: '30px 28px 0', textAlign: 'center', position: 'relative', zIndex: 2 }}>
+          <motion.div
+            initial={{ scale: 0.6, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 300, damping: 20, delay: 0.2 }}
+            style={{ display: 'inline-block', marginBottom: 14 }}
+          >
+            <AmethystLogo />
+          </motion.div>
+
+          <motion.h1
+            className="am-title"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.3 }}
+            style={{
+              fontSize: 26,
+              fontWeight: 900,
+              letterSpacing: '.12em',
+              marginBottom: 4,
+              background: 'linear-gradient(135deg, #f5c842 20%, #c084fc 60%, #9d4edd 100%)',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              backgroundClip: 'text',
+            }}
+          >
+            AMETHYST.GG
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            style={{ fontSize: 11, color: 'rgba(192,132,252,.45)', fontWeight: 700, letterSpacing: '.14em', textTransform: 'uppercase' }}
+          >
+            {mode === 'signin' ? '✦ Welcome back, player ✦' : '✦ Join the arena ✦'}
+          </motion.p>
         </div>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', margin: '22px 28px 0', borderBottom: '1px solid rgba(255,255,255,.06)', position: 'relative', zIndex: 2 }}>
-          <button className={`auth-tab ${mode === 'signin' ? 'active' : 'inactive'}`} onClick={() => switchMode('signin')}>
-            Sign In
-          </button>
-          <button className={`auth-tab ${mode === 'signup' ? 'active' : 'inactive'}`} onClick={() => switchMode('signup')}>
-            Sign Up
-          </button>
+        <div style={{ display: 'flex', margin: '22px 28px 0', borderBottom: '1px solid rgba(157,78,221,.15)', position: 'relative', zIndex: 2 }}>
+          <button className={`am-tab ${mode === 'signin' ? 'active' : 'inactive'}`} onClick={() => switchMode('signin')}>Sign In</button>
+          <button className={`am-tab ${mode === 'signup' ? 'active' : 'inactive'}`} onClick={() => switchMode('signup')}>Sign Up</button>
         </div>
 
         {/* Form */}
@@ -596,192 +507,119 @@ export default function Authpage() {
             <motion.form
               key={mode}
               onSubmit={handleSubmit}
-              initial={{ opacity: 0, x: mode === 'signup' ? 18 : -18 }}
+              initial={{ opacity: 0, x: mode === 'signup' ? 20 : -20 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: mode === 'signup' ? -18 : 18 }}
-              transition={{ duration: .22 }}
+              exit={{ opacity: 0, x: mode === 'signup' ? -20 : 20 }}
+              transition={{ duration: .2 }}
               style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
             >
-              {/* Username — signup only */}
               {mode === 'signup' && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                >
-                  <Field
-                    icon={User}
-                    placeholder="Username"
-                    value={username}
-                    onChange={setUn}
-                  />
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                  <Field icon={User} placeholder="Username" value={username} onChange={setUn} />
                 </motion.div>
               )}
 
-              {/* Email */}
-              <Field
-                icon={Mail}
-                type="email"
-                placeholder="Email address"
-                value={email}
-                onChange={setEmail}
-              />
+              <Field icon={Mail} type="email" placeholder="Email address" value={email} onChange={setEmail} />
 
-              {/* Password + strength bar */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <Field
-                  icon={Lock}
-                  placeholder="Password"
-                  value={password}
-                  onChange={setPw}
-                  showToggle
-                  showPw={showPw}
-                  onToggle={() => setShowPw(v => !v)}
-                />
+                <Field icon={Lock} placeholder="Password" value={password} onChange={setPw} showToggle showPw={showPw} onToggle={() => setShowPw(v => !v)} />
                 {mode === 'signup' && password.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    style={{ display: 'flex', flexDirection: 'column', gap: 5 }}
-                  >
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                     <div style={{ display: 'flex', gap: 4 }}>
                       {[1, 2, 3, 4].map(i => (
                         <div key={i} style={{
-                          flex: 1,
-                          height: 3,
-                          borderRadius: 3,
-                          background: i <= strength ? STRENGTH_COLORS[strength] : 'rgba(255,255,255,.07)',
+                          flex: 1, height: 3, borderRadius: 3,
+                          background: i <= strength ? STRENGTH_COLORS[strength] : 'rgba(157,78,221,.12)',
                           transition: 'background .3s',
+                          boxShadow: i <= strength ? `0 0 6px ${STRENGTH_COLORS[strength]}` : 'none',
                         }} />
                       ))}
                     </div>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: STRENGTH_COLORS[strength] || 'rgba(240,234,255,.25)', letterSpacing: '.06em' }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: STRENGTH_COLORS[strength] || 'rgba(192,132,252,.25)', letterSpacing: '.06em' }}>
                       {STRENGTH_LABELS[strength] || 'Enter a password'}
                     </span>
                   </motion.div>
                 )}
               </div>
 
-              {/* Referral code — signup only */}
               {mode === 'signup' && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  style={{ display: 'flex', flexDirection: 'column', gap: 6 }}
-                >
-                  <button
-                    type="button"
-                    className="auth-referral-toggle"
-                    onClick={() => setShowReferral(v => !v)}
-                  >
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <button type="button" className="am-referral-toggle" onClick={() => setShowReferral(v => !v)}>
                     {showReferral ? '▾ Hide referral code' : '▸ Have a referral code?'}
                   </button>
                   <AnimatePresence>
                     {showReferral && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                      >
-                        <Field
-                          icon={Sparkles}
-                          placeholder="Referral code (optional)"
-                          value={referralCode}
-                          onChange={setReferral}
-                        />
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                        <Field icon={User} placeholder="Referral code (optional)" value={referralCode} onChange={setReferral} />
                       </motion.div>
                     )}
                   </AnimatePresence>
                 </motion.div>
               )}
 
-              {/* Forgot password — signin only */}
               {mode === 'signin' && (
                 <div style={{ textAlign: 'right' }}>
-                  <button type="button" className="auth-forgot">
-                    Forgot password?
-                  </button>
+                  <button type="button" className="am-forgot">Forgot password?</button>
                 </div>
               )}
 
-              {/* Error */}
               <AnimatePresence>
                 {error && (
-                  <motion.div
-                    className="auth-error"
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                  >
+                  <motion.div className="am-error" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                     {error}
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              {/* Success */}
               <AnimatePresence>
                 {success && (
-                  <motion.div
-                    className="auth-success"
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                  >
-                    <span style={{ fontSize: 16 }}>🎉</span>
-                    Account created! Welcome to the arena.
+                  <motion.div className="am-success" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
+                    <span style={{ fontSize: 16 }}>💎</span> Account created! Welcome to Amethyst.
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              {/* Submit */}
               <motion.button
                 type="submit"
-                className="auth-submit"
+                className="am-submit"
                 disabled={loading}
-                whileTap={{ scale: .98 }}
+                whileTap={{ scale: .97 }}
                 style={{ marginTop: 4 }}
               >
-                {loading ? (
-                  <div className="auth-spinner" />
-                ) : (
-                  <>
-                    {mode === 'signin' ? 'Sign In' : 'Create Account'}
-                    <ArrowRight style={{ width: 16, height: 16 }} />
-                  </>
+                {loading ? <div className="am-spinner" /> : (
+                  <>{mode === 'signin' ? 'Sign In' : 'Create Account'}<ArrowRight style={{ width: 16, height: 16 }} /></>
                 )}
               </motion.button>
 
-              {/* Divider */}
-              <div className="auth-divider">
-                <div className="auth-divider-line" />
-                <span className="auth-divider-text">or</span>
-                <div className="auth-divider-line" />
+              <div className="am-divider">
+                <div className="am-divider-line" />
+                <span className="am-divider-text">or</span>
+                <div className="am-divider-line" />
               </div>
 
-              {/* Guest */}
-              <button type="button" className="auth-guest" onClick={handleGuest}>
+              <button type="button" className="am-guest" onClick={handleGuest}>
                 👻 Continue as Guest
               </button>
 
-              {/* Switch mode */}
-              <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(240,234,255,.25)', fontWeight: 600, marginTop: 4 }}>
+              <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(192,132,252,.2)', fontWeight: 600, marginTop: 4 }}>
                 {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
                 <button
                   type="button"
                   onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f5c842', fontWeight: 800, fontFamily: 'Outfit,sans-serif', fontSize: 12 }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f5c842', fontWeight: 800, fontFamily: 'DM Sans,sans-serif', fontSize: 12 }}
                 >
                   {mode === 'signin' ? 'Sign up' : 'Sign in'}
                 </button>
               </p>
 
-              <p className="auth-badge">🔐 Secured by base44</p>
-
+              <p style={{ textAlign: 'center', fontSize: 10, color: 'rgba(157,78,221,.18)', fontWeight: 600, marginTop: 2 }}>
+                💎 Secured by Amethyst
+              </p>
             </motion.form>
           </AnimatePresence>
         </div>
 
-        {/* Bottom accent */}
-        <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,rgba(157,111,255,.2),transparent)' }} />
+        <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,rgba(157,78,221,.25),transparent)' }} />
       </motion.div>
     </div>
   );
