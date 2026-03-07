@@ -1,7 +1,10 @@
 import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
-import { Users } from '@base44/sdk/models/User';
+import { base44 } from '@/api/base44Client';
+
+/* ─── base44 entity shorthand ────────────────────────────────────── */
+const Users = base44.entities.User;
 
 /* ─── Clerk config ───────────────────────────────────────────────── */
 const CLERK_PUBLISHABLE_KEY = 'pk_test_bWF0dXJlLWtvaS0xLmNsZXJrLmFjY291bnRzLmRldiQ';
@@ -418,7 +421,7 @@ export default function AuthPage() {
           username,
           referred_by: referralCode,
         });
-        // 3. Show success then reload
+        // 3. Show success banner then reload
         setSuccess(true);
         setTimeout(() => window.location.reload(), 1800);
       }
@@ -439,7 +442,6 @@ export default function AuthPage() {
         is_anonymous: true,
       });
     } catch (_) {}
-    // Reload so base44 AuthContext picks up the guest session
     window.location.reload();
   };
 
