@@ -16,43 +16,6 @@ function generateAffiliateCode() {
   return code;
 }
 
-async function syncBase44User({ email, full_name, username = '', referred_by = '' }) {
-  let existing = null;
-  try {
-    const results = await Users.filter({ email });
-    if (results?.length > 0) existing = results[0];
-  } catch (_) {}
-
-  if (existing) {
-    // Always write username — this is the field the site displays
-    return Users.update(existing.id, { full_name, username: username || existing.username });
-  }
-
-  return Users.create({
-    email,
-    full_name,
-    username,
-    role: 'user',
-    balance: 1000,
-    xp: 0,
-    level: 1,
-    is_anonymous: false,
-    affiliate_code: generateAffiliateCode(),
-    referred_by,
-    total_deposited: 0,
-    affiliate_earnings: 0,
-    affiliate_earnings_claimable: 0,
-    rakeback_instant: 0,
-    rakeback_daily: 0,
-    rakeback_weekly: 0,
-    rakeback_monthly: 0,
-    total_rakeback_claimed: 0,
-    rakeback_daily_claimed_at: '',
-    rakeback_weekly_claimed_at: '',
-    rakeback_monthly_claimed_at: '',
-  });
-}
-
 /* ─── password strength ──────────────────────────────────────────── */
 const getStrength = (pw) => {
   let s = 0;
@@ -363,7 +326,7 @@ const CSS = `
   text-transform: uppercase;
 }
 
-/* ── Clerk badge ── */
+/* ── Badge ── */
 .auth-badge {
   text-align: center;
   font-size: 10px;
@@ -372,7 +335,7 @@ const CSS = `
   margin-top: 2px;
 }
 
-/* ── Forgot password link ── */
+/* ── Forgot password ── */
 .auth-forgot {
   font-size: 11px;
   font-weight: 700;
@@ -468,8 +431,6 @@ export default function Authpage() {
     if (isAuthenticated) navigate('/Home');
   }, [isAuthenticated]);
 
-
-
   const switchMode = (m) => {
     setMode(m);
     setError('');
@@ -491,53 +452,11 @@ export default function Authpage() {
     setLoading(true);
     try {
       await base44.auth.verifyOtp({ email: pendingEmail, otpCode: verifyCode.trim() });
-      // verifyOtp confirms the email but doesn't set a session token —
-      // log in immediately after so the session is active before we sync
+      // Log in immediately after verify to establish the session
       const { access_token } = await base44.auth.loginViaEmailPassword(pendingEmail, password);
-      // Explicitly persist token to localStorage so it survives the reload
       base44.auth.setToken(access_token, true);
-      // Session is now live — write username directly, no reload needed
-      try {
-        const me = await base44.auth.me();
-        if (me) {
-          const results = await Users.filter({ email: me.email });
-          if (results?.length > 0) {
-            await Users.update(results[0].id, {
-              username,
-              full_name: username,
-              referred_by: referralCode || '',
-            });
-          } else {
-            await Users.create({
-              email: me.email,
-              full_name: username,
-              username,
-              role: 'user',
-              balance: 1000,
-              xp: 0,
-              level: 1,
-              is_anonymous: false,
-              affiliate_code: generateAffiliateCode(),
-              referred_by: referralCode || '',
-              total_deposited: 0,
-              affiliate_earnings: 0,
-              affiliate_earnings_claimable: 0,
-              rakeback_instant: 0,
-              rakeback_daily: 0,
-              rakeback_weekly: 0,
-              rakeback_monthly: 0,
-              total_rakeback_claimed: 0,
-              rakeback_daily_claimed_at: '',
-              rakeback_weekly_claimed_at: '',
-              rakeback_monthly_claimed_at: '',
-            });
-          }
-        }
-      } catch (e) {
-        console.error('Username sync failed:', e);
-      }
       setSuccess(true);
-      setTimeout(() => navigate('/Home'), 1800);
+      setTimeout(() => window.location.reload(), 1800);
     } catch (err) {
       const msg = err?.message || err?.error || 'Invalid code. Please try again.';
       setError(msg);
@@ -550,50 +469,32 @@ export default function Authpage() {
     e.preventDefault();
     setError('');
 
-    // Basic validation
     if (!email.trim())                         { setError('Email is required'); return; }
     if (!password)                             { setError('Password is required'); return; }
     if (mode === 'signup' && !username.trim()) { setError('Username is required'); return; }
     if (mode === 'signup' && strength < 2)     { setError('Password is too weak'); return; }
 
-    // Check username uniqueness before registering
-    if (mode === 'signup') {
-      try {
-        const existing = await Users.filter({ username: username.trim() });
-        if (existing?.length > 0) {
-          setError('That username is already taken. Please choose another.');
-          return;
-        }
-      } catch (_) {
-        // If the check fails for any reason, allow through and let the server handle it
-      }
-    }
-
     setLoading(true);
     try {
       if (mode === 'signin') {
-        // ── Sign in via base44 SDK ──────────────────────────────────
+        // ── Sign in ───────────────────────────────────────────────
         const { access_token } = await base44.auth.loginViaEmailPassword(email, password);
         base44.auth.setToken(access_token, true);
-        navigate('/Home');
+        window.location.reload();
 
       } else {
-        // ── Sign up via base44 SDK ──────────────────────────────────
+        // ── Sign up ───────────────────────────────────────────────
         await base44.auth.register({
           email,
           password,
-          // full_name is the display name base44 uses internally;
-          // we use the username they entered for both so it shows correctly
           full_name: username,
         });
-        // Registration sent a verification email — show code input step
+        // Registration sends a verification email — show code input
         setPendingEmail(email);
         setVerifyStep(true);
       }
     } catch (err) {
-      // base44 SDK throws an error object with a message field
       const msg = err?.message || err?.error || 'Something went wrong. Please try again.';
-      // Clean up common base44 error messages
       if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('credentials')) {
         setError('Incorrect email or password.');
       } else if (msg.toLowerCase().includes('exists') || msg.toLowerCase().includes('already')) {
@@ -608,10 +509,7 @@ export default function Authpage() {
     }
   };
 
-  const handleGuest = () => {
-    // Skip auth — go straight to Home
-    navigate('/Home');
-  };
+  const handleGuest = () => navigate('/Home');
 
   return (
     <div className="auth-root">
@@ -670,7 +568,7 @@ export default function Authpage() {
           </button>
         </div>
 
-        {/* Form */}
+        {/* Form area */}
         <div style={{ padding: '24px 28px 28px', position: 'relative', zIndex: 2 }}>
           <AnimatePresence mode="wait">
 
@@ -698,7 +596,6 @@ export default function Authpage() {
                   </p>
                 </div>
 
-                {/* Code input */}
                 <div className="auth-input-wrap">
                   <input
                     className="auth-input"
@@ -708,59 +605,43 @@ export default function Authpage() {
                     onChange={e => setVerifyCode(e.target.value)}
                     autoComplete="one-time-code"
                     maxLength={8}
-                    style={{ textAlign: 'center', fontSize: 20, fontWeight: 900, letterSpacing: '.3em' }}
+                    style={{ textAlign: 'center', fontSize: 20, fontWeight: 900, letterSpacing: '.3em', paddingLeft: 14, paddingRight: 14 }}
                   />
                 </div>
 
-                {/* Error */}
                 <AnimatePresence>
                   {error && (
-                    <motion.div
-                      className="auth-error"
-                      initial={{ opacity: 0, y: -6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                    >
+                    <motion.div className="auth-error" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                       {error}
                     </motion.div>
                   )}
                 </AnimatePresence>
 
-                {/* Success */}
                 <AnimatePresence>
                   {success && (
-                    <motion.div
-                      className="auth-success"
-                      initial={{ opacity: 0, y: -6 }}
-                      animate={{ opacity: 1, y: 0 }}
-                    >
+                    <motion.div className="auth-success" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
                       <span style={{ fontSize: 16 }}>🎉</span>
                       Account verified! Welcome to the arena.
                     </motion.div>
                   )}
                 </AnimatePresence>
 
-                {/* Submit */}
-                <motion.button
-                  type="submit"
-                  className="auth-submit"
-                  disabled={loading}
-                  whileTap={{ scale: .98 }}
-                  style={{ marginTop: 4 }}
-                >
+                <motion.button type="submit" className="auth-submit" disabled={loading} whileTap={{ scale: .98 }} style={{ marginTop: 4 }}>
                   {loading ? <div className="auth-spinner" /> : <>Verify Email <ArrowRight style={{ width: 16, height: 16 }} /></>}
                 </motion.button>
 
                 <button
                   type="button"
                   onClick={() => { setVerifyStep(false); setError(''); setVerifyCode(''); }}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(240,234,255,.25)', fontWeight: 700, fontSize: 12, fontFamily: 'Outfit,sans-serif' }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(240,234,255,.25)', fontWeight: 700, fontSize: 12, fontFamily: 'Outfit,sans-serif', textAlign: 'center' }}
                 >
                   ← Back
                 </button>
               </motion.form>
+
             ) : (
 
+            /* ── Main sign in / sign up form ── */
             <motion.form
               key={mode}
               onSubmit={handleSubmit}
@@ -772,55 +653,22 @@ export default function Authpage() {
             >
               {/* Username — signup only */}
               {mode === 'signup' && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                >
-                  <Field
-                    icon={User}
-                    placeholder="Username"
-                    value={username}
-                    onChange={setUn}
-                  />
+                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                  <Field icon={User} placeholder="Username" value={username} onChange={setUn} />
                 </motion.div>
               )}
 
               {/* Email */}
-              <Field
-                icon={Mail}
-                type="email"
-                placeholder="Email address"
-                value={email}
-                onChange={setEmail}
-              />
+              <Field icon={Mail} type="email" placeholder="Email address" value={email} onChange={setEmail} />
 
               {/* Password + strength bar */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <Field
-                  icon={Lock}
-                  placeholder="Password"
-                  value={password}
-                  onChange={setPw}
-                  showToggle
-                  showPw={showPw}
-                  onToggle={() => setShowPw(v => !v)}
-                />
+                <Field icon={Lock} placeholder="Password" value={password} onChange={setPw} showToggle showPw={showPw} onToggle={() => setShowPw(v => !v)} />
                 {mode === 'signup' && password.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    style={{ display: 'flex', flexDirection: 'column', gap: 5 }}
-                  >
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                     <div style={{ display: 'flex', gap: 4 }}>
                       {[1, 2, 3, 4].map(i => (
-                        <div key={i} style={{
-                          flex: 1,
-                          height: 3,
-                          borderRadius: 3,
-                          background: i <= strength ? STRENGTH_COLORS[strength] : 'rgba(255,255,255,.07)',
-                          transition: 'background .3s',
-                        }} />
+                        <div key={i} style={{ flex: 1, height: 3, borderRadius: 3, background: i <= strength ? STRENGTH_COLORS[strength] : 'rgba(255,255,255,.07)', transition: 'background .3s' }} />
                       ))}
                     </div>
                     <span style={{ fontSize: 10, fontWeight: 700, color: STRENGTH_COLORS[strength] || 'rgba(240,234,255,.25)', letterSpacing: '.06em' }}>
@@ -832,31 +680,14 @@ export default function Authpage() {
 
               {/* Referral code — signup only */}
               {mode === 'signup' && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  style={{ display: 'flex', flexDirection: 'column', gap: 6 }}
-                >
-                  <button
-                    type="button"
-                    className="auth-referral-toggle"
-                    onClick={() => setShowReferral(v => !v)}
-                  >
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <button type="button" className="auth-referral-toggle" onClick={() => setShowReferral(v => !v)}>
                     {showReferral ? '▾ Hide referral code' : '▸ Have a referral code?'}
                   </button>
                   <AnimatePresence>
                     {showReferral && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                      >
-                        <Field
-                          icon={Sparkles}
-                          placeholder="Referral code (optional)"
-                          value={referralCode}
-                          onChange={setReferral}
-                        />
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                        <Field icon={Sparkles} placeholder="Referral code (optional)" value={referralCode} onChange={setReferral} />
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -866,55 +697,25 @@ export default function Authpage() {
               {/* Forgot password — signin only */}
               {mode === 'signin' && (
                 <div style={{ textAlign: 'right' }}>
-                  <button type="button" className="auth-forgot">
-                    Forgot password?
-                  </button>
+                  <button type="button" className="auth-forgot">Forgot password?</button>
                 </div>
               )}
 
               {/* Error */}
               <AnimatePresence>
                 {error && (
-                  <motion.div
-                    className="auth-error"
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                  >
+                  <motion.div className="auth-error" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
                     {error}
                   </motion.div>
                 )}
               </AnimatePresence>
 
-              {/* Success */}
-              <AnimatePresence>
-                {success && (
-                  <motion.div
-                    className="auth-success"
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                  >
-                    <span style={{ fontSize: 16 }}>🎉</span>
-                    Account created! Welcome to the arena.
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
               {/* Submit */}
-              <motion.button
-                type="submit"
-                className="auth-submit"
-                disabled={loading}
-                whileTap={{ scale: .98 }}
-                style={{ marginTop: 4 }}
-              >
+              <motion.button type="submit" className="auth-submit" disabled={loading} whileTap={{ scale: .98 }} style={{ marginTop: 4 }}>
                 {loading ? (
                   <div className="auth-spinner" />
                 ) : (
-                  <>
-                    {mode === 'signin' ? 'Sign In' : 'Create Account'}
-                    <ArrowRight style={{ width: 16, height: 16 }} />
-                  </>
+                  <>{mode === 'signin' ? 'Sign In' : 'Create Account'}<ArrowRight style={{ width: 16, height: 16 }} /></>
                 )}
               </motion.button>
 
@@ -946,6 +747,7 @@ export default function Authpage() {
 
             </motion.form>
             )} {/* end verifyStep ternary */}
+
           </AnimatePresence>
         </div>
 
