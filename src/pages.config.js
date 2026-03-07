@@ -8,6 +8,7 @@
  * This controls which page is the landing page (shown when users visit the app).
  */
 import Admin from './pages/Admin';
+import Authpage from './pages/Authpage';
 import Battles from './pages/Battles';
 import CaseOpen from './pages/CaseOpen';
 import Cases from './pages/Cases';
@@ -24,6 +25,7 @@ import __Layout from './Layout.jsx';
 
 export const PAGES = {
   "Admin": Admin,
+  "Authpage": Authpage,
   "Battles": Battles,
   "CaseOpen": CaseOpen,
   "Cases": Cases,
@@ -39,7 +41,7 @@ export const PAGES = {
 }
 
 export const pagesConfig = {
-  mainPage: "Home",
+  mainPage: "Authpage",
   Pages: PAGES,
   Layout: __Layout,
 };
