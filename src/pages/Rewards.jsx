@@ -1,3 +1,4 @@
+import { useRequireAuth } from '@/components/useRequireAuth';
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useWallet } from '../components/game/useWallet';
@@ -129,6 +130,7 @@ function CoinIcon({ size = 16 }) {
 
 export default function Rewards() {
   const { user, reload: reloadUser, updateBalance } = useWallet();
+  useRequireAuth();
   const [refCode,    setRefCode]    = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [rakeback,   setRakeback]   = useState({ instant:0, daily:0, weekly:0, monthly:0 });
