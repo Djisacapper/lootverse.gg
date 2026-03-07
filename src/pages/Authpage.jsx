@@ -488,7 +488,10 @@ export default function Authpage() {
     setLoading(true);
     try {
       await base44.auth.verifyOtp({ email: pendingEmail, otpCode: verifyCode.trim() });
-      // Sync User entity now that account is verified
+      // verifyOtp confirms the email but doesn't set a session token —
+      // log in immediately after so the session is active before we sync
+      await base44.auth.loginViaEmailPassword(pendingEmail, password);
+      // Now the session is live — sync our User entity with game defaults
       await syncBase44User({
         email: pendingEmail,
         full_name: username,
