@@ -1,3 +1,4 @@
+import { useRequireAuth } from '@/components/useRequireAuth';
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -616,6 +617,7 @@ function CasesTab({ onLog }) {
 /* ─── Main Admin ─────────────────────────────────────────────────── */
 export default function Admin() {
   const [user, setUser]                   = useState(null);
+  useRequireAuth();
   const [allUsers, setAllUsers]           = useState([]);
   const [searchQuery, setSearchQuery]     = useState('');
   const [selectedUser, setSelectedUser]   = useState(null);
