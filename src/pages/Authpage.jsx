@@ -471,7 +471,6 @@ export default function Authpage() {
 
     if (!email.trim())                         { setError('Email is required'); return; }
     if (!password)                             { setError('Password is required'); return; }
-    if (mode === 'signup' && !username.trim()) { setError('Username is required'); return; }
     if (mode === 'signup' && strength < 2)     { setError('Password is too weak'); return; }
 
     setLoading(true);
@@ -651,12 +650,6 @@ export default function Authpage() {
               transition={{ duration: .22 }}
               style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
             >
-              {/* Username — signup only */}
-              {mode === 'signup' && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
-                  <Field icon={User} placeholder="Username" value={username} onChange={setUn} />
-                </motion.div>
-              )}
 
               {/* Email */}
               <Field icon={Mail} type="email" placeholder="Email address" value={email} onChange={setEmail} />
