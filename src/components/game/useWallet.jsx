@@ -9,13 +9,19 @@ export function useWallet() {
   const [loading, setLoading] = useState(true);
 
   const loadUser = useCallback(async () => {
-    const me = await base44.auth.me();
-    setUser(me);
-    setBalance(me.balance || 0);
-    setXp(me.xp || 0);
-    setLevel(me.level || 1);
-    setLoading(false);
-    return me;
+    try {
+      const me = await base44.auth.me();
+      setUser(me);
+      setBalance(me.balance || 0);
+      setXp(me.xp || 0);
+      setLevel(me.level || 1);
+      setLoading(false);
+      return me;
+    } catch (err) {
+      // Not authenticated yet — stop the loading spinner and bail out silently
+      setLoading(false);
+      return null;
+    }
   }, []);
 
   useEffect(() => {
