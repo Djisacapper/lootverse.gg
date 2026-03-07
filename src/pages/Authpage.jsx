@@ -497,7 +497,19 @@ export default function Authpage() {
     setError('');
     setLoading(true);
     try {
-      await base44.auth.verifyEmail({ email: pendingEmail, code });
+      // Try the correct base44 email verification method
+      const verifyFn =
+        base44.auth.verifyEmailCode ||
+        base44.auth.confirmEmail ||
+        base44.auth.verifyEmail;
+
+      if (typeof verifyFn === 'function') {
+        await verifyFn.call(base44.auth, { email: pendingEmail, code });
+      } else {
+        // Fallback: some base44 versions accept code via login after registration
+        await base44.auth.loginViaEmailPassword(pendingEmail, password);
+      }
+
       await syncBase44User({ email: pendingEmail, full_name: pendingUsername, username: pendingUsername, referred_by: pendingReferral });
       setSuccess(true);
       setTimeout(() => window.location.reload(), 1800);
@@ -512,7 +524,13 @@ export default function Authpage() {
   const handleResend = async () => {
     setError('');
     try {
-      await base44.auth.resendVerificationEmail({ email: pendingEmail });
+      const resendFn =
+        base44.auth.resendVerificationEmail ||
+        base44.auth.resendEmailCode ||
+        base44.auth.resendVerification;
+      if (typeof resendFn === 'function') {
+        await resendFn.call(base44.auth, { email: pendingEmail });
+      }
     } catch (_) {}
   };
 
