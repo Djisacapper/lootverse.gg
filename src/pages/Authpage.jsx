@@ -367,17 +367,17 @@ const Field = ({ icon: Icon, type = 'text', placeholder, value, onChange, error,
 );
 
 /* ─── Main ───────────────────────────────────────────────────────── */
-export default function AuthPage({ onAuthSuccess, onGuest }) {
-  const [mode, setMode]               = useState('signin');
-  const [email, setEmail]             = useState('');
-  const [password, setPw]             = useState('');
-  const [username, setUn]             = useState('');
-  const [referralCode, setReferral]   = useState('');
+export default function AuthPage() {
+  const [mode, setMode]                 = useState('signin');
+  const [email, setEmail]               = useState('');
+  const [password, setPw]               = useState('');
+  const [username, setUn]               = useState('');
+  const [referralCode, setReferral]     = useState('');
   const [showReferral, setShowReferral] = useState(false);
-  const [showPw, setShowPw]           = useState(false);
-  const [loading, setLoading]         = useState(false);
-  const [error, setError]             = useState('');
-  const [success, setSuccess]         = useState(false);
+  const [showPw, setShowPw]             = useState(false);
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState('');
+  const [success, setSuccess]           = useState(false);
 
   const strength = mode === 'signup' ? getStrength(password) : 0;
 
@@ -402,24 +402,25 @@ export default function AuthPage({ onAuthSuccess, onGuest }) {
         await clerkSignIn({ identifier: email, password });
         // 2. Pull base44 user record (create if somehow missing)
         const results = await Users.filter({ email });
-        const base44User = results?.[0] || await syncBase44User({
-          email,
-          full_name: email.split('@')[0],
-        });
-        onAuthSuccess?.({ email, user: base44User });
+        if (!results?.[0]) {
+          await syncBase44User({ email, full_name: email.split('@')[0] });
+        }
+        // 3. Reload so base44's AuthContext re-checks and lets the user through
+        window.location.reload();
 
       } else {
         // 1. Create Clerk account
         await clerkSignUp({ emailAddress: email, password, username });
         // 2. Create base44 record with all game defaults
-        const base44User = await syncBase44User({
+        await syncBase44User({
           email,
           full_name: username,
           username,
           referred_by: referralCode,
         });
+        // 3. Show success then reload
         setSuccess(true);
-        setTimeout(() => onAuthSuccess?.({ email, user: base44User }), 1800);
+        setTimeout(() => window.location.reload(), 1800);
       }
     } catch (err) {
       setError(err.message || 'Something went wrong');
@@ -431,16 +432,15 @@ export default function AuthPage({ onAuthSuccess, onGuest }) {
   const handleGuest = async () => {
     const guestId = Math.floor(1000 + Math.random() * 9000);
     try {
-      const base44User = await syncBase44User({
+      await syncBase44User({
         email: `guest_${guestId}@caserift.app`,
         full_name: `Anonymous #${guestId}`,
         username: `Anonymous #${guestId}`,
         is_anonymous: true,
       });
-      onGuest?.({ guestId, user: base44User });
-    } catch (_) {
-      onGuest?.({ guestId });
-    }
+    } catch (_) {}
+    // Reload so base44 AuthContext picks up the guest session
+    window.location.reload();
   };
 
   return (
@@ -514,23 +514,12 @@ export default function AuthPage({ onAuthSuccess, onGuest }) {
                   animate={{ opacity: 1, height: 'auto' }}
                   exit={{ opacity: 0, height: 0 }}
                 >
-                  <Field
-                    icon={User}
-                    placeholder="Username"
-                    value={username}
-                    onChange={setUn}
-                  />
+                  <Field icon={User} placeholder="Username" value={username} onChange={setUn} />
                 </motion.div>
               )}
 
               {/* Email */}
-              <Field
-                icon={Mail}
-                type="email"
-                placeholder="Email address"
-                value={email}
-                onChange={setEmail}
-              />
+              <Field icon={Mail} type="email" placeholder="Email address" value={email} onChange={setEmail} />
 
               {/* Password + strength bar */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
