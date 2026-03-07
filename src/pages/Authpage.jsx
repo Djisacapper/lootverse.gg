@@ -591,16 +591,6 @@ export default function Authpage() {
                 )}
               </motion.button>
 
-              <div className="am-divider">
-                <div className="am-divider-line" />
-                <span className="am-divider-text">or</span>
-                <div className="am-divider-line" />
-              </div>
-
-              <button type="button" className="am-guest" onClick={handleGuest}>
-                👻 Continue as Guest
-              </button>
-
               <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(192,132,252,.2)', fontWeight: 600, marginTop: 4 }}>
                 {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
                 <button
