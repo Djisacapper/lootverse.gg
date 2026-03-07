@@ -490,7 +490,9 @@ export default function Authpage() {
       await base44.auth.verifyOtp({ email: pendingEmail, otpCode: verifyCode.trim() });
       // verifyOtp confirms the email but doesn't set a session token —
       // log in immediately after so the session is active before we sync
-      await base44.auth.loginViaEmailPassword(pendingEmail, password);
+      const { access_token } = await base44.auth.loginViaEmailPassword(pendingEmail, password);
+      // Explicitly persist token to localStorage so it survives the reload
+      base44.auth.setToken(access_token, true);
       // Now the session is live — sync our User entity with game defaults
       await syncBase44User({
         email: pendingEmail,
@@ -535,8 +537,9 @@ export default function Authpage() {
     try {
       if (mode === 'signin') {
         // ── Sign in via base44 SDK ──────────────────────────────────
-        await base44.auth.loginViaEmailPassword(email, password);
-        // Token is automatically set — reload so AuthContext picks it up
+        const { access_token } = await base44.auth.loginViaEmailPassword(email, password);
+        // Explicitly persist token to localStorage so it survives the reload
+        base44.auth.setToken(access_token, true);
         window.location.reload();
 
       } else {
