@@ -1,3 +1,4 @@
+import { useRequireAuth } from '@/components/useRequireAuth';
 import React, { useState, useEffect, useRef } from 'react';
 import { base44 } from '@/api/base44Client';
 import { rollItem, getRarityColor, getRarityGlow } from '../components/game/useWallet';
@@ -139,6 +140,7 @@ function Particles({ color, count = 16 }) {
 
 export default function CaseOpen() {
   const params = new URLSearchParams(window.location.search);
+  useRequireAuth();
   const caseId = params.get('id');
 
   const [caseData,      setCaseData]      = useState(null);
