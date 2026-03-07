@@ -1,3 +1,4 @@
+import { useRequireAuth } from '@/components/useRequireAuth';
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useWallet } from '../components/game/useWallet';
@@ -106,6 +107,7 @@ function StatCard({ label, value, accent = '#fbbf24', delay = 0, children }) {
 
 export default function Referrals() {
   const { user, reload: reloadUser } = useWallet();
+  useRequireAuth();
   const [referrals,  setReferrals]  = useState([]);
   const [loading,    setLoading]    = useState(true);
   const [codeInput,  setCodeInput]  = useState('');

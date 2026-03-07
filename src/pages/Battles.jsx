@@ -1,3 +1,4 @@
+import { useRequireAuth } from '@/components/useRequireAuth';
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useWallet } from '../components/game/useWallet';
@@ -419,6 +420,7 @@ function Skeleton({ i }) {
 /* ─── Main ───────────────────────────────────────────────────────── */
 export default function Battles() {
   const { user: walletUser, balance, updateBalance, addXp } = useWallet();
+  useRequireAuth();
   const [freshUser, setFreshUser] = React.useState(null);
   const arenaDataRef = React.useRef(null);
 

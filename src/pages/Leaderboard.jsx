@@ -1,3 +1,4 @@
+import { useRequireAuth } from '@/components/useRequireAuth';
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -360,6 +361,7 @@ function WeeklyBanner() {
 /* ─── Main ───────────────────────────────────────────────────────── */
 export default function Leaderboard() {
   const [top10, setTop10] = useState([]);
+  useRequireAuth();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [tab, setTab] = useState('all-time');

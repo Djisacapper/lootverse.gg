@@ -1,3 +1,4 @@
+import { useRequireAuth } from '@/components/useRequireAuth';
 import React, { useState, useRef } from 'react';
 import { useWallet } from '../components/game/useWallet';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -136,6 +137,7 @@ function Particles({ accent = '#fbbf24', count = 12 }) {
 /* ─── Main ───────────────────────────────────────────────────────── */
 export default function Deposit() {
   const { user, balance, updateBalance, addXp } = useWallet();
+  useRequireAuth();
   const [amount, setAmount]         = useState(1000);
   const [depositing, setDepositing] = useState(false);
   const [success, setSuccess]       = useState(false);

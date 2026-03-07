@@ -1,3 +1,4 @@
+import { useRequireAuth } from '@/components/useRequireAuth';
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useWallet } from '../components/game/useWallet';
@@ -612,6 +613,7 @@ const BOT_NAMES = ['CoinBot', 'FlipMaster', 'LuckyBot', 'RNGod', 'ShadowBot', 'C
 /* ─── Main ───────────────────────────────────────────────────────── */
 export default function Coinflip() {
   const { user, balance, updateBalance, addXp, addRakeback } = useWallet();
+  useRequireAuth();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
