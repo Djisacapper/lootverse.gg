@@ -1,3 +1,4 @@
+import { useRequireAuth } from '@/components/useRequireAuth';
 import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
@@ -54,6 +55,7 @@ const SORT_OPTIONS = [
 
 export default function Cases() {
   const [cases,   setCases]   = useState([]);
+  useRequireAuth();
   const [loading, setLoading] = useState(true);
   const [search,  setSearch]  = useState('');
   const [sortBy,  setSortBy]  = useState('price_desc');
