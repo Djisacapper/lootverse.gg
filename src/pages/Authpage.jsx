@@ -1,6 +1,97 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
+import { Users } from '@base44/sdk/models/User';
+
+/* ─── Clerk config ───────────────────────────────────────────────── */
+const CLERK_PUBLISHABLE_KEY = 'pk_test_bWF0dXJlLWtvaS0xLmNsZXJrLmFjY291bnRzLmRldiQ';
+const CLERK_FRONTEND_API = (() => {
+  try {
+    const b64 = CLERK_PUBLISHABLE_KEY.replace('pk_test_', '').replace('pk_live_', '');
+    const domain = atob(b64).replace(/\$$/, '');
+    return `https://${domain}`;
+  } catch {
+    return 'https://mature-koi-1.clerk.accounts.dev';
+  }
+})();
+
+/* ─── Clerk API helpers (pure fetch — no npm needed) ─────────────── */
+async function clerkSignUp({ emailAddress, password, username }) {
+  const res = await fetch(`${CLERK_FRONTEND_API}/v1/client/sign_ups`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ email_address: emailAddress, password, username }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = data?.errors?.[0]?.long_message || data?.errors?.[0]?.message || 'Sign-up failed';
+    throw new Error(msg);
+  }
+  return data;
+}
+
+async function clerkSignIn({ identifier, password }) {
+  const res = await fetch(`${CLERK_FRONTEND_API}/v1/client/sign_ins`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    credentials: 'include',
+    body: JSON.stringify({ identifier, password, strategy: 'password' }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const msg = data?.errors?.[0]?.long_message || data?.errors?.[0]?.message || 'Sign-in failed';
+    throw new Error(msg);
+  }
+  const token = data?.client?.sessions?.[0]?.last_active_token?.jwt;
+  if (token) localStorage.setItem('clerk_session_token', token);
+  return data;
+}
+
+/* ─── base44 helpers ─────────────────────────────────────────────── */
+function generateAffiliateCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = 'CR-';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+async function syncBase44User({ email, full_name, username = '', avatar_url = '', referred_by = '', is_anonymous = false }) {
+  let existing = null;
+  try {
+    const results = await Users.filter({ email });
+    if (results?.length > 0) existing = results[0];
+  } catch (_) {}
+
+  if (existing) {
+    return Users.update(existing.id, { full_name, avatar_url });
+  }
+
+  return Users.create({
+    email,
+    full_name,
+    username,
+    avatar_url,
+    role: 'user',
+    balance: 1000,
+    xp: 0,
+    level: 1,
+    is_anonymous,
+    affiliate_code: generateAffiliateCode(),
+    referred_by,
+    total_deposited: 0,
+    affiliate_earnings: 0,
+    affiliate_earnings_claimable: 0,
+    rakeback_instant: 0,
+    rakeback_daily: 0,
+    rakeback_weekly: 0,
+    rakeback_monthly: 0,
+    total_rakeback_claimed: 0,
+    rakeback_daily_claimed_at: '',
+    rakeback_weekly_claimed_at: '',
+    rakeback_monthly_claimed_at: '',
+  });
+}
 
 /* ─── CSS ─────────────────────────────────────────────────────────── */
 const CSS = `
@@ -39,171 +130,176 @@ const CSS = `
 /* ── Scan line ── */
 @keyframes auth-scan {
   0%  { top:-1px; opacity:0; }
-  5%  { opacity:.5; } 95%{ opacity:.5; }
+  5%  { opacity:.5; }
+  95% { opacity:.5; }
   100%{ top:100%; opacity:0; }
 }
 .auth-scan {
-  position:absolute; left:0; right:0; height:1px; z-index:10; pointer-events:none;
-  background:linear-gradient(90deg,transparent,rgba(245,200,66,.2),transparent);
-  animation:auth-scan 8s linear infinite;
+  position: absolute; left: 0; right: 0; height: 1px; z-index: 10; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(245,200,66,.2), transparent);
+  animation: auth-scan 8s linear infinite;
 }
 
 /* ── Noise texture ── */
 .auth-noise {
-  position:absolute; inset:0; pointer-events:none; z-index:1;
-  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-  background-size:160px; mix-blend-mode:overlay; opacity:.04;
+  position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px; mix-blend-mode: overlay; opacity: .04;
 }
 
 /* ── Particles ── */
 @keyframes auth-particle {
-  0%   { transform:translateY(0) translateX(0) scale(1); opacity:0; }
-  10%  { opacity:1; }
-  85%  { opacity:.3; }
-  100% { transform:translateY(-120px) translateX(var(--dx)) scale(0); opacity:0; }
+  0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
+  10%  { opacity: 1; }
+  85%  { opacity: .3; }
+  100% { transform: translateY(-120px) translateX(var(--dx)) scale(0); opacity: 0; }
 }
 .auth-pt {
-  position:absolute; border-radius:50%; pointer-events:none;
-  animation:auth-particle var(--d) ease-out infinite var(--delay);
+  position: absolute; border-radius: 50%; pointer-events: none;
+  animation: auth-particle var(--d) ease-out infinite var(--delay);
 }
 
 /* ── Card ── */
 .auth-card {
-  position:relative; width:100%; max-width:420px;
-  border-radius:24px; overflow:hidden;
-  background:linear-gradient(160deg,#0d0a1e 0%,#080518 50%,#06030f 100%);
-  border:1px solid rgba(245,200,66,.18);
+  position: relative; width: 100%; max-width: 420px;
+  border-radius: 24px; overflow: hidden;
+  background: linear-gradient(160deg, #0d0a1e 0%, #080518 50%, #06030f 100%);
+  border: 1px solid rgba(245,200,66,.18);
   box-shadow:
     0 0 0 1px rgba(245,200,66,.06),
     0 0 100px rgba(157,111,255,.1),
     0 30px 80px rgba(0,0,0,.8);
-  z-index:10;
+  z-index: 10;
 }
 
 /* ── Input ── */
 .auth-input-wrap {
-  position:relative; width:100%;
+  position: relative; width: 100%;
 }
 .auth-input {
-  width:100%; padding:13px 44px 13px 44px;
-  background:rgba(255,255,255,.04);
-  border:1px solid rgba(255,255,255,.08);
-  border-radius:12px; outline:none;
-  color:#f0eaff; font-family:'Outfit',sans-serif;
-  font-size:14px; font-weight:600;
-  transition:border-color .2s, background .2s, box-shadow .2s;
+  width: 100%; padding: 13px 44px 13px 44px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px; outline: none;
+  color: #f0eaff; font-family: 'Outfit', sans-serif;
+  font-size: 14px; font-weight: 600;
+  transition: border-color .2s, background .2s, box-shadow .2s;
 }
-.auth-input::placeholder { color:rgba(240,234,255,.2); }
+.auth-input::placeholder { color: rgba(240,234,255,.2); }
 .auth-input:focus {
-  border-color:rgba(245,200,66,.4);
-  background:rgba(245,200,66,.04);
-  box-shadow:0 0 0 3px rgba(245,200,66,.06);
+  border-color: rgba(245,200,66,.4);
+  background: rgba(245,200,66,.04);
+  box-shadow: 0 0 0 3px rgba(245,200,66,.06);
 }
 .auth-input.error {
-  border-color:rgba(255,78,106,.4);
-  background:rgba(255,78,106,.04);
+  border-color: rgba(255,78,106,.4);
+  background: rgba(255,78,106,.04);
 }
 .auth-input-icon {
-  position:absolute; left:14px; top:50%; transform:translateY(-50%);
-  color:rgba(240,234,255,.2); pointer-events:none;
-  transition:color .2s;
+  position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+  color: rgba(240,234,255,.2); pointer-events: none; transition: color .2s;
 }
 .auth-input:focus ~ .auth-input-icon,
-.auth-input-wrap:focus-within .auth-input-icon { color:rgba(245,200,66,.5); }
+.auth-input-wrap:focus-within .auth-input-icon { color: rgba(245,200,66,.5); }
 .auth-eye-btn {
-  position:absolute; right:12px; top:50%; transform:translateY(-50%);
-  background:none; border:none; cursor:pointer; padding:4px;
-  color:rgba(240,234,255,.2); transition:color .2s;
+  position: absolute; right: 12px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; cursor: pointer; padding: 4px;
+  color: rgba(240,234,255,.2); transition: color .2s;
 }
-.auth-eye-btn:hover { color:rgba(245,200,66,.6); }
+.auth-eye-btn:hover { color: rgba(245,200,66,.6); }
 
 /* ── Submit button ── */
 .auth-submit {
-  width:100%; padding:14px; border:none; cursor:pointer;
-  border-radius:12px; font-family:'Outfit',sans-serif;
-  font-size:15px; font-weight:900; letter-spacing:.02em;
-  background:linear-gradient(135deg,#f5c842 0%,#e8a800 60%,#f5c842 100%);
-  background-size:200%;
-  color:#0a0600;
-  box-shadow:0 0 32px rgba(245,200,66,.35), 0 4px 20px rgba(0,0,0,.5);
-  transition:transform .18s, box-shadow .18s, background-position .4s;
-  display:flex; align-items:center; justify-content:center; gap:8px;
+  width: 100%; padding: 14px; border: none; cursor: pointer;
+  border-radius: 12px; font-family: 'Outfit', sans-serif;
+  font-size: 15px; font-weight: 900; letter-spacing: .02em;
+  background: linear-gradient(135deg, #f5c842 0%, #e8a800 60%, #f5c842 100%);
+  background-size: 200%;
+  color: #0a0600;
+  box-shadow: 0 0 32px rgba(245,200,66,.35), 0 4px 20px rgba(0,0,0,.5);
+  transition: transform .18s, box-shadow .18s, background-position .4s;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
 }
 .auth-submit:hover:not(:disabled) {
-  transform:translateY(-2px) scale(1.02);
-  box-shadow:0 0 48px rgba(245,200,66,.5), 0 8px 24px rgba(0,0,0,.6);
-  background-position:100%;
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 0 48px rgba(245,200,66,.5), 0 8px 24px rgba(0,0,0,.6);
+  background-position: 100%;
 }
-.auth-submit:active:not(:disabled) { transform:scale(.98); }
-.auth-submit:disabled { opacity:.4; cursor:not-allowed; }
+.auth-submit:active:not(:disabled) { transform: scale(.98); }
+.auth-submit:disabled { opacity: .4; cursor: not-allowed; }
 
 /* ── Tab toggle ── */
 .auth-tab {
-  flex:1; padding:12px; border:none; cursor:pointer; background:transparent;
-  font-family:'Outfit',sans-serif; font-size:13px; font-weight:800;
-  transition:color .2s; position:relative;
+  flex: 1; padding: 12px; border: none; cursor: pointer; background: transparent;
+  font-family: 'Outfit', sans-serif; font-size: 13px; font-weight: 800;
+  transition: color .2s; position: relative;
 }
 .auth-tab::after {
-  content:''; position:absolute; bottom:0; left:20%; right:20%; height:2px;
-  border-radius:2px; transition:opacity .2s, background .2s;
+  content: ''; position: absolute; bottom: 0; left: 20%; right: 20%; height: 2px;
+  border-radius: 2px; transition: opacity .2s, background .2s;
 }
-.auth-tab.active { color:#f5c842; }
-.auth-tab.active::after { background:#f5c842; opacity:1; }
-.auth-tab.inactive { color:rgba(240,234,255,.25); }
-.auth-tab.inactive::after { opacity:0; }
-
-/* ── Divider ── */
-.auth-divider {
-  display:flex; align-items:center; gap:12; margin:20px 0;
-}
-.auth-divider-line { flex:1; height:1px; background:rgba(255,255,255,.06); }
-.auth-divider-text { font-size:10px; font-weight:700; color:rgba(240,234,255,.2); letter-spacing:.14em; text-transform:uppercase; white-space:nowrap; }
+.auth-tab.active { color: #f5c842; }
+.auth-tab.active::after { background: #f5c842; opacity: 1; }
+.auth-tab.inactive { color: rgba(240,234,255,.25); }
+.auth-tab.inactive::after { opacity: 0; }
 
 /* ── Guest button ── */
 .auth-guest {
-  width:100%; padding:12px; border:1px solid rgba(255,255,255,.08); cursor:pointer;
-  border-radius:12px; font-family:'Outfit',sans-serif;
-  font-size:13px; font-weight:700;
-  background:rgba(255,255,255,.03); color:rgba(240,234,255,.4);
-  transition:all .2s;
+  width: 100%; padding: 12px; border: 1px solid rgba(255,255,255,.08); cursor: pointer;
+  border-radius: 12px; font-family: 'Outfit', sans-serif;
+  font-size: 13px; font-weight: 700;
+  background: rgba(255,255,255,.03); color: rgba(240,234,255,.4);
+  transition: all .2s;
 }
 .auth-guest:hover {
-  background:rgba(157,111,255,.08);
-  border-color:rgba(157,111,255,.25);
-  color:#c084fc;
+  background: rgba(157,111,255,.08);
+  border-color: rgba(157,111,255,.25);
+  color: #c084fc;
 }
 
 /* ── Error toast ── */
 .auth-error {
-  padding:10px 14px; border-radius:10px;
-  background:rgba(255,78,106,.1); border:1px solid rgba(255,78,106,.25);
-  color:#ff4e6a; font-size:12px; font-weight:700;
+  padding: 10px 14px; border-radius: 10px;
+  background: rgba(255,78,106,.1); border: 1px solid rgba(255,78,106,.25);
+  color: #ff4e6a; font-size: 12px; font-weight: 700;
 }
 
 /* ── Success state ── */
 @keyframes auth-success-pop {
-  0%  { transform:scale(.5) rotate(-10deg); opacity:0; }
-  60% { transform:scale(1.15) rotate(2deg); }
-  100%{ transform:scale(1) rotate(0); opacity:1; }
+  0%  { transform: scale(.5) rotate(-10deg); opacity: 0; }
+  60% { transform: scale(1.15) rotate(2deg); }
+  100%{ transform: scale(1) rotate(0); opacity: 1; }
 }
-.auth-success-icon { animation:auth-success-pop .5s cubic-bezier(.34,1.56,.64,1) forwards; }
+.auth-success-icon { animation: auth-success-pop .5s cubic-bezier(.34,1.56,.64,1) forwards; }
 
-@keyframes auth-spin { to { transform:rotate(360deg); } }
+/* ── Spinner ── */
+@keyframes auth-spin { to { transform: rotate(360deg); } }
 .auth-spinner {
-  width:16px; height:16px; border-radius:50%;
-  border:2px solid rgba(0,0,0,.2); border-top-color:#000;
-  animation:auth-spin .7s linear infinite;
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid rgba(0,0,0,.2); border-top-color: #000;
+  animation: auth-spin .7s linear infinite;
 }
 
 /* ── Logo pulse ── */
 @keyframes auth-logo-glow {
-  0%,100% { filter:drop-shadow(0 0 8px rgba(245,200,66,.4)); }
-  50%     { filter:drop-shadow(0 0 22px rgba(245,200,66,.8)) drop-shadow(0 0 40px rgba(245,200,66,.3)); }
+  0%,100% { filter: drop-shadow(0 0 8px rgba(245,200,66,.4)); }
+  50%     { filter: drop-shadow(0 0 22px rgba(245,200,66,.8)) drop-shadow(0 0 40px rgba(245,200,66,.3)); }
 }
-.auth-logo { animation:auth-logo-glow 2.5s ease-in-out infinite; }
+.auth-logo { animation: auth-logo-glow 2.5s ease-in-out infinite; }
 
-/* ── Strength bar ── */
-.auth-strength-bar { height:3px; border-radius:3px; transition:width .3s, background .3s; }
+/* ── Referral toggle ── */
+.auth-referral-toggle {
+  font-size: 11px; font-weight: 700; color: rgba(245,200,66,.4);
+  background: none; border: none; cursor: pointer; padding: 0;
+  transition: color .2s; text-align: left;
+}
+.auth-referral-toggle:hover { color: rgba(245,200,66,.8); }
+
+/* ── Clerk badge ── */
+.clerk-badge {
+  text-align: center; font-size: 10px;
+  color: rgba(240,234,255,.12); font-weight: 600; margin-top: 2px;
+}
 `;
 
 /* ─── Particles ──────────────────────────────────────────────────── */
@@ -271,42 +367,79 @@ const Field = ({ icon: Icon, type = 'text', placeholder, value, onChange, error,
 );
 
 /* ─── Main ───────────────────────────────────────────────────────── */
-export default function AuthPage({ onSignIn, onSignUp, onGuest }) {
-  const [mode, setMode]       = useState('signin'); // 'signin' | 'signup'
-  const [email, setEmail]     = useState('');
-  const [password, setPw]     = useState('');
-  const [username, setUn]     = useState('');
-  const [showPw, setShowPw]   = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
-  const [success, setSuccess] = useState(false);
+export default function AuthPage({ onAuthSuccess, onGuest }) {
+  const [mode, setMode]               = useState('signin');
+  const [email, setEmail]             = useState('');
+  const [password, setPw]             = useState('');
+  const [username, setUn]             = useState('');
+  const [referralCode, setReferral]   = useState('');
+  const [showReferral, setShowReferral] = useState(false);
+  const [showPw, setShowPw]           = useState(false);
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState('');
+  const [success, setSuccess]         = useState(false);
 
   const strength = mode === 'signup' ? getStrength(password) : 0;
 
   const switchMode = (m) => {
-    setMode(m); setError(''); setEmail(''); setPw(''); setUn(''); setSuccess(false);
+    setMode(m); setError(''); setEmail(''); setPw(''); setUn('');
+    setReferral(''); setShowReferral(false); setSuccess(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!email.trim()) { setError('Email is required'); return; }
-    if (!password) { setError('Password is required'); return; }
-    if (mode === 'signup' && !username.trim()) { setError('Username is required'); return; }
-    if (mode === 'signup' && strength < 2) { setError('Password is too weak'); return; }
+
+    if (!email.trim())                              { setError('Email is required'); return; }
+    if (!password)                                  { setError('Password is required'); return; }
+    if (mode === 'signup' && !username.trim())      { setError('Username is required'); return; }
+    if (mode === 'signup' && strength < 2)          { setError('Password is too weak'); return; }
 
     setLoading(true);
     try {
       if (mode === 'signin') {
-        await onSignIn?.({ email, password });
+        // 1. Auth with Clerk
+        await clerkSignIn({ identifier: email, password });
+        // 2. Pull base44 user record (create if somehow missing)
+        const results = await Users.filter({ email });
+        const base44User = results?.[0] || await syncBase44User({
+          email,
+          full_name: email.split('@')[0],
+        });
+        onAuthSuccess?.({ email, user: base44User });
+
       } else {
-        await onSignUp?.({ email, password, username });
+        // 1. Create Clerk account
+        await clerkSignUp({ emailAddress: email, password, username });
+        // 2. Create base44 record with all game defaults
+        const base44User = await syncBase44User({
+          email,
+          full_name: username,
+          username,
+          referred_by: referralCode,
+        });
         setSuccess(true);
+        setTimeout(() => onAuthSuccess?.({ email, user: base44User }), 1800);
       }
     } catch (err) {
-      setError(err?.message || 'Something went wrong');
+      setError(err.message || 'Something went wrong');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleGuest = async () => {
+    const guestId = Math.floor(1000 + Math.random() * 9000);
+    try {
+      const base44User = await syncBase44User({
+        email: `guest_${guestId}@caserift.app`,
+        full_name: `Anonymous #${guestId}`,
+        username: `Anonymous #${guestId}`,
+        is_anonymous: true,
+      });
+      onGuest?.({ guestId, user: base44User });
+    } catch (_) {
+      onGuest?.({ guestId });
     }
   };
 
@@ -336,7 +469,12 @@ export default function AuthPage({ onSignIn, onSignUp, onGuest }) {
 
         {/* Logo area */}
         <div style={{ padding: '28px 28px 0', textAlign: 'center', position: 'relative', zIndex: 2 }}>
-          <div className="auth-logo" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 58, height: 58, borderRadius: 16, background: 'linear-gradient(135deg,rgba(245,200,66,.15),rgba(157,111,255,.1))', border: '1px solid rgba(245,200,66,.25)', marginBottom: 14 }}>
+          <div className="auth-logo" style={{
+            display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+            width: 58, height: 58, borderRadius: 16,
+            background: 'linear-gradient(135deg,rgba(245,200,66,.15),rgba(157,111,255,.1))',
+            border: '1px solid rgba(245,200,66,.25)', marginBottom: 14,
+          }}>
             <Sparkles style={{ width: 26, height: 26, color: '#f5c842' }} />
           </div>
           <h1 className="auth-title" style={{ fontSize: 28, fontWeight: 700, color: '#f0eaff', letterSpacing: '.04em', marginBottom: 4 }}>
@@ -369,9 +507,13 @@ export default function AuthPage({ onSignIn, onSignUp, onGuest }) {
               transition={{ duration: .22 }}
               style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
             >
-              {/* Username (signup only) */}
+              {/* Username — signup only */}
               {mode === 'signup' && (
-                <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                >
                   <Field
                     icon={User}
                     placeholder="Username"
@@ -390,7 +532,7 @@ export default function AuthPage({ onSignIn, onSignUp, onGuest }) {
                 onChange={setEmail}
               />
 
-              {/* Password */}
+              {/* Password + strength bar */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <Field
                   icon={Lock}
@@ -402,12 +544,19 @@ export default function AuthPage({ onSignIn, onSignUp, onGuest }) {
                   onToggle={() => setShowPw(v => !v)}
                 />
 
-                {/* Strength bar (signup only) */}
                 {mode === 'signup' && password.length > 0 && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    style={{ display: 'flex', flexDirection: 'column', gap: 5 }}
+                  >
                     <div style={{ display: 'flex', gap: 4 }}>
                       {[1, 2, 3, 4].map(i => (
-                        <div key={i} style={{ flex: 1, height: 3, borderRadius: 3, background: i <= strength ? STRENGTH_COLORS[strength] : 'rgba(255,255,255,.07)', transition: 'background .3s' }} />
+                        <div key={i} style={{
+                          flex: 1, height: 3, borderRadius: 3,
+                          background: i <= strength ? STRENGTH_COLORS[strength] : 'rgba(255,255,255,.07)',
+                          transition: 'background .3s',
+                        }} />
                       ))}
                     </div>
                     <span style={{ fontSize: 10, fontWeight: 700, color: STRENGTH_COLORS[strength] || 'rgba(240,234,255,.25)', letterSpacing: '.06em' }}>
@@ -417,14 +566,48 @@ export default function AuthPage({ onSignIn, onSignUp, onGuest }) {
                 )}
               </div>
 
-              {/* Forgot password (signin only) */}
+              {/* Referral code — signup only */}
+              {mode === 'signup' && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 6 }}
+                >
+                  <button
+                    type="button"
+                    className="auth-referral-toggle"
+                    onClick={() => setShowReferral(v => !v)}
+                  >
+                    {showReferral ? '▾ Hide referral code' : '▸ Have a referral code?'}
+                  </button>
+                  <AnimatePresence>
+                    {showReferral && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                      >
+                        <Field
+                          icon={Sparkles}
+                          placeholder="Referral code (optional)"
+                          value={referralCode}
+                          onChange={setReferral}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              )}
+
+              {/* Forgot password — signin only */}
               {mode === 'signin' && (
                 <div style={{ textAlign: 'right' }}>
-                  <button type="button" style={{ fontSize: 11, fontWeight: 700, color: 'rgba(245,200,66,.5)', background: 'none', border: 'none', cursor: 'pointer', transition: 'color .2s' }}
-                    // @ts-ignore
+                  <button
+                    type="button"
+                    style={{ fontSize: 11, fontWeight: 700, color: 'rgba(245,200,66,.5)', background: 'none', border: 'none', cursor: 'pointer', transition: 'color .2s' }}
                     onMouseEnter={e => e.target.style.color = '#f5c842'}
-                    // @ts-ignore
-                    onMouseLeave={e => e.target.style.color = 'rgba(245,200,66,.5)'}>
+                    onMouseLeave={e => e.target.style.color = 'rgba(245,200,66,.5)'}
+                  >
                     Forgot password?
                   </button>
                 </div>
@@ -433,7 +616,12 @@ export default function AuthPage({ onSignIn, onSignUp, onGuest }) {
               {/* Error */}
               <AnimatePresence>
                 {error && (
-                  <motion.div className="auth-error" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                  <motion.div
+                    className="auth-error"
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                  >
                     {error}
                   </motion.div>
                 )}
@@ -442,7 +630,11 @@ export default function AuthPage({ onSignIn, onSignUp, onGuest }) {
               {/* Success */}
               <AnimatePresence>
                 {success && (
-                  <motion.div initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(0,229,160,.08)', border: '1px solid rgba(0,229,160,.25)', color: '#00e5a0', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <motion.div
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{ padding: '10px 14px', borderRadius: 10, background: 'rgba(0,229,160,.08)', border: '1px solid rgba(0,229,160,.25)', color: '#00e5a0', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}
+                  >
                     <span className="auth-success-icon" style={{ fontSize: 16 }}>🎉</span>
                     Account created! Welcome to the arena.
                   </motion.div>
@@ -475,17 +667,25 @@ export default function AuthPage({ onSignIn, onSignUp, onGuest }) {
               </div>
 
               {/* Guest */}
-              <button type="button" className="auth-guest" onClick={onGuest}>
+              <button type="button" className="auth-guest" onClick={handleGuest}>
                 👻 Continue as Guest
               </button>
 
               {/* Switch mode link */}
               <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(240,234,255,.25)', fontWeight: 600, marginTop: 4 }}>
                 {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
-                <button type="button" onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f5c842', fontWeight: 800, fontFamily: 'Outfit,sans-serif', fontSize: 12 }}>
+                <button
+                  type="button"
+                  onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f5c842', fontWeight: 800, fontFamily: 'Outfit,sans-serif', fontSize: 12 }}
+                >
                   {mode === 'signin' ? 'Sign up' : 'Sign in'}
                 </button>
               </p>
+
+              {/* Clerk badge */}
+              <p className="clerk-badge">🔐 Secured by Clerk</p>
+
             </motion.form>
           </AnimatePresence>
         </div>
