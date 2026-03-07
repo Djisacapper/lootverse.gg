@@ -1,631 +1,752 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Link } from 'react-router-dom';
-import { createPageUrl } from '@/utils';
+import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
+import { useAuth } from '@/lib/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
 
-import {
-  Box, Swords, Coins, TrendingUp, Gift, Award, Users,
-  Menu, X, ChevronLeft, ChevronRight, Wallet,
-  Shield, MessageCircle, Home,
-} from 'lucide-react';
+/* ─── base44 entity shorthand ────────────────────────────────────── */
+const Users = base44.entities.User;
 
+/* ─── helpers ────────────────────────────────────────────────────── */
+function generateAffiliateCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = 'CR-';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+/* ─── password strength ──────────────────────────────────────────── */
+const getStrength = (pw) => {
+  let s = 0;
+  if (pw.length >= 8) s++;
+  if (/[A-Z]/.test(pw)) s++;
+  if (/[0-9]/.test(pw)) s++;
+  if (/[^A-Za-z0-9]/.test(pw)) s++;
+  return s;
+};
+const STRENGTH_LABELS = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+const STRENGTH_COLORS = ['', '#ff4e6a', '#fbbf24', '#34d399', '#00e5a0'];
+
+/* ─── CSS ─────────────────────────────────────────────────────────── */
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-* { box-sizing: border-box; }
-body, #root { font-family: 'Nunito', sans-serif; background: #04000a; }
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 
-@keyframes scan {
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+.auth-root {
+  font-family: 'Outfit', sans-serif;
+  min-height: 100vh;
+  background: #03000d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 20px;
+}
+
+.auth-title { font-family: 'Rajdhani', sans-serif; }
+
+/* ── Animated background orbs ── */
+.auth-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(80px);
+  pointer-events: none;
+  animation: auth-orb-drift 12s ease-in-out infinite;
+}
+@keyframes auth-orb-drift {
+  0%,100% { transform: translate(0,0) scale(1); }
+  33%      { transform: translate(30px,-20px) scale(1.08); }
+  66%      { transform: translate(-20px,15px) scale(.94); }
+}
+
+/* ── Scan line ── */
+@keyframes auth-scan {
   0%  { top:-1px; opacity:0; }
-  5%  { opacity:1; } 95%{ opacity:1; }
+  5%  { opacity:.5; }
+  95% { opacity:.5; }
   100%{ top:100%; opacity:0; }
 }
-.sidebar-scan {
-  position:absolute; left:0; right:0; height:1px; z-index:2;
-  background:linear-gradient(90deg,transparent,rgba(255,220,0,.15),transparent);
-  animation:scan 8s linear infinite; pointer-events:none;
+.auth-scan {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 1px;
+  z-index: 10;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(245,200,66,.2), transparent);
+  animation: auth-scan 8s linear infinite;
 }
 
-@keyframes logo-pulse {
-  0%,100%{ box-shadow: 0 0 0 0 rgba(251,191,36,.3); }
-  50%    { box-shadow: 0 0 0 6px rgba(251,191,36,0); }
-}
-.logo-pulse { animation: logo-pulse 2.5s ease-in-out infinite; }
-
-@keyframes xp-shimmer {
-  0%  { background-position: -200% center; }
-  100%{ background-position: 200% center; }
-}
-.xp-bar {
-  background: linear-gradient(90deg, #a855f7, #fbbf24, #f59e0b, #a855f7);
-  background-size: 200% auto;
-  animation: xp-shimmer 3s linear infinite;
+/* ── Noise texture ── */
+.auth-noise {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px;
+  mix-blend-mode: overlay;
+  opacity: .04;
 }
 
-@keyframes nav-glow {
-  0%,100%{ box-shadow: inset 0 0 0 0 rgba(251,191,36,0); }
-  50%    { box-shadow: inset 0 0 20px rgba(251,191,36,.04); }
+/* ── Particles ── */
+@keyframes auth-particle {
+  0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
+  10%  { opacity: 1; }
+  85%  { opacity: .3; }
+  100% { transform: translateY(-120px) translateX(var(--dx)) scale(0); opacity: 0; }
 }
-.nav-active { animation: nav-glow 3s ease-in-out infinite; }
-
-@keyframes gold-pulse-border {
-  0%,100%{ border-color: rgba(251,191,36,.15); }
-  50%    { border-color: rgba(251,191,36,.35); }
-}
-.balance-chip { animation: gold-pulse-border 3s ease-in-out infinite; }
-
-@keyframes chat-btn-pulse {
-  0%,100%{ box-shadow: 0 0 0 0 rgba(168,85,247,.5); }
-  50%    { box-shadow: 0 0 0 10px rgba(168,85,247,0); }
-}
-.chat-btn-pulse { animation: chat-btn-pulse 2s ease-in-out infinite; }
-
-.nav-link {
-  display: flex; align-items: center; gap: 10px;
-  margin: 1px 8px; border-radius: 10px; cursor: pointer;
-  text-decoration: none; transition: all .22s ease;
-  border: 1px solid transparent;
-  font-family: 'Nunito', sans-serif;
-  font-size: 13px; font-weight: 700;
-  color: rgba(255,255,255,.35);
-  position: relative; overflow: hidden;
-}
-.nav-link:hover {
-  color: rgba(251,191,36,.9);
-  background: rgba(251,191,36,.06);
-  border-color: rgba(251,191,36,.12);
-}
-.nav-link.active {
-  color: #fbbf24;
-  background: linear-gradient(90deg,rgba(251,191,36,.12),rgba(168,85,247,.06));
-  border-color: rgba(251,191,36,.25);
-}
-.nav-link.active::before {
-  content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
-  background: linear-gradient(to bottom, #fbbf24, #a855f7);
-  border-radius: 0 2px 2px 0;
-}
-.nav-link.collapsed { justify-content: center; margin: 2px 6px; padding: 10px 0; }
-.nav-link.expanded  { padding: 9px 12px; }
-
-.sidebar-section-label {
-  font-size: 9px; font-weight: 800; letter-spacing: .18em;
-  text-transform: uppercase; color: rgba(251,191,36,.25);
-  padding: 0 16px; margin: 14px 0 4px;
-  font-family: 'Nunito', sans-serif;
+.auth-pt {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  animation: auth-particle var(--d) ease-out infinite var(--delay);
 }
 
-/* Stable avatar — reserves space before image loads, no layout jump */
-.lv-avatar {
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 50%; overflow: hidden; flex-shrink: 0;
+/* ── Card ── */
+.auth-card {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  border-radius: 24px;
+  overflow: hidden;
+  background: linear-gradient(160deg, #0d0a1e 0%, #080518 50%, #06030f 100%);
+  border: 1px solid rgba(245,200,66,.18);
+  box-shadow:
+    0 0 0 1px rgba(245,200,66,.06),
+    0 0 100px rgba(157,111,255,.1),
+    0 30px 80px rgba(0,0,0,.8);
+  z-index: 10;
+}
+
+/* ── Inputs ── */
+.auth-input-wrap {
+  position: relative;
+  width: 100%;
+}
+.auth-input {
+  width: 100%;
+  padding: 13px 44px 13px 44px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  outline: none;
+  color: #f0eaff;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  transition: border-color .2s, background .2s, box-shadow .2s;
+}
+.auth-input::placeholder { color: rgba(240,234,255,.2); }
+.auth-input:focus {
+  border-color: rgba(245,200,66,.4);
+  background: rgba(245,200,66,.04);
+  box-shadow: 0 0 0 3px rgba(245,200,66,.06);
+}
+.auth-input.error {
+  border-color: rgba(255,78,106,.4);
+  background: rgba(255,78,106,.04);
+}
+.auth-input-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(240,234,255,.2);
+  pointer-events: none;
+  transition: color .2s;
+}
+.auth-input-wrap:focus-within .auth-input-icon { color: rgba(245,200,66,.5); }
+.auth-eye-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: rgba(240,234,255,.2);
+  transition: color .2s;
+}
+.auth-eye-btn:hover { color: rgba(245,200,66,.6); }
+
+/* ── Submit button ── */
+.auth-submit {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  cursor: pointer;
+  border-radius: 12px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: .02em;
+  background: linear-gradient(135deg, #f5c842 0%, #e8a800 60%, #f5c842 100%);
+  background-size: 200%;
+  color: #0a0600;
+  box-shadow: 0 0 32px rgba(245,200,66,.35), 0 4px 20px rgba(0,0,0,.5);
+  transition: transform .18s, box-shadow .18s, background-position .4s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.auth-submit:hover:not(:disabled) {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 0 48px rgba(245,200,66,.5), 0 8px 24px rgba(0,0,0,.6);
+  background-position: 100%;
+}
+.auth-submit:active:not(:disabled) { transform: scale(.98); }
+.auth-submit:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ── Tab toggle ── */
+.auth-tab {
+  flex: 1;
+  padding: 12px;
+  border: none;
+  cursor: pointer;
+  background: transparent;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  transition: color .2s;
   position: relative;
 }
-.lv-avatar img {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: cover;
-  /* Fade in once loaded — never flashes white or disappears */
-  opacity: 0; transition: opacity 0.2s ease;
+.auth-tab::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  border-radius: 2px;
+  transition: opacity .2s, background .2s;
 }
-.lv-avatar img.loaded { opacity: 1; }
+.auth-tab.active { color: #f5c842; }
+.auth-tab.active::after { background: #f5c842; opacity: 1; }
+.auth-tab.inactive { color: rgba(240,234,255,.25); }
+.auth-tab.inactive::after { opacity: 0; }
 
-::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-thumb { background: rgba(251,191,36,.15); border-radius: 3px; }
-::-webkit-scrollbar-track { background: transparent; }
+/* ── Guest button ── */
+.auth-guest {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  cursor: pointer;
+  border-radius: 12px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  background: rgba(255,255,255,.03);
+  color: rgba(240,234,255,.4);
+  transition: all .2s;
+}
+.auth-guest:hover {
+  background: rgba(157,111,255,.08);
+  border-color: rgba(157,111,255,.25);
+  color: #c084fc;
+}
+
+/* ── Error / success toasts ── */
+.auth-error {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255,78,106,.1);
+  border: 1px solid rgba(255,78,106,.25);
+  color: #ff4e6a;
+  font-size: 12px;
+  font-weight: 700;
+}
+.auth-success {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(0,229,160,.08);
+  border: 1px solid rgba(0,229,160,.25);
+  color: #00e5a0;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Spinner ── */
+@keyframes auth-spin { to { transform: rotate(360deg); } }
+.auth-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,0,0,.2);
+  border-top-color: #000;
+  animation: auth-spin .7s linear infinite;
+}
+
+/* ── Logo pulse ── */
+@keyframes auth-logo-glow {
+  0%,100% { filter: drop-shadow(0 0 8px rgba(245,200,66,.4)); }
+  50%     { filter: drop-shadow(0 0 22px rgba(245,200,66,.8)) drop-shadow(0 0 40px rgba(245,200,66,.3)); }
+}
+.auth-logo { animation: auth-logo-glow 2.5s ease-in-out infinite; }
+
+/* ── Referral toggle ── */
+.auth-referral-toggle {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(245,200,66,.4);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color .2s;
+  text-align: left;
+}
+.auth-referral-toggle:hover { color: rgba(245,200,66,.8); }
+
+/* ── Divider ── */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0;
+}
+.auth-divider-line {
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,.06);
+}
+.auth-divider-text {
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(240,234,255,.2);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+
+/* ── Badge ── */
+.auth-badge {
+  text-align: center;
+  font-size: 10px;
+  color: rgba(240,234,255,.12);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* ── Forgot password ── */
+.auth-forgot {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(245,200,66,.5);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color .2s;
+}
+.auth-forgot:hover { color: #f5c842; }
 `;
 
-const NAV_SECTIONS = (role) => [
-  {
-    label: 'Games',
-    items: [
-      { name: 'Home',     icon: Home,       page: 'Home'     },
-      { name: 'Battles',  icon: Swords,     page: 'Battles'  },
-      { name: 'Cases',    icon: Box,        page: 'Cases'    },
-      { name: 'Coinflip', icon: Coins,      page: 'Coinflip' },
-      { name: 'Crash',    icon: TrendingUp, page: 'Crash'    },
-    ],
-  },
-  {
-    label: 'Earn',
-    items: [
-      { name: 'Referrals',   icon: Users,  page: 'Referrals'   },
-      { name: 'Rewards',     icon: Gift,   page: 'Rewards'     },
-      { name: 'Leaderboard', icon: Award,  page: 'Leaderboard' },
-    ],
-  },
-  ...(role === 'admin' ? [{
-    label: 'Staff',
-    items: [{ name: 'Admin', icon: Shield, page: 'Admin' }],
-  }] : []),
-];
+/* ─── Particles ──────────────────────────────────────────────────── */
+const Particles = ({ count = 14 }) => {
+  const pts = useRef(Array.from({ length: count }, (_, i) => ({
+    id: i,
+    left: `${5 + Math.random() * 90}%`,
+    bottom: `${Math.random() * 20}%`,
+    size: 1.2 + Math.random() * 2.4,
+    color: Math.random() > .5 ? '#f5c842' : '#9d6fff',
+    d: `${4 + Math.random() * 6}s`,
+    delay: `${-Math.random() * 8}s`,
+    dx: `${(Math.random() - .5) * 44}px`,
+  }))).current;
 
-function CoinIcon({ size = 16 }) {
   return (
-    <div style={{
-      width: size, height: size, borderRadius: '50%', flexShrink: 0,
-      background: 'linear-gradient(135deg,#fbbf24,#f59e0b)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      boxShadow: '0 0 8px rgba(251,191,36,.55)',
-    }}>
-      <span style={{ fontSize: size * 0.45, fontWeight: 900, color: '#000' }}>$</span>
+    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
+      {pts.map(p => (
+        <div key={p.id} className="auth-pt" style={{
+          left: p.left,
+          bottom: p.bottom,
+          width: p.size,
+          height: p.size,
+          background: p.color,
+          boxShadow: `0 0 ${p.size * 4}px ${p.color}`,
+          '--d': p.d,
+          '--delay': p.delay,
+          '--dx': p.dx,
+        }} />
+      ))}
     </div>
   );
-}
+};
 
-/* ── Stable Avatar component ──────────────────────────────────────
-   Uses a persistent <img> that fades in once loaded. The fallback
-   initial letter sits underneath and is only visible before load.
-   Critically: we never unmount/remount the img when user state
-   updates — the src only changes if the actual avatar_url changes.
-────────────────────────────────────────────────────────────────── */
-const StableAvatar = React.memo(({ avatarUrl, name, size, fontSize, gradient, boxShadow, onClick, style = {} }) => {
-  const imgRef = useRef(null);
-  const [imgLoaded, setImgLoaded] = useState(false);
-  const prevUrl = useRef(avatarUrl);
-
-  // Only reset loaded state when the URL genuinely changes
-  useEffect(() => {
-    if (prevUrl.current !== avatarUrl) {
-      prevUrl.current = avatarUrl;
-      setImgLoaded(false);
-    }
-  }, [avatarUrl]);
-
-  // If img is already complete when mounted (browser cache), mark loaded immediately
-  useEffect(() => {
-    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
-      setImgLoaded(true);
-    }
-  }, []);
-
-  const initial = name?.[0]?.toUpperCase() || '?';
-
-  return (
-    <button
-      onClick={onClick}
-      style={{
-        width: size, height: size, borderRadius: '50%',
-        background: gradient || 'linear-gradient(135deg,#fbbf24,#a855f7)',
-        border: 'none', cursor: onClick ? 'pointer' : 'default', padding: 0,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize, fontWeight: 900, color: '#000',
-        boxShadow: boxShadow || '0 0 12px rgba(251,191,36,.4)',
-        position: 'relative', overflow: 'hidden', flexShrink: 0,
-        ...style,
-      }}
-    >
-      {/* Fallback initial — always rendered underneath */}
-      <span style={{ position: 'relative', zIndex: 1, pointerEvents: 'none' }}>{initial}</span>
-
-      {/* Avatar image — fades in over the initial, never causes a flash */}
-      {avatarUrl && (
-        <img
-          ref={imgRef}
-          src={avatarUrl}
-          alt=""
-          style={{
-            position: 'absolute', inset: 0, width: '100%', height: '100%',
-            objectFit: 'cover', zIndex: 2,
-            opacity: imgLoaded ? 1 : 0,
-            transition: 'opacity 0.25s ease',
-          }}
-          onLoad={() => setImgLoaded(true)}
-          onError={() => setImgLoaded(false)}
-        />
-      )}
-    </button>
-  );
-});
-
-export default function Layout({ children, currentPageName }) {
-  const [user,             setUser]             = useState(null);
-  const [mobileOpen,       setMobileOpen]       = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [profileOpen,      setProfileOpen]      = useState(false);
-  const [chatOpen,         setChatOpen]         = useState(true);
-
-  // FIX: Track previous user data in a ref so we only call setUser
-  // when something meaningful actually changed. This stops the 3-second
-  // polling from triggering re-renders (and avatar blinks) on every tick.
-  const userRef = useRef(null);
-
-  const reloadUser = () => base44.auth.me().then(fresh => {
-    const prev = userRef.current;
-    if (
-      !prev ||
-      prev.balance    !== fresh.balance    ||
-      prev.xp         !== fresh.xp         ||
-      prev.level      !== fresh.level      ||
-      prev.avatar_url !== fresh.avatar_url ||
-      prev.full_name  !== fresh.full_name  ||
-      prev.role       !== fresh.role       ||
-      prev.email      !== fresh.email
-    ) {
-      userRef.current = fresh;
-      setUser(fresh);
-    }
-  }).catch(() => {});
-
-  useEffect(() => {
-    reloadUser();
-    const interval = setInterval(reloadUser, 3000);
-    const unsub = base44.entities.User.subscribe(e => { if (e.type === 'update') reloadUser(); });
-    return () => { clearInterval(interval); unsub(); };
-  }, []);
-
-  useEffect(() => { setMobileOpen(false); }, [currentPageName]);
-
-  const xpProgress = user ? ((user.xp || 0) % 500) / 5 : 0;
-  const level      = user?.level || 1;
-  const sidebarW   = sidebarCollapsed ? 60 : 210;
-
-  /* ── Sidebar inner ── */
-  const SidebarInner = ({ collapsed }) => (
-    <div style={{ display:'flex', flexDirection:'column', height:'100%', position:'relative', overflow:'hidden' }}>
-      <div className="sidebar-scan" />
-
-      {/* Logo */}
-      <div style={{
-        padding: collapsed ? '18px 0' : '16px 18px',
-        borderBottom: '1px solid rgba(251,191,36,.08)',
-        display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start',
-        gap: 10,
-      }}>
-        <Link to={createPageUrl('Home')} style={{ display:'flex', alignItems:'center', gap:10, textDecoration:'none' }}>
-          <div className="logo-pulse" style={{
-            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-            background: 'linear-gradient(135deg,#fbbf24,#f59e0b,#a855f7)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 20px rgba(251,191,36,.35)',
-          }}>
-            <Box style={{ width: 18, height: 18, color: '#000' }} />
-          </div>
-          {!collapsed && (
-            <div>
-              <div style={{
-                fontSize: 14, fontWeight: 900, letterSpacing: '.18em',
-                background: 'linear-gradient(90deg,#fbbf24,#f59e0b 40%,#c084fc)',
-                WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              }}>LOOTVERSE</div>
-              <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '.1em', color: 'rgba(255,255,255,.2)', marginTop: 1 }}>
-                PLAY · WIN · EARN
-              </div>
-            </div>
-          )}
-        </Link>
-      </div>
-
-      {/* Nav */}
-      <nav style={{ flex: 1, overflowY: 'auto', padding: '8px 0 12px' }}>
-        {NAV_SECTIONS(user?.role).map(section => (
-          <div key={section.label}>
-            {!collapsed && <div className="sidebar-section-label">{section.label}</div>}
-            {collapsed  && <div style={{ height: 12 }} />}
-            {section.items.map(item => {
-              const active = currentPageName === item.page;
-              return (
-                <Link
-                  key={item.page}
-                  to={createPageUrl(item.page)}
-                  title={collapsed ? item.name : undefined}
-                  className={`nav-link ${collapsed ? 'collapsed' : 'expanded'} ${active ? 'active nav-active' : ''}`}
-                >
-                  <item.icon style={{
-                    width: 16, height: 16, flexShrink: 0,
-                    color: active ? '#fbbf24' : 'rgba(255,255,255,.3)',
-                    transition: 'color .22s',
-                  }} />
-                  {!collapsed && item.name}
-                  {!collapsed && active && (
-                    <div style={{
-                      marginLeft: 'auto', width: 5, height: 5, borderRadius: '50%',
-                      background: '#a855f7', boxShadow: '0 0 6px #a855f7',
-                    }} />
-                  )}
-                </Link>
-              );
-            })}
-          </div>
-        ))}
-      </nav>
-
-      {/* User card — bottom of sidebar */}
-      {user && !collapsed && (
-        <div style={{
-          margin: '0 10px 12px', padding: '10px 12px', borderRadius: 12,
-          background: 'rgba(251,191,36,.05)', border: '1px solid rgba(251,191,36,.1)',
-        }}>
-          <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:8 }}>
-            <StableAvatar
-              avatarUrl={user.avatar_url}
-              name={user.full_name || user.email}
-              size={30} fontSize={11}
-              onClick={() => setProfileOpen(true)}
-            />
-            <div style={{ flex:1, overflow:'hidden' }}>
-              <div style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,.8)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                {user.full_name || user.email?.split('@')[0] || 'Player'}
-              </div>
-              <div style={{ fontSize:9, fontWeight:700, color:'rgba(251,191,36,.5)' }}>Level {level}</div>
-            </div>
-            <div style={{
-              padding:'2px 7px', borderRadius:100, fontSize:9, fontWeight:800,
-              background:'rgba(168,85,247,.15)', border:'1px solid rgba(168,85,247,.3)',
-              color:'#c084fc',
-            }}>Lv{level}</div>
-          </div>
-          <div style={{ height:3, background:'rgba(255,255,255,.06)', borderRadius:99, overflow:'hidden' }}>
-            <div className="xp-bar" style={{ height:'100%', width:`${xpProgress}%`, borderRadius:99, transition:'width .5s' }} />
-          </div>
-          <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
-            <span style={{ fontSize:8, fontWeight:700, color:'rgba(255,255,255,.2)' }}>XP Progress</span>
-            <span style={{ fontSize:8, fontWeight:700, color:'rgba(251,191,36,.4)' }}>{Math.round(xpProgress)}%</span>
-          </div>
-        </div>
-      )}
-
-      {/* Collapsed avatar */}
-      {user && collapsed && (
-        <div style={{ display:'flex', justifyContent:'center', paddingBottom:14 }}>
-          <StableAvatar
-            avatarUrl={user.avatar_url}
-            name={user.full_name || user.email}
-            size={32} fontSize={11}
-            onClick={() => setProfileOpen(true)}
-          />
-        </div>
-      )}
+/* ─── Field component ────────────────────────────────────────────── */
+const Field = ({ icon: Icon, type = 'text', placeholder, value, onChange, showToggle, onToggle, showPw }) => (
+  <div className="auth-input-wrap">
+    <input
+      className="auth-input"
+      type={showToggle ? (showPw ? 'text' : 'password') : type}
+      placeholder={placeholder}
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      autoComplete="off"
+    />
+    <div className="auth-input-icon">
+      <Icon style={{ width: 15, height: 15 }} />
     </div>
-  );
+    {showToggle && (
+      <button type="button" className="auth-eye-btn" onClick={onToggle}>
+        {showPw
+          ? <EyeOff style={{ width: 14, height: 14 }} />
+          : <Eye style={{ width: 14, height: 14 }} />}
+      </button>
+    )}
+  </div>
+);
+
+/* ─── Main ───────────────────────────────────────────────────────── */
+export default function Authpage() {
+  const { isAuthenticated } = useAuth();
+  const navigate = useNavigate();
+
+  const [mode, setMode]                 = useState('signin');
+  const [email, setEmail]               = useState('');
+  const [password, setPw]               = useState('');
+  const [username, setUn]               = useState('');
+  const [referralCode, setReferral]     = useState('');
+  const [showReferral, setShowReferral] = useState(false);
+  const [showPw, setShowPw]             = useState(false);
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState('');
+  const [success, setSuccess]           = useState(false);
+  const [verifyStep, setVerifyStep]     = useState(false);
+  const [verifyCode, setVerifyCode]     = useState('');
+  const [pendingEmail, setPendingEmail] = useState('');
+
+  const strength = mode === 'signup' ? getStrength(password) : 0;
+
+  // Already logged in → go home
+  useEffect(() => {
+    if (isAuthenticated) navigate('/Home');
+  }, [isAuthenticated]);
+
+  const switchMode = (m) => {
+    setMode(m);
+    setError('');
+    setEmail('');
+    setPw('');
+    setUn('');
+    setReferral('');
+    setShowReferral(false);
+    setSuccess(false);
+    setVerifyStep(false);
+    setVerifyCode('');
+    setPendingEmail('');
+  };
+
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    setError('');
+    if (!verifyCode.trim()) { setError('Please enter the verification code'); return; }
+    setLoading(true);
+    try {
+      await base44.auth.verifyOtp({ email: pendingEmail, otpCode: verifyCode.trim() });
+      // Log in immediately after verify to establish the session
+      const { access_token } = await base44.auth.loginViaEmailPassword(pendingEmail, password);
+      base44.auth.setToken(access_token, true);
+      setSuccess(true);
+      setTimeout(() => window.location.reload(), 1800);
+    } catch (err) {
+      const msg = err?.message || err?.error || 'Invalid code. Please try again.';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    if (!email.trim())                         { setError('Email is required'); return; }
+    if (!password)                             { setError('Password is required'); return; }
+    if (mode === 'signup' && strength < 2)     { setError('Password is too weak'); return; }
+
+    setLoading(true);
+    try {
+      if (mode === 'signin') {
+        // ── Sign in ───────────────────────────────────────────────
+        const { access_token } = await base44.auth.loginViaEmailPassword(email, password);
+        base44.auth.setToken(access_token, true);
+        window.location.reload();
+
+      } else {
+        // ── Sign up ───────────────────────────────────────────────
+        await base44.auth.register({
+          email,
+          password,
+          full_name: username,
+        });
+        // Registration sends a verification email — show code input
+        setPendingEmail(email);
+        setVerifyStep(true);
+      }
+    } catch (err) {
+      const msg = err?.message || err?.error || 'Something went wrong. Please try again.';
+      if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('credentials')) {
+        setError('Incorrect email or password.');
+      } else if (msg.toLowerCase().includes('exists') || msg.toLowerCase().includes('already')) {
+        setError('An account with this email already exists.');
+      } else if (msg.toLowerCase().includes('password')) {
+        setError('Password must be at least 8 characters.');
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGuest = () => navigate('/Home');
 
   return (
-    <div style={{ minHeight:'100vh', background:'#04000a', display:'flex', fontFamily:'Nunito,sans-serif' }}>
+    <div className="auth-root">
       <style>{CSS}</style>
 
-      {/* ── Desktop Sidebar ── */}
-      <aside style={{
-        width: sidebarW, flexShrink: 0,
-        position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 40,
-        background: 'linear-gradient(180deg,#08001a 0%,#04000a 100%)',
-        borderRight: '1px solid rgba(251,191,36,.08)',
-        transition: 'width .3s cubic-bezier(.4,0,.2,1)',
-        overflow: 'hidden',
-        display: 'none',
-      }} className="lv-sidebar">
-        <SidebarInner collapsed={sidebarCollapsed} />
-        <button onClick={() => setSidebarCollapsed(v => !v)} style={{
-          position:'absolute', right:-12, top:68,
-          width:24, height:24, borderRadius:'50%',
-          background:'#0e0020', border:'1px solid rgba(251,191,36,.2)',
-          display:'flex', alignItems:'center', justifyContent:'center',
-          cursor:'pointer', zIndex:50, color:'rgba(251,191,36,.5)',
-        }}>
-          {sidebarCollapsed
-            ? <ChevronRight style={{ width:12, height:12 }} />
-            : <ChevronLeft  style={{ width:12, height:12 }} />}
-        </button>
-      </aside>
+      {/* Background orbs */}
+      <div className="auth-orb" style={{ width: 500, height: 500, top: '-20%', left: '-15%', background: 'radial-gradient(circle,rgba(157,111,255,.12) 0%,transparent 70%)', animationDelay: '0s' }} />
+      <div className="auth-orb" style={{ width: 400, height: 400, bottom: '-15%', right: '-10%', background: 'radial-gradient(circle,rgba(245,200,66,.09) 0%,transparent 70%)', animationDelay: '-4s' }} />
+      <div className="auth-orb" style={{ width: 300, height: 300, top: '40%', right: '20%', background: 'radial-gradient(circle,rgba(157,111,255,.07) 0%,transparent 70%)', animationDelay: '-8s' }} />
 
-      {/* ── Desktop Top Header ── */}
-      <header style={{
-        display: 'none',
-        position: 'fixed', top: 0, right: 0, zIndex: 30,
-        left: sidebarW, height: 54,
-        background: 'linear-gradient(90deg,#08001a,#0a0015)',
-        borderBottom: '1px solid rgba(251,191,36,.08)',
-        alignItems: 'center',
-        padding: '0 16px',
-        gap: 10,
-        transition: 'left .3s cubic-bezier(.4,0,.2,1)',
-      }} className="lv-header">
+      <Particles />
 
-        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <div style={{ height:18, width:2, borderRadius:2, background:'linear-gradient(to bottom,#fbbf24,#a855f7)', opacity:.6 }} />
-          <span style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,.2)', letterSpacing:'.1em', textTransform:'uppercase' }}>
-            {currentPageName || ''}
-          </span>
+      {/* Card */}
+      <motion.div
+        className="auth-card"
+        initial={{ opacity: 0, y: 28, scale: .96 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ type: 'spring', stiffness: 280, damping: 26 }}
+      >
+        <div className="auth-scan" />
+        <div className="auth-noise" />
+
+        {/* Top accent bar */}
+        <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#f5c842,#9d6fff,transparent)' }} />
+
+        {/* Logo */}
+        <div style={{ padding: '28px 28px 0', textAlign: 'center', position: 'relative', zIndex: 2 }}>
+          <div className="auth-logo" style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: 58,
+            height: 58,
+            borderRadius: 16,
+            background: 'linear-gradient(135deg,rgba(245,200,66,.15),rgba(157,111,255,.1))',
+            border: '1px solid rgba(245,200,66,.25)',
+            marginBottom: 14,
+          }}>
+            <Sparkles style={{ width: 26, height: 26, color: '#f5c842' }} />
+          </div>
+          <h1 className="auth-title" style={{ fontSize: 28, fontWeight: 700, color: '#f0eaff', letterSpacing: '.04em', marginBottom: 4 }}>
+            CASERIFT
+          </h1>
+          <p style={{ fontSize: 12, color: 'rgba(240,234,255,.3)', fontWeight: 600, letterSpacing: '.08em' }}>
+            {mode === 'signin' ? 'Welcome back, player' : 'Join the arena'}
+          </p>
         </div>
 
-        <div style={{ flex:1, display:'flex', justifyContent:'center' }}>
-          {user && (
-            <Link to={createPageUrl('Deposit')} style={{
-              display:'flex', alignItems:'center', gap:7, padding:'6px 16px', borderRadius:10,
-              background:'linear-gradient(135deg,#fbbf24,#f59e0b)',
-              textDecoration:'none',
-              boxShadow:'0 0 20px rgba(251,191,36,.35)',
-              transition:'transform .2s, box-shadow .2s',
-            }}>
-              <Wallet style={{ width:14, height:14, color:'#000' }} />
-              <span style={{ fontSize:12, fontWeight:900, color:'#000', letterSpacing:'.04em' }}>Deposit</span>
-            </Link>
-          )}
-        </div>
-
-        {user && (
-          <div className="balance-chip" style={{
-            display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:10,
-            background:'rgba(251,191,36,.07)', border:'1px solid rgba(251,191,36,.15)',
-          }}>
-            <CoinIcon size={16} />
-            <span style={{ fontSize:14, fontWeight:900, color:'#fbbf24', minWidth:50 }}>
-              {(user.balance || 0).toLocaleString()}
-            </span>
-          </div>
-        )}
-      </header>
-
-      {/* ── Mobile Header ── */}
-      <header style={{
-        position:'fixed', top:0, left:0, right:0, zIndex:50, height:54,
-        background:'linear-gradient(90deg,#08001a,#0a0015)',
-        borderBottom:'1px solid rgba(251,191,36,.08)',
-        display:'flex', alignItems:'center', padding:'0 14px', gap:10,
-      }} className="lv-mobile-header">
-        <button onClick={() => setMobileOpen(v => !v)} style={{
-          width:32, height:32, borderRadius:9,
-          background:'rgba(251,191,36,.08)', border:'1px solid rgba(251,191,36,.15)',
-          display:'flex', alignItems:'center', justifyContent:'center',
-          color:'rgba(251,191,36,.7)', cursor:'pointer',
-        }}>
-          {mobileOpen ? <X style={{ width:15, height:15 }} /> : <Menu style={{ width:15, height:15 }} />}
-        </button>
-
-        <Link to={createPageUrl('Home')} style={{ display:'flex', alignItems:'center', gap:8, textDecoration:'none' }}>
-          <div style={{
-            width:28, height:28, borderRadius:8, flexShrink:0,
-            background:'linear-gradient(135deg,#fbbf24,#a855f7)',
-            display:'flex', alignItems:'center', justifyContent:'center',
-            boxShadow:'0 0 14px rgba(251,191,36,.4)',
-          }}>
-            <Box style={{ width:14, height:14, color:'#000' }} />
-          </div>
-          <span style={{
-            fontSize:12, fontWeight:900, letterSpacing:'.15em',
-            background:'linear-gradient(90deg,#fbbf24,#c084fc)',
-            WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
-          }}>LOOTVERSE</span>
-        </Link>
-
-        <div style={{ flex:1, display:'flex', justifyContent:'center' }}>
-          {user && (
-            <Link to={createPageUrl('Deposit')} style={{
-              display:'flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:8,
-              background:'linear-gradient(135deg,#fbbf24,#f59e0b)',
-              textDecoration:'none', boxShadow:'0 0 12px rgba(251,191,36,.3)',
-            }}>
-              <Wallet style={{ width:12, height:12, color:'#000' }} />
-              <span style={{ fontSize:11, fontWeight:900, color:'#000' }}>Deposit</span>
-            </Link>
-          )}
-        </div>
-
-        {user && (
-          <div className="balance-chip" style={{
-            display:'flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:8,
-            background:'rgba(251,191,36,.07)', border:'1px solid rgba(251,191,36,.15)',
-          }}>
-            <CoinIcon size={13} />
-            <span style={{ fontSize:11, fontWeight:900, color:'#fbbf24' }}>
-              {(user.balance || 0).toLocaleString()}
-            </span>
-          </div>
-        )}
-      </header>
-
-      {/* ── Mobile Drawer ── */}
-      {mobileOpen && (
-        <div style={{ position:'fixed', inset:0, zIndex:40 }}>
-          <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.75)' }} onClick={() => setMobileOpen(false)} />
-          <aside style={{
-            position:'absolute', left:0, top:0, bottom:0, width:240,
-            background:'linear-gradient(180deg,#08001a 0%,#04000a 100%)',
-            borderRight:'1px solid rgba(251,191,36,.1)',
-            paddingTop:54, display:'flex', flexDirection:'column', overflow:'hidden',
-          }}>
-            <div style={{ position:'relative', overflow:'hidden', flex:1 }}>
-              <div className="sidebar-scan" />
-              <nav style={{ padding:'10px 0', overflowY:'auto', height:'100%' }}>
-                {NAV_SECTIONS(user?.role).map(section => (
-                  <div key={section.label}>
-                    <div className="sidebar-section-label">{section.label}</div>
-                    {section.items.map(item => {
-                      const active = currentPageName === item.page;
-                      return (
-                        <Link
-                          key={item.page}
-                          to={createPageUrl(item.page)}
-                          className={`nav-link expanded ${active ? 'active nav-active' : ''}`}
-                        >
-                          <item.icon style={{ width:16, height:16, flexShrink:0, color: active ? '#fbbf24' : 'rgba(255,255,255,.3)' }} />
-                          {item.name}
-                          {active && <div style={{ marginLeft:'auto', width:5, height:5, borderRadius:'50%', background:'#a855f7', boxShadow:'0 0 6px #a855f7' }} />}
-                        </Link>
-                      );
-                    })}
-                  </div>
-                ))}
-              </nav>
-            </div>
-
-            {/* Mobile bottom user strip */}
-            {user && (
-              <div style={{ margin:'0 10px 12px', padding:'10px 12px', borderRadius:12, background:'rgba(251,191,36,.05)', border:'1px solid rgba(251,191,36,.1)' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-                  <StableAvatar
-                    avatarUrl={user.avatar_url}
-                    name={user.full_name || user.email}
-                    size={28} fontSize={10}
-                    onClick={() => { setProfileOpen(true); setMobileOpen(false); }}
-                  />
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,.7)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                      {user.full_name || user.email?.split('@')[0] || 'Player'}
-                    </div>
-                    <div style={{ fontSize:9, color:'rgba(251,191,36,.4)', fontWeight:700 }}>Level {level}</div>
-                  </div>
-                  <div style={{ padding:'2px 7px', borderRadius:100, fontSize:9, fontWeight:800, background:'rgba(168,85,247,.15)', border:'1px solid rgba(168,85,247,.3)', color:'#c084fc' }}>Lv{level}</div>
-                </div>
-                <div style={{ height:3, background:'rgba(255,255,255,.06)', borderRadius:99, overflow:'hidden' }}>
-                  <div className="xp-bar" style={{ height:'100%', width:`${xpProgress}%`, borderRadius:99 }} />
-                </div>
-                <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
-                  <span style={{ fontSize:8, color:'rgba(255,255,255,.2)', fontWeight:700 }}>XP</span>
-                  <span style={{ fontSize:8, color:'rgba(251,191,36,.4)', fontWeight:700 }}>{Math.round(xpProgress)}%</span>
-                </div>
-              </div>
-            )}
-          </aside>
-        </div>
-      )}
-
-      {/* ── Profile Modal ── */}
-      {profileOpen && user && <ProfileModal user={user} onClose={() => setProfileOpen(false)} />}
-
-      {/* ── Main ── */}
-      <div style={{ display:'flex', flex:1, minHeight:'100vh', paddingTop:54, marginLeft: sidebarW, transition:'margin-left .3s cubic-bezier(.4,0,.2,1)' }} className="lv-main">
-        <main style={{ flex:1, minWidth:0, overflowY:'auto' }}>
-          <div style={{ maxWidth:900, margin:'0 auto', padding:'20px 20px 40px' }}>
-            {children}
-          </div>
-        </main>
-
-        {/* Chat panel */}
-        <aside style={{
-          display:'none', flexShrink:0,
-          height:'calc(100vh - 54px)', position:'sticky', top:54,
-          background:'linear-gradient(180deg,#08001a 0%,#04000a 100%)',
-          borderLeft:'1px solid rgba(251,191,36,.07)',
-          transition:'width .3s cubic-bezier(.4,0,.2,1)',
-          overflow:'hidden', width: chatOpen ? 260 : 0,
-        }} className="lv-chat">
-          <LiveChat onClose={() => setChatOpen(false)} />
-        </aside>
-
-        {!chatOpen && (
-          <button onClick={() => setChatOpen(true)} style={{
-            display:'none', position:'fixed', bottom:20, right:20, zIndex:50,
-            width:46, height:46, borderRadius:'50%', border:'none', cursor:'pointer',
-            background:'linear-gradient(135deg,#a855f7,#7c3aed)',
-            alignItems:'center', justifyContent:'center',
-            boxShadow:'0 4px 20px rgba(168,85,247,.5)',
-          }} className="lv-chat-btn chat-btn-pulse">
-            <MessageCircle style={{ width:20, height:20, color:'#fff' }} />
+        {/* Tabs */}
+        <div style={{ display: 'flex', margin: '22px 28px 0', borderBottom: '1px solid rgba(255,255,255,.06)', position: 'relative', zIndex: 2 }}>
+          <button className={`auth-tab ${mode === 'signin' ? 'active' : 'inactive'}`} onClick={() => switchMode('signin')}>
+            Sign In
           </button>
-        )}
-      </div>
+          <button className={`auth-tab ${mode === 'signup' ? 'active' : 'inactive'}`} onClick={() => switchMode('signup')}>
+            Sign Up
+          </button>
+        </div>
 
-      <style>{`
-        @media (min-width: 1024px) {
-          .lv-sidebar       { display: flex !important; flex-direction: column; }
-          .lv-header        { display: flex !important; }
-          .lv-mobile-header { display: none !important; }
-          .lv-main          { margin-left: ${sidebarW}px !important; }
-          .lv-chat          { display: flex !important; flex-direction: column; }
-          .lv-chat-btn      { display: flex !important; }
-        }
-        @media (max-width: 1023px) {
-          .lv-main { margin-left: 0 !important; }
-        }
-      `}</style>
+        {/* Form area */}
+        <div style={{ padding: '24px 28px 28px', position: 'relative', zIndex: 2 }}>
+          <AnimatePresence mode="wait">
+
+            {/* ── Verify email step ── */}
+            {verifyStep ? (
+              <motion.form
+                key="verify"
+                onSubmit={handleVerify}
+                initial={{ opacity: 0, x: 18 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -18 }}
+                transition={{ duration: .22 }}
+                style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+              >
+                <div style={{ textAlign: 'center', marginBottom: 4 }}>
+                  <div style={{ fontSize: 36, marginBottom: 8 }}>📧</div>
+                  <p style={{ fontSize: 14, fontWeight: 800, color: '#f0eaff', marginBottom: 4 }}>
+                    Check your email
+                  </p>
+                  <p style={{ fontSize: 12, color: 'rgba(240,234,255,.35)', fontWeight: 600 }}>
+                    We sent a verification code to
+                  </p>
+                  <p style={{ fontSize: 12, color: '#f5c842', fontWeight: 800, marginTop: 2 }}>
+                    {pendingEmail}
+                  </p>
+                </div>
+
+                <div className="auth-input-wrap">
+                  <input
+                    className="auth-input"
+                    type="text"
+                    placeholder="Enter verification code"
+                    value={verifyCode}
+                    onChange={e => setVerifyCode(e.target.value)}
+                    autoComplete="one-time-code"
+                    maxLength={8}
+                    style={{ textAlign: 'center', fontSize: 20, fontWeight: 900, letterSpacing: '.3em', paddingLeft: 14, paddingRight: 14 }}
+                  />
+                </div>
+
+                <AnimatePresence>
+                  {error && (
+                    <motion.div className="auth-error" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                      {error}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <AnimatePresence>
+                  {success && (
+                    <motion.div className="auth-success" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
+                      <span style={{ fontSize: 16 }}>🎉</span>
+                      Account verified! Welcome to the arena.
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
+                <motion.button type="submit" className="auth-submit" disabled={loading} whileTap={{ scale: .98 }} style={{ marginTop: 4 }}>
+                  {loading ? <div className="auth-spinner" /> : <>Verify Email <ArrowRight style={{ width: 16, height: 16 }} /></>}
+                </motion.button>
+
+                <button
+                  type="button"
+                  onClick={() => { setVerifyStep(false); setError(''); setVerifyCode(''); }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(240,234,255,.25)', fontWeight: 700, fontSize: 12, fontFamily: 'Outfit,sans-serif', textAlign: 'center' }}
+                >
+                  ← Back
+                </button>
+              </motion.form>
+
+            ) : (
+
+            /* ── Main sign in / sign up form ── */
+            <motion.form
+              key={mode}
+              onSubmit={handleSubmit}
+              initial={{ opacity: 0, x: mode === 'signup' ? 18 : -18 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: mode === 'signup' ? -18 : 18 }}
+              transition={{ duration: .22 }}
+              style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+            >
+
+              {/* Email */}
+              <Field icon={Mail} type="email" placeholder="Email address" value={email} onChange={setEmail} />
+
+              {/* Password + strength bar */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <Field icon={Lock} placeholder="Password" value={password} onChange={setPw} showToggle showPw={showPw} onToggle={() => setShowPw(v => !v)} />
+                {mode === 'signup' && password.length > 0 && (
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {[1, 2, 3, 4].map(i => (
+                        <div key={i} style={{ flex: 1, height: 3, borderRadius: 3, background: i <= strength ? STRENGTH_COLORS[strength] : 'rgba(255,255,255,.07)', transition: 'background .3s' }} />
+                      ))}
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: STRENGTH_COLORS[strength] || 'rgba(240,234,255,.25)', letterSpacing: '.06em' }}>
+                      {STRENGTH_LABELS[strength] || 'Enter a password'}
+                    </span>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Referral code — signup only */}
+              {mode === 'signup' && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <button type="button" className="auth-referral-toggle" onClick={() => setShowReferral(v => !v)}>
+                    {showReferral ? '▾ Hide referral code' : '▸ Have a referral code?'}
+                  </button>
+                  <AnimatePresence>
+                    {showReferral && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                        <Field icon={Sparkles} placeholder="Referral code (optional)" value={referralCode} onChange={setReferral} />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              )}
+
+              {/* Forgot password — signin only */}
+              {mode === 'signin' && (
+                <div style={{ textAlign: 'right' }}>
+                  <button type="button" className="auth-forgot">Forgot password?</button>
+                </div>
+              )}
+
+              {/* Error */}
+              <AnimatePresence>
+                {error && (
+                  <motion.div className="auth-error" initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                    {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Submit */}
+              <motion.button type="submit" className="auth-submit" disabled={loading} whileTap={{ scale: .98 }} style={{ marginTop: 4 }}>
+                {loading ? (
+                  <div className="auth-spinner" />
+                ) : (
+                  <>{mode === 'signin' ? 'Sign In' : 'Create Account'}<ArrowRight style={{ width: 16, height: 16 }} /></>
+                )}
+              </motion.button>
+
+              {/* Divider */}
+              <div className="auth-divider">
+                <div className="auth-divider-line" />
+                <span className="auth-divider-text">or</span>
+                <div className="auth-divider-line" />
+              </div>
+
+              {/* Guest */}
+              <button type="button" className="auth-guest" onClick={handleGuest}>
+                👻 Continue as Guest
+              </button>
+
+              {/* Switch mode */}
+              <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(240,234,255,.25)', fontWeight: 600, marginTop: 4 }}>
+                {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
+                <button
+                  type="button"
+                  onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f5c842', fontWeight: 800, fontFamily: 'Outfit,sans-serif', fontSize: 12 }}
+                >
+                  {mode === 'signin' ? 'Sign up' : 'Sign in'}
+                </button>
+              </p>
+
+              <p className="auth-badge">🔐 Secured by base44</p>
+
+            </motion.form>
+            )} {/* end verifyStep ternary */}
+
+          </AnimatePresence>
+        </div>
+
+        {/* Bottom accent */}
+        <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,rgba(157,111,255,.2),transparent)' }} />
+      </motion.div>
     </div>
   );
 }
