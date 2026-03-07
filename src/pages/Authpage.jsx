@@ -494,8 +494,8 @@ export default function Authpage() {
       // Now the session is live — sync our User entity with game defaults
       await syncBase44User({
         email: pendingEmail,
-        full_name: username,
-        username,
+        full_name: username,  // base44 internal display name
+        username,             // our custom username field on the User entity
         referred_by: referralCode,
       });
       setSuccess(true);
@@ -518,6 +518,19 @@ export default function Authpage() {
     if (mode === 'signup' && !username.trim()) { setError('Username is required'); return; }
     if (mode === 'signup' && strength < 2)     { setError('Password is too weak'); return; }
 
+    // Check username uniqueness before registering
+    if (mode === 'signup') {
+      try {
+        const existing = await Users.filter({ username: username.trim() });
+        if (existing?.length > 0) {
+          setError('That username is already taken. Please choose another.');
+          return;
+        }
+      } catch (_) {
+        // If the check fails for any reason, allow through and let the server handle it
+      }
+    }
+
     setLoading(true);
     try {
       if (mode === 'signin') {
@@ -531,6 +544,8 @@ export default function Authpage() {
         await base44.auth.register({
           email,
           password,
+          // full_name is the display name base44 uses internally;
+          // we use the username they entered for both so it shows correctly
           full_name: username,
         });
         // Registration sent a verification email — show code input step
