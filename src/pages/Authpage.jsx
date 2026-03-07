@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight, ShieldCheck } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { base44 } from '@/api/base44Client';
@@ -311,6 +311,31 @@ const CSS = `
 }
 .am-forgot:hover { color: #f5c842; }
 
+/* ── OTP Input ── */
+.am-otp-grid { display: flex; gap: 8px; justify-content: center; }
+.am-otp-cell {
+  width: 46px; height: 54px; border-radius: 12px; text-align: center;
+  font-family: 'Cinzel', serif; font-size: 22px; font-weight: 700; color: #f5c842;
+  background: rgba(157,78,221,.08); border: 1px solid rgba(157,78,221,.25);
+  outline: none; caret-color: #f5c842;
+  transition: border-color .2s, background .2s, box-shadow .2s;
+}
+.am-otp-cell:focus {
+  border-color: rgba(245,200,66,.5);
+  background: rgba(245,200,66,.06);
+  box-shadow: 0 0 0 3px rgba(245,200,66,.08), 0 0 20px rgba(157,78,221,.15);
+}
+.am-otp-cell.filled {
+  border-color: rgba(245,200,66,.35);
+  background: rgba(245,200,66,.05);
+}
+.am-resend-btn {
+  background: none; border: none; cursor: pointer;
+  font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700;
+  color: rgba(245,200,66,.4); transition: color .2s; padding: 0;
+}
+.am-resend-btn:hover { color: #f5c842; }
+
 @keyframes am-scan {
   0%  { top: -1px; opacity: 0; }
   5%  { opacity: .4; }
@@ -386,6 +411,12 @@ export default function Authpage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [pendingEmail, setPendingEmail] = useState('');
+  const [pendingUsername, setPendingUsername] = useState('');
+  const [pendingReferral, setPendingReferral] = useState('');
+  const otpRefs = useRef([]);
 
   const strength = mode === 'signup' ? getStrength(password) : 0;
 
@@ -394,6 +425,7 @@ export default function Authpage() {
   const switchMode = (m) => {
     setMode(m); setError(''); setEmail(''); setPw(''); setUn('');
     setReferral(''); setShowReferral(false); setSuccess(false);
+    setVerifying(false); setOtp(['', '', '', '', '', '']);
   };
 
   const handleSubmit = async (e) => {
@@ -411,9 +443,13 @@ export default function Authpage() {
         window.location.reload();
       } else {
         await base44.auth.register({ email, password, full_name: username });
-        await syncBase44User({ email, full_name: username, username, referred_by: referralCode });
-        setSuccess(true);
-        setTimeout(() => window.location.reload(), 1800);
+        // Store pending info and show OTP verification screen
+        setPendingEmail(email);
+        setPendingUsername(username);
+        setPendingReferral(referralCode);
+        setVerifying(true);
+        setOtp(['', '', '', '', '', '']);
+        setTimeout(() => otpRefs.current[0]?.focus(), 100);
       }
     } catch (err) {
       const msg = err?.message || err?.error || 'Something went wrong. Please try again.';
@@ -431,7 +467,54 @@ export default function Authpage() {
     }
   };
 
-  const handleGuest = () => navigate('/Home');
+  const handleOtpChange = (i, val) => {
+    if (!/^\d?$/.test(val)) return;
+    const next = [...otp];
+    next[i] = val;
+    setOtp(next);
+    if (val && i < 5) otpRefs.current[i + 1]?.focus();
+  };
+
+  const handleOtpKeyDown = (i, e) => {
+    if (e.key === 'Backspace' && !otp[i] && i > 0) otpRefs.current[i - 1]?.focus();
+    if (e.key === 'ArrowLeft' && i > 0) otpRefs.current[i - 1]?.focus();
+    if (e.key === 'ArrowRight' && i < 5) otpRefs.current[i + 1]?.focus();
+  };
+
+  const handleOtpPaste = (e) => {
+    const pasted = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 6);
+    if (pasted.length === 6) {
+      setOtp(pasted.split(''));
+      otpRefs.current[5]?.focus();
+      e.preventDefault();
+    }
+  };
+
+  const handleVerify = async (e) => {
+    e.preventDefault();
+    const code = otp.join('');
+    if (code.length < 6) { setError('Please enter the full 6-digit code'); return; }
+    setError('');
+    setLoading(true);
+    try {
+      await base44.auth.verifyEmail({ email: pendingEmail, code });
+      await syncBase44User({ email: pendingEmail, full_name: pendingUsername, username: pendingUsername, referred_by: pendingReferral });
+      setSuccess(true);
+      setTimeout(() => window.location.reload(), 1800);
+    } catch (err) {
+      const msg = err?.message || err?.error || 'Invalid code. Please try again.';
+      setError(msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('code') ? 'Invalid or expired code.' : msg);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    setError('');
+    try {
+      await base44.auth.resendVerificationEmail({ email: pendingEmail });
+    } catch (_) {}
+  };
 
   return (
     <div className="am-root">
@@ -495,13 +578,113 @@ export default function Authpage() {
           </motion.p>
         </div>
 
-        {/* Tabs */}
+        {/* Tabs — hidden during verify */}
+        {!verifying && (
         <div style={{ display: 'flex', margin: '22px 28px 0', borderBottom: '1px solid rgba(157,78,221,.15)', position: 'relative', zIndex: 2 }}>
           <button className={`am-tab ${mode === 'signin' ? 'active' : 'inactive'}`} onClick={() => switchMode('signin')}>Sign In</button>
           <button className={`am-tab ${mode === 'signup' ? 'active' : 'inactive'}`} onClick={() => switchMode('signup')}>Sign Up</button>
         </div>
+        )}
+
+        {/* Verify email screen */}
+        {verifying && (
+          <div style={{ padding: '28px 28px 32px', position: 'relative', zIndex: 2 }}>
+            <motion.form
+              onSubmit={handleVerify}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: .25 }}
+              style={{ display: 'flex', flexDirection: 'column', gap: 20, alignItems: 'center' }}
+            >
+              {/* Icon */}
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ type: 'spring', stiffness: 280, damping: 20 }}
+                style={{
+                  width: 60, height: 60, borderRadius: 16,
+                  background: 'linear-gradient(135deg, rgba(157,78,221,.2), rgba(245,200,66,.1))',
+                  border: '1px solid rgba(245,200,66,.25)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  boxShadow: '0 0 30px rgba(157,78,221,.2)',
+                }}
+              >
+                <ShieldCheck style={{ width: 26, height: 26, color: '#f5c842' }} />
+              </motion.div>
+
+              <div style={{ textAlign: 'center' }}>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#f0eaff', marginBottom: 6, fontFamily: 'Cinzel, serif', letterSpacing: '.06em' }}>
+                  Verify Your Email
+                </div>
+                <div style={{ fontSize: 12, color: 'rgba(192,132,252,.4)', fontWeight: 600, lineHeight: 1.6 }}>
+                  We sent a 6-digit code to<br />
+                  <span style={{ color: '#f5c842', fontWeight: 700 }}>{pendingEmail}</span>
+                </div>
+              </div>
+
+              {/* OTP boxes */}
+              <div className="am-otp-grid" onPaste={handleOtpPaste}>
+                {otp.map((digit, i) => (
+                  <input
+                    key={i}
+                    ref={el => otpRefs.current[i] = el}
+                    className={`am-otp-cell${digit ? ' filled' : ''}`}
+                    type="text"
+                    inputMode="numeric"
+                    maxLength={1}
+                    value={digit}
+                    onChange={e => handleOtpChange(i, e.target.value)}
+                    onKeyDown={e => handleOtpKeyDown(i, e)}
+                  />
+                ))}
+              </div>
+
+              {/* Error */}
+              <AnimatePresence>
+                {error && (
+                  <motion.div className="am-error" style={{ width: '100%', textAlign: 'center' }}
+                    initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}>
+                    {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Success */}
+              <AnimatePresence>
+                {success && (
+                  <motion.div className="am-success" style={{ width: '100%', justifyContent: 'center' }}
+                    initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}>
+                    <span style={{ fontSize: 16 }}>💎</span> Email verified! Welcome to Amethyst.
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Verify button */}
+              <motion.button
+                type="submit"
+                className="am-submit"
+                disabled={loading || otp.join('').length < 6}
+                whileTap={{ scale: .97 }}
+                style={{ width: '100%' }}
+              >
+                {loading ? <div className="am-spinner" /> : (<>Verify Email <ShieldCheck style={{ width: 16, height: 16 }} /></>)}
+              </motion.button>
+
+              {/* Resend + back */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                <button type="button" className="am-resend-btn" onClick={handleResend}>
+                  ↺ Resend code
+                </button>
+                <button type="button" className="am-resend-btn" onClick={() => { setVerifying(false); setError(''); setOtp(['','','','','','']); }}>
+                  ← Back
+                </button>
+              </div>
+            </motion.form>
+          </div>
+        )}
 
         {/* Form */}
+        {!verifying && (
         <div style={{ padding: '24px 28px 28px', position: 'relative', zIndex: 2 }}>
           <AnimatePresence mode="wait">
             <motion.form
@@ -608,6 +791,7 @@ export default function Authpage() {
             </motion.form>
           </AnimatePresence>
         </div>
+        )}
 
         <div style={{ height: 1, background: 'linear-gradient(90deg,transparent,rgba(157,78,221,.25),transparent)' }} />
       </motion.div>
