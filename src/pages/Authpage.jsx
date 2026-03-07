@@ -182,10 +182,10 @@ const CSS = `
 /* ── Logo gem ── */
 @keyframes am-gem-pulse {
   0%,100% {
-    filter: drop-shadow(0 0 8px rgba(245,200,66,.4)) drop-shadow(0 0 20px rgba(168,85,247,.3));
+    filter: drop-shadow(0 0 6px rgba(245,200,66,.3)) drop-shadow(0 0 16px rgba(168,85,247,.2));
   }
   50% {
-    filter: drop-shadow(0 0 16px rgba(245,200,66,.7)) drop-shadow(0 0 40px rgba(245,200,66,.3)) drop-shadow(0 0 60px rgba(168,85,247,.2));
+    filter: drop-shadow(0 0 12px rgba(245,200,66,.55)) drop-shadow(0 0 28px rgba(168,85,247,.35)) drop-shadow(0 0 50px rgba(124,58,237,.15));
   }
 }
 .am-gem { animation: am-gem-pulse 3s ease-in-out infinite; }
@@ -508,18 +508,23 @@ const Field = ({ icon: Icon, type = 'text', placeholder, value, onChange, showTo
 
 /* ── Logo gem SVG ── */
 const GemLogo = () => (
-  <svg width="32" height="32" viewBox="0 0 32 32" fill="none" className="am-gem">
-    <polygon points="16,2 28,10 24,28 8,28 4,10" fill="url(#ggrad)" fillOpacity=".9"/>
-    <polygon points="16,2 28,10 16,16" fill="rgba(221,214,254,.12)"/>
-    <polygon points="16,2 4,10 16,16" fill="rgba(221,214,254,.06)"/>
-    <polygon points="16,16 28,10 24,28" fill="rgba(0,0,0,.2)"/>
-    <polygon points="16,16 4,10 8,28" fill="rgba(0,0,0,.1)"/>
-    <polyline points="16,2 28,10 24,28 8,28 4,10 16,2" stroke="rgba(192,132,252,.6)" strokeWidth="0.8" fill="none"/>
+  <svg width="48" height="48" viewBox="0 0 32 32" fill="none" className="am-gem">
+    <polygon points="16,2 28,10 24,28 8,28 4,10" fill="url(#ggrad)" fillOpacity=".55"/>
+    <polygon points="16,2 28,10 16,16" fill="rgba(255,255,255,.1)"/>
+    <polygon points="16,2 4,10 16,16" fill="rgba(255,255,255,.05)"/>
+    <polygon points="16,16 28,10 24,28" fill="rgba(0,0,0,.15)"/>
+    <polygon points="16,16 4,10 8,28" fill="rgba(0,0,0,.08)"/>
+    {/* Edge gleams */}
+    <line x1="16" y1="2" x2="28" y2="10" stroke="rgba(245,200,66,.5)" strokeWidth="0.8"/>
+    <line x1="16" y1="2" x2="4" y2="10" stroke="rgba(245,200,66,.25)" strokeWidth="0.5"/>
+    <polyline points="16,2 28,10 24,28 8,28 4,10 16,2" stroke="rgba(192,132,252,.35)" strokeWidth="0.6" fill="none"/>
+    {/* Inner sparkle */}
+    <circle cx="16" cy="11" r="1.2" fill="rgba(255,255,255,.45)"/>
     <defs>
       <linearGradient id="ggrad" x1="4" y1="2" x2="28" y2="28" gradientUnits="userSpaceOnUse">
-        <stop offset="0%" stopColor="#a855f7"/>
-        <stop offset="50%" stopColor="#7c3aed"/>
-        <stop offset="100%" stopColor="#4c1d95"/>
+        <stop offset="0%" stopColor="#c084fc" stopOpacity="0.9"/>
+        <stop offset="40%" stopColor="#7c3aed" stopOpacity="0.8"/>
+        <stop offset="100%" stopColor="#4c1d95" stopOpacity="0.7"/>
       </linearGradient>
     </defs>
   </svg>
@@ -637,12 +642,12 @@ export default function Authpage() {
             width: 62,
             height: 62,
             borderRadius: 18,
-            background: 'linear-gradient(135deg, rgba(245,200,66,.1), rgba(124,58,237,.12))',
-            border: '1px solid rgba(245,200,66,.2)',
+            background: 'transparent',
+            border: 'none',
             marginBottom: 14,
             position: 'relative',
           }}>
-            <div style={{ position: 'absolute', top: 6, right: 6, width: 3, height: 3, borderRadius: '50%', background: '#f5c842', boxShadow: '0 0 6px #f5c842' }}/>
+            <div style={{ position: 'absolute', top: 6, right: 6, width: 3, height: 3, borderRadius: '50%', background: '#f5c842', boxShadow: '0 0 6px #f5c842', opacity: .7 }}/>
             <GemLogo />
           </div>
 
