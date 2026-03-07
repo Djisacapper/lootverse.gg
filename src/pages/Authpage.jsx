@@ -1,100 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
-import { base44 } from '@/api/base44Client';
-
-/* ─── base44 entity shorthand ────────────────────────────────────── */
-const Users = base44.entities.User;
-
-/* ─── Clerk config ───────────────────────────────────────────────── */
-const CLERK_PUBLISHABLE_KEY = 'pk_live_Y2xlcmsuYmFzZTQ0LmFwcCQ';
-
-/* ─── Load Clerk JS SDK via script tag ───────────────────────────── */
-// Loading via script tag avoids CORS issues that occur when calling
-// Clerk's API directly via fetch from a different origin.
-function loadClerkScript() {
-  return new Promise((resolve, reject) => {
-    // Already loaded
-    if (window.Clerk) {
-      resolve(window.Clerk);
-      return;
-    }
-    // Script tag already injected but not yet loaded
-    const existing = document.getElementById('clerk-js');
-    if (existing) {
-      existing.addEventListener('load', () => resolve(window.Clerk));
-      return;
-    }
-    // Inject the script tag
-    const script = document.createElement('script');
-    script.id = 'clerk-js';
-    script.src = `https://cdnjs.cloudflare.com/ajax/libs/clerk-js/5.58.0-canary.v20250326115904/clerk.browser.js`;
-    script.setAttribute('data-clerk-publishable-key', CLERK_PUBLISHABLE_KEY);
-    script.crossOrigin = 'anonymous';
-    script.onload = async () => {
-      try {
-        await window.Clerk.load({ publishableKey: CLERK_PUBLISHABLE_KEY });
-        resolve(window.Clerk);
-      } catch (e) {
-        reject(e);
-      }
-    };
-    script.onerror = () => reject(new Error('Failed to load Clerk script'));
-    document.head.appendChild(script);
-  });
-}
-
-/* ─── base44 helpers ─────────────────────────────────────────────── */
-function generateAffiliateCode() {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-  let code = 'CR-';
-  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
-  return code;
-}
-
-async function syncBase44User({
-  email,
-  full_name,
-  username = '',
-  avatar_url = '',
-  referred_by = '',
-  is_anonymous = false,
-}) {
-  let existing = null;
-  try {
-    const results = await Users.filter({ email });
-    if (results?.length > 0) existing = results[0];
-  } catch (_) {}
-
-  if (existing) {
-    return Users.update(existing.id, { full_name, avatar_url });
-  }
-
-  return Users.create({
-    email,
-    full_name,
-    username,
-    avatar_url,
-    role: 'user',
-    balance: 1000,
-    xp: 0,
-    level: 1,
-    is_anonymous,
-    affiliate_code: generateAffiliateCode(),
-    referred_by,
-    total_deposited: 0,
-    affiliate_earnings: 0,
-    affiliate_earnings_claimable: 0,
-    rakeback_instant: 0,
-    rakeback_daily: 0,
-    rakeback_weekly: 0,
-    rakeback_monthly: 0,
-    total_rakeback_claimed: 0,
-    rakeback_daily_claimed_at: '',
-    rakeback_weekly_claimed_at: '',
-    rakeback_monthly_claimed_at: '',
-  });
-}
+import { ArrowRight, Sparkles, User, LogIn } from 'lucide-react';
+import { useAuth } from '@/lib/AuthContext';
+import { useNavigate } from 'react-router-dom';
 
 /* ─── CSS ─────────────────────────────────────────────────────────── */
 const CSS = `
@@ -190,63 +98,10 @@ const CSS = `
   z-index: 10;
 }
 
-/* ── Input ── */
-.auth-input-wrap {
-  position: relative;
+/* ── Primary button (Sign In) ── */
+.auth-btn-primary {
   width: 100%;
-}
-.auth-input {
-  width: 100%;
-  padding: 13px 44px 13px 44px;
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.08);
-  border-radius: 12px;
-  outline: none;
-  color: #f0eaff;
-  font-family: 'Outfit', sans-serif;
-  font-size: 14px;
-  font-weight: 600;
-  transition: border-color .2s, background .2s, box-shadow .2s;
-}
-.auth-input::placeholder { color: rgba(240,234,255,.2); }
-.auth-input:focus {
-  border-color: rgba(245,200,66,.4);
-  background: rgba(245,200,66,.04);
-  box-shadow: 0 0 0 3px rgba(245,200,66,.06);
-}
-.auth-input.error {
-  border-color: rgba(255,78,106,.4);
-  background: rgba(255,78,106,.04);
-}
-.auth-input-icon {
-  position: absolute;
-  left: 14px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: rgba(240,234,255,.2);
-  pointer-events: none;
-  transition: color .2s;
-}
-.auth-input:focus ~ .auth-input-icon,
-.auth-input-wrap:focus-within .auth-input-icon { color: rgba(245,200,66,.5); }
-.auth-eye-btn {
-  position: absolute;
-  right: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  color: rgba(240,234,255,.2);
-  transition: color .2s;
-}
-.auth-eye-btn:hover { color: rgba(245,200,66,.6); }
-
-/* ── Submit button ── */
-.auth-submit {
-  width: 100%;
-  padding: 14px;
+  padding: 15px;
   border: none;
   cursor: pointer;
   border-radius: 12px;
@@ -262,43 +117,41 @@ const CSS = `
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
 }
-.auth-submit:hover:not(:disabled) {
+.auth-btn-primary:hover {
   transform: translateY(-2px) scale(1.02);
   box-shadow: 0 0 48px rgba(245,200,66,.5), 0 8px 24px rgba(0,0,0,.6);
   background-position: 100%;
 }
-.auth-submit:active:not(:disabled) { transform: scale(.98); }
-.auth-submit:disabled { opacity: .4; cursor: not-allowed; }
+.auth-btn-primary:active { transform: scale(.98); }
 
-/* ── Tab toggle ── */
-.auth-tab {
-  flex: 1;
-  padding: 12px;
-  border: none;
+/* ── Secondary button (Sign Up) ── */
+.auth-btn-secondary {
+  width: 100%;
+  padding: 15px;
   cursor: pointer;
-  background: transparent;
+  border-radius: 12px;
   font-family: 'Outfit', sans-serif;
-  font-size: 13px;
-  font-weight: 800;
-  transition: color .2s;
-  position: relative;
+  font-size: 15px;
+  font-weight: 900;
+  letter-spacing: .02em;
+  background: transparent;
+  border: 1px solid rgba(245,200,66,.3);
+  color: #f5c842;
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
 }
-.auth-tab::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 20%;
-  right: 20%;
-  height: 2px;
-  border-radius: 2px;
-  transition: opacity .2s, background .2s;
+.auth-btn-secondary:hover {
+  background: rgba(245,200,66,.08);
+  border-color: rgba(245,200,66,.6);
+  transform: translateY(-2px);
+  box-shadow: 0 0 24px rgba(245,200,66,.15);
 }
-.auth-tab.active { color: #f5c842; }
-.auth-tab.active::after { background: #f5c842; opacity: 1; }
-.auth-tab.inactive { color: rgba(240,234,255,.25); }
-.auth-tab.inactive::after { opacity: 0; }
+.auth-btn-secondary:active { transform: scale(.98); }
 
 /* ── Guest button ── */
 .auth-guest {
@@ -320,34 +173,24 @@ const CSS = `
   color: #c084fc;
 }
 
-/* ── Error toast ── */
-.auth-error {
-  padding: 10px 14px;
-  border-radius: 10px;
-  background: rgba(255,78,106,.1);
-  border: 1px solid rgba(255,78,106,.25);
-  color: #ff4e6a;
-  font-size: 12px;
+/* ── Feature pills ── */
+.auth-features {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.auth-feature-pill {
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 10px;
   font-weight: 700;
-}
-
-/* ── Success state ── */
-@keyframes auth-success-pop {
-  0%  { transform: scale(.5) rotate(-10deg); opacity: 0; }
-  60% { transform: scale(1.15) rotate(2deg); }
-  100%{ transform: scale(1) rotate(0); opacity: 1; }
-}
-.auth-success-icon { animation: auth-success-pop .5s cubic-bezier(.34,1.56,.64,1) forwards; }
-
-/* ── Spinner ── */
-@keyframes auth-spin { to { transform: rotate(360deg); } }
-.auth-spinner {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  border: 2px solid rgba(0,0,0,.2);
-  border-top-color: #000;
-  animation: auth-spin .7s linear infinite;
+  letter-spacing: .06em;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.07);
+  color: rgba(240,234,255,.3);
+  text-transform: uppercase;
 }
 
 /* ── Logo pulse ── */
@@ -357,27 +200,24 @@ const CSS = `
 }
 .auth-logo { animation: auth-logo-glow 2.5s ease-in-out infinite; }
 
-/* ── Referral toggle ── */
-.auth-referral-toggle {
-  font-size: 11px;
-  font-weight: 700;
-  color: rgba(245,200,66,.4);
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 0;
-  transition: color .2s;
-  text-align: left;
+/* ── Divider ── */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0;
 }
-.auth-referral-toggle:hover { color: rgba(245,200,66,.8); }
-
-/* ── Clerk badge ── */
-.clerk-badge {
-  text-align: center;
+.auth-divider-line {
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,.06);
+}
+.auth-divider-text {
   font-size: 10px;
-  color: rgba(240,234,255,.12);
-  font-weight: 600;
-  margin-top: 2px;
+  font-weight: 700;
+  color: rgba(240,234,255,.2);
+  letter-spacing: .14em;
+  text-transform: uppercase;
 }
 `;
 
@@ -413,159 +253,31 @@ const Particles = ({ count = 14 }) => {
   );
 };
 
-/* ─── Password strength ──────────────────────────────────────────── */
-const getStrength = (pw) => {
-  let score = 0;
-  if (pw.length >= 8) score++;
-  if (/[A-Z]/.test(pw)) score++;
-  if (/[0-9]/.test(pw)) score++;
-  if (/[^A-Za-z0-9]/.test(pw)) score++;
-  return score;
-};
-const STRENGTH_LABELS = ['', 'Weak', 'Fair', 'Good', 'Strong'];
-const STRENGTH_COLORS = ['', '#ff4e6a', '#fbbf24', '#34d399', '#00e5a0'];
-
-/* ─── Input Field ────────────────────────────────────────────────── */
-const Field = ({ icon: Icon, type = 'text', placeholder, value, onChange, error, showToggle, onToggle, showPw }) => (
-  <div className="auth-input-wrap">
-    <input
-      className={`auth-input${error ? ' error' : ''}`}
-      type={showToggle ? (showPw ? 'text' : 'password') : type}
-      placeholder={placeholder}
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      autoComplete="off"
-    />
-    <div className="auth-input-icon">
-      <Icon style={{ width: 15, height: 15 }} />
-    </div>
-    {showToggle && (
-      <button type="button" className="auth-eye-btn" onClick={onToggle}>
-        {showPw
-          ? <EyeOff style={{ width: 14, height: 14 }} />
-          : <Eye style={{ width: 14, height: 14 }} />}
-      </button>
-    )}
-  </div>
-);
-
 /* ─── Main ───────────────────────────────────────────────────────── */
-export default function AuthPage() {
-  const [mode, setMode]                 = useState('signin');
-  const [email, setEmail]               = useState('');
-  const [password, setPw]               = useState('');
-  const [username, setUn]               = useState('');
-  const [referralCode, setReferral]     = useState('');
-  const [showReferral, setShowReferral] = useState(false);
-  const [showPw, setShowPw]             = useState(false);
-  const [loading, setLoading]           = useState(false);
-  const [error, setError]               = useState('');
-  const [success, setSuccess]           = useState(false);
-  const [clerkReady, setClerkReady]     = useState(false);
+export default function Authpage() {
+  const { isAuthenticated, navigateToLogin } = useAuth();
+  const navigate = useNavigate();
 
-  const strength = mode === 'signup' ? getStrength(password) : 0;
-
-  // Load Clerk SDK on mount
+  // If already logged in, go straight to Home
   useEffect(() => {
-    loadClerkScript()
-      .then(() => setClerkReady(true))
-      .catch(() => setError('Failed to load auth system. Please refresh.'));
-  }, []);
-
-  const switchMode = (m) => {
-    setMode(m);
-    setError('');
-    setEmail('');
-    setPw('');
-    setUn('');
-    setReferral('');
-    setShowReferral(false);
-    setSuccess(false);
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-
-    if (!clerkReady)                                { setError('Auth system still loading, please wait...'); return; }
-    if (!email.trim())                              { setError('Email is required'); return; }
-    if (!password)                                  { setError('Password is required'); return; }
-    if (mode === 'signup' && !username.trim())      { setError('Username is required'); return; }
-    if (mode === 'signup' && strength < 2)          { setError('Password is too weak'); return; }
-
-    setLoading(true);
-    try {
-      const clerk = window.Clerk;
-
-      if (mode === 'signin') {
-        // 1. Sign in via Clerk SDK
-        const signIn = await clerk.client.signIn.create({
-          identifier: email,
-          password,
-        });
-
-        if (signIn.status === 'complete') {
-          await clerk.setActive({ session: signIn.createdSessionId });
-          // 2. Pull base44 user record, create if missing
-          const results = await Users.filter({ email });
-          if (!results?.[0]) {
-            await syncBase44User({ email, full_name: email.split('@')[0] });
-          }
-          // 3. Reload so base44 AuthContext re-checks and lets the user through
-          window.location.reload();
-        } else {
-          throw new Error('Sign-in incomplete. Please try again.');
-        }
-
-      } else {
-        // 1. Sign up via Clerk SDK
-        const signUp = await clerk.client.signUp.create({
-          emailAddress: email,
-          password,
-          username,
-        });
-
-        if (signUp.status === 'complete') {
-          await clerk.setActive({ session: signUp.createdSessionId });
-          // 2. Create base44 record with all game defaults
-          await syncBase44User({
-            email,
-            full_name: username,
-            username,
-            referred_by: referralCode,
-          });
-          // 3. Show success then reload
-          setSuccess(true);
-          setTimeout(() => window.location.reload(), 1800);
-
-        } else if (signUp.status === 'missing_requirements') {
-          // Email verification required
-          await signUp.prepareEmailAddressVerification({ strategy: 'email_code' });
-          throw new Error('Check your email for a verification code, then sign in.');
-        } else {
-          throw new Error('Sign-up incomplete. Please try again.');
-        }
-      }
-    } catch (err) {
-      const clerkMsg = err?.errors?.[0]?.longMessage || err?.errors?.[0]?.message;
-      setError(clerkMsg || err?.message || 'Something went wrong');
-    } finally {
-      setLoading(false);
+    if (isAuthenticated) {
+      navigate('/Home');
     }
+  }, [isAuthenticated]);
+
+  const handleSignIn = () => {
+    // Triggers base44's native login modal
+    navigateToLogin();
   };
 
-  const handleGuest = async () => {
-    const guestId = Math.floor(1000 + Math.random() * 9000);
-    try {
-      await syncBase44User({
-        email: `guest_${guestId}@caserift.app`,
-        full_name: `Anonymous #${guestId}`,
-        username: `Anonymous #${guestId}`,
-        is_anonymous: true,
-      });
-    } catch (_) {}
-    // Reload so base44 AuthContext picks up the guest session
-    window.location.reload();
+  const handleSignUp = () => {
+    // Triggers base44's native login modal (sign up tab)
+    navigateToLogin();
+  };
+
+  const handleGuest = () => {
+    // Skip auth entirely — go straight to Home as guest
+    navigate('/Home');
   };
 
   return (
@@ -593,246 +305,74 @@ export default function AuthPage() {
         <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#f5c842,#9d6fff,transparent)' }} />
 
         {/* Logo area */}
-        <div style={{ padding: '28px 28px 0', textAlign: 'center', position: 'relative', zIndex: 2 }}>
+        <div style={{ padding: '36px 28px 0', textAlign: 'center', position: 'relative', zIndex: 2 }}>
           <div className="auth-logo" style={{
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 58,
-            height: 58,
-            borderRadius: 16,
+            width: 64,
+            height: 64,
+            borderRadius: 18,
             background: 'linear-gradient(135deg,rgba(245,200,66,.15),rgba(157,111,255,.1))',
             border: '1px solid rgba(245,200,66,.25)',
-            marginBottom: 14,
+            marginBottom: 16,
           }}>
-            <Sparkles style={{ width: 26, height: 26, color: '#f5c842' }} />
+            <Sparkles style={{ width: 28, height: 28, color: '#f5c842' }} />
           </div>
-          <h1 className="auth-title" style={{ fontSize: 28, fontWeight: 700, color: '#f0eaff', letterSpacing: '.04em', marginBottom: 4 }}>
+          <h1 className="auth-title" style={{ fontSize: 34, fontWeight: 700, color: '#f0eaff', letterSpacing: '.06em', marginBottom: 6 }}>
             CASERIFT
           </h1>
-          <p style={{ fontSize: 12, color: 'rgba(240,234,255,.3)', fontWeight: 600, letterSpacing: '.08em' }}>
-            {mode === 'signin' ? 'Welcome back, player' : 'Join the arena'}
+          <p style={{ fontSize: 13, color: 'rgba(240,234,255,.35)', fontWeight: 600, letterSpacing: '.06em', marginBottom: 20 }}>
+            The ultimate case opening experience
           </p>
+
+          {/* Feature pills */}
+          <div className="auth-features">
+            <span className="auth-feature-pill">🎰 Case Opening</span>
+            <span className="auth-feature-pill">⚔️ Battles</span>
+            <span className="auth-feature-pill">🪙 Coinflip</span>
+            <span className="auth-feature-pill">📈 Crash</span>
+          </div>
         </div>
 
-        {/* Tab toggle */}
-        <div style={{ display: 'flex', margin: '22px 28px 0', borderBottom: '1px solid rgba(255,255,255,.06)', position: 'relative', zIndex: 2 }}>
-          <button className={`auth-tab ${mode === 'signin' ? 'active' : 'inactive'}`} onClick={() => switchMode('signin')}>
+        {/* Buttons */}
+        <div style={{ padding: '28px 28px 32px', display: 'flex', flexDirection: 'column', gap: 12, position: 'relative', zIndex: 2 }}>
+
+          {/* Sign In */}
+          <motion.button
+            className="auth-btn-primary"
+            onClick={handleSignIn}
+            whileTap={{ scale: .98 }}
+          >
+            <LogIn style={{ width: 18, height: 18 }} />
             Sign In
+          </motion.button>
+
+          {/* Sign Up */}
+          <motion.button
+            className="auth-btn-secondary"
+            onClick={handleSignUp}
+            whileTap={{ scale: .98 }}
+          >
+            <User style={{ width: 18, height: 18 }} />
+            Create Account
+          </motion.button>
+
+          {/* Divider */}
+          <div className="auth-divider">
+            <div className="auth-divider-line" />
+            <span className="auth-divider-text">or</span>
+            <div className="auth-divider-line" />
+          </div>
+
+          {/* Guest */}
+          <button type="button" className="auth-guest" onClick={handleGuest}>
+            👻 Continue as Guest
           </button>
-          <button className={`auth-tab ${mode === 'signup' ? 'active' : 'inactive'}`} onClick={() => switchMode('signup')}>
-            Sign Up
-          </button>
-        </div>
 
-        {/* Form */}
-        <div style={{ padding: '24px 28px 28px', position: 'relative', zIndex: 2 }}>
-          <AnimatePresence mode="wait">
-            <motion.form
-              key={mode}
-              onSubmit={handleSubmit}
-              initial={{ opacity: 0, x: mode === 'signup' ? 18 : -18 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: mode === 'signup' ? -18 : 18 }}
-              transition={{ duration: .22 }}
-              style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
-            >
-              {/* Username — signup only */}
-              {mode === 'signup' && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                >
-                  <Field
-                    icon={User}
-                    placeholder="Username"
-                    value={username}
-                    onChange={setUn}
-                  />
-                </motion.div>
-              )}
-
-              {/* Email */}
-              <Field
-                icon={Mail}
-                type="email"
-                placeholder="Email address"
-                value={email}
-                onChange={setEmail}
-              />
-
-              {/* Password + strength bar */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <Field
-                  icon={Lock}
-                  placeholder="Password"
-                  value={password}
-                  onChange={setPw}
-                  showToggle
-                  showPw={showPw}
-                  onToggle={() => setShowPw(v => !v)}
-                />
-
-                {mode === 'signup' && password.length > 0 && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    style={{ display: 'flex', flexDirection: 'column', gap: 5 }}
-                  >
-                    <div style={{ display: 'flex', gap: 4 }}>
-                      {[1, 2, 3, 4].map(i => (
-                        <div key={i} style={{
-                          flex: 1,
-                          height: 3,
-                          borderRadius: 3,
-                          background: i <= strength ? STRENGTH_COLORS[strength] : 'rgba(255,255,255,.07)',
-                          transition: 'background .3s',
-                        }} />
-                      ))}
-                    </div>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: STRENGTH_COLORS[strength] || 'rgba(240,234,255,.25)', letterSpacing: '.06em' }}>
-                      {STRENGTH_LABELS[strength] || 'Enter a password'}
-                    </span>
-                  </motion.div>
-                )}
-              </div>
-
-              {/* Referral code — signup only */}
-              {mode === 'signup' && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  style={{ display: 'flex', flexDirection: 'column', gap: 6 }}
-                >
-                  <button
-                    type="button"
-                    className="auth-referral-toggle"
-                    onClick={() => setShowReferral(v => !v)}
-                  >
-                    {showReferral ? '▾ Hide referral code' : '▸ Have a referral code?'}
-                  </button>
-                  <AnimatePresence>
-                    {showReferral && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                      >
-                        <Field
-                          icon={Sparkles}
-                          placeholder="Referral code (optional)"
-                          value={referralCode}
-                          onChange={setReferral}
-                        />
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </motion.div>
-              )}
-
-              {/* Forgot password — signin only */}
-              {mode === 'signin' && (
-                <div style={{ textAlign: 'right' }}>
-                  <button
-                    type="button"
-                    style={{ fontSize: 11, fontWeight: 700, color: 'rgba(245,200,66,.5)', background: 'none', border: 'none', cursor: 'pointer', transition: 'color .2s' }}
-                    onMouseEnter={e => e.target.style.color = '#f5c842'}
-                    onMouseLeave={e => e.target.style.color = 'rgba(245,200,66,.5)'}
-                  >
-                    Forgot password?
-                  </button>
-                </div>
-              )}
-
-              {/* Error */}
-              <AnimatePresence>
-                {error && (
-                  <motion.div
-                    className="auth-error"
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0 }}
-                  >
-                    {error}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Success */}
-              <AnimatePresence>
-                {success && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -6 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    style={{
-                      padding: '10px 14px',
-                      borderRadius: 10,
-                      background: 'rgba(0,229,160,.08)',
-                      border: '1px solid rgba(0,229,160,.25)',
-                      color: '#00e5a0',
-                      fontSize: 12,
-                      fontWeight: 700,
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: 8,
-                    }}
-                  >
-                    <span className="auth-success-icon" style={{ fontSize: 16 }}>🎉</span>
-                    Account created! Welcome to the arena.
-                  </motion.div>
-                )}
-              </AnimatePresence>
-
-              {/* Submit */}
-              <motion.button
-                type="submit"
-                className="auth-submit"
-                disabled={loading || !clerkReady}
-                whileTap={{ scale: .98 }}
-                style={{ marginTop: 4 }}
-              >
-                {loading ? (
-                  <div className="auth-spinner" />
-                ) : !clerkReady ? (
-                  <>Loading auth...</>
-                ) : (
-                  <>
-                    {mode === 'signin' ? 'Sign In' : 'Create Account'}
-                    <ArrowRight style={{ width: 16, height: 16 }} />
-                  </>
-                )}
-              </motion.button>
-
-              {/* Divider */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '4px 0' }}>
-                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.06)' }} />
-                <span style={{ fontSize: 10, fontWeight: 700, color: 'rgba(240,234,255,.2)', letterSpacing: '.14em', textTransform: 'uppercase' }}>or</span>
-                <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.06)' }} />
-              </div>
-
-              {/* Guest */}
-              <button type="button" className="auth-guest" onClick={handleGuest}>
-                👻 Continue as Guest
-              </button>
-
-              {/* Switch mode link */}
-              <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(240,234,255,.25)', fontWeight: 600, marginTop: 4 }}>
-                {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
-                <button
-                  type="button"
-                  onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f5c842', fontWeight: 800, fontFamily: 'Outfit,sans-serif', fontSize: 12 }}
-                >
-                  {mode === 'signin' ? 'Sign up' : 'Sign in'}
-                </button>
-              </p>
-
-              {/* Clerk badge */}
-              <p className="clerk-badge">🔐 Secured by Clerk</p>
-
-            </motion.form>
-          </AnimatePresence>
+          <p style={{ textAlign: 'center', fontSize: 11, color: 'rgba(240,234,255,.15)', fontWeight: 600, marginTop: 4 }}>
+            By continuing you agree to our Terms of Service
+          </p>
         </div>
 
         {/* Bottom accent */}
