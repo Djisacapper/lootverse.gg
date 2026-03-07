@@ -62,7 +62,6 @@ import Rewards from './pages/Rewards';
 import Upgrade from './pages/Upgrade';
 import __Layout from './Layout.jsx';
 import { pagesConfig, PAGES } from './pages.config'
-import Authpage from './pages/Authpage';
 
 export const PAGES = {
     "Admin": Admin,
