@@ -1,3 +1,4 @@
+import { useRequireAuth } from '@/components/useRequireAuth';
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useWallet } from '../components/game/useWallet';
@@ -159,6 +160,7 @@ function CrashGraph({ phase, multiplier, crashPoint }) {
 
 export default function Crash() {
   const { user, balance, updateBalance, addXp, addRakeback } = useWallet();
+  useRequireAuth();
 
   const [phase,      setPhase]      = useState('loading');
   const [countdown,  setCountdown]  = useState(BETTING_DURATION);
