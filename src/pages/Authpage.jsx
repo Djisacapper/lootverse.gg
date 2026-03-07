@@ -1,8 +1,68 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Sparkles, User, LogIn } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, ArrowRight, Sparkles } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { base44 } from '@/api/base44Client';
+
+/* ─── base44 entity shorthand ────────────────────────────────────── */
+const Users = base44.entities.User;
+
+/* ─── helpers ────────────────────────────────────────────────────── */
+function generateAffiliateCode() {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let code = 'CR-';
+  for (let i = 0; i < 6; i++) code += chars[Math.floor(Math.random() * chars.length)];
+  return code;
+}
+
+async function syncBase44User({ email, full_name, username = '', referred_by = '' }) {
+  let existing = null;
+  try {
+    const results = await Users.filter({ email });
+    if (results?.length > 0) existing = results[0];
+  } catch (_) {}
+
+  if (existing) {
+    return Users.update(existing.id, { full_name });
+  }
+
+  return Users.create({
+    email,
+    full_name,
+    username,
+    role: 'user',
+    balance: 1000,
+    xp: 0,
+    level: 1,
+    is_anonymous: false,
+    affiliate_code: generateAffiliateCode(),
+    referred_by,
+    total_deposited: 0,
+    affiliate_earnings: 0,
+    affiliate_earnings_claimable: 0,
+    rakeback_instant: 0,
+    rakeback_daily: 0,
+    rakeback_weekly: 0,
+    rakeback_monthly: 0,
+    total_rakeback_claimed: 0,
+    rakeback_daily_claimed_at: '',
+    rakeback_weekly_claimed_at: '',
+    rakeback_monthly_claimed_at: '',
+  });
+}
+
+/* ─── password strength ──────────────────────────────────────────── */
+const getStrength = (pw) => {
+  let s = 0;
+  if (pw.length >= 8) s++;
+  if (/[A-Z]/.test(pw)) s++;
+  if (/[0-9]/.test(pw)) s++;
+  if (/[^A-Za-z0-9]/.test(pw)) s++;
+  return s;
+};
+const STRENGTH_LABELS = ['', 'Weak', 'Fair', 'Good', 'Strong'];
+const STRENGTH_COLORS = ['', '#ff4e6a', '#fbbf24', '#34d399', '#00e5a0'];
 
 /* ─── CSS ─────────────────────────────────────────────────────────── */
 const CSS = `
@@ -98,10 +158,62 @@ const CSS = `
   z-index: 10;
 }
 
-/* ── Primary button (Sign In) ── */
-.auth-btn-primary {
+/* ── Inputs ── */
+.auth-input-wrap {
+  position: relative;
   width: 100%;
-  padding: 15px;
+}
+.auth-input {
+  width: 100%;
+  padding: 13px 44px 13px 44px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 12px;
+  outline: none;
+  color: #f0eaff;
+  font-family: 'Outfit', sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  transition: border-color .2s, background .2s, box-shadow .2s;
+}
+.auth-input::placeholder { color: rgba(240,234,255,.2); }
+.auth-input:focus {
+  border-color: rgba(245,200,66,.4);
+  background: rgba(245,200,66,.04);
+  box-shadow: 0 0 0 3px rgba(245,200,66,.06);
+}
+.auth-input.error {
+  border-color: rgba(255,78,106,.4);
+  background: rgba(255,78,106,.04);
+}
+.auth-input-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: rgba(240,234,255,.2);
+  pointer-events: none;
+  transition: color .2s;
+}
+.auth-input-wrap:focus-within .auth-input-icon { color: rgba(245,200,66,.5); }
+.auth-eye-btn {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: rgba(240,234,255,.2);
+  transition: color .2s;
+}
+.auth-eye-btn:hover { color: rgba(245,200,66,.6); }
+
+/* ── Submit button ── */
+.auth-submit {
+  width: 100%;
+  padding: 14px;
   border: none;
   cursor: pointer;
   border-radius: 12px;
@@ -117,41 +229,43 @@ const CSS = `
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
 }
-.auth-btn-primary:hover {
+.auth-submit:hover:not(:disabled) {
   transform: translateY(-2px) scale(1.02);
   box-shadow: 0 0 48px rgba(245,200,66,.5), 0 8px 24px rgba(0,0,0,.6);
   background-position: 100%;
 }
-.auth-btn-primary:active { transform: scale(.98); }
+.auth-submit:active:not(:disabled) { transform: scale(.98); }
+.auth-submit:disabled { opacity: .4; cursor: not-allowed; }
 
-/* ── Secondary button (Sign Up) ── */
-.auth-btn-secondary {
-  width: 100%;
-  padding: 15px;
+/* ── Tab toggle ── */
+.auth-tab {
+  flex: 1;
+  padding: 12px;
+  border: none;
   cursor: pointer;
-  border-radius: 12px;
-  font-family: 'Outfit', sans-serif;
-  font-size: 15px;
-  font-weight: 900;
-  letter-spacing: .02em;
   background: transparent;
-  border: 1px solid rgba(245,200,66,.3);
-  color: #f5c842;
-  transition: all .2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px;
+  font-weight: 800;
+  transition: color .2s;
+  position: relative;
 }
-.auth-btn-secondary:hover {
-  background: rgba(245,200,66,.08);
-  border-color: rgba(245,200,66,.6);
-  transform: translateY(-2px);
-  box-shadow: 0 0 24px rgba(245,200,66,.15);
+.auth-tab::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 20%;
+  right: 20%;
+  height: 2px;
+  border-radius: 2px;
+  transition: opacity .2s, background .2s;
 }
-.auth-btn-secondary:active { transform: scale(.98); }
+.auth-tab.active { color: #f5c842; }
+.auth-tab.active::after { background: #f5c842; opacity: 1; }
+.auth-tab.inactive { color: rgba(240,234,255,.25); }
+.auth-tab.inactive::after { opacity: 0; }
 
 /* ── Guest button ── */
 .auth-guest {
@@ -173,24 +287,38 @@ const CSS = `
   color: #c084fc;
 }
 
-/* ── Feature pills ── */
-.auth-features {
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-top: 4px;
-}
-.auth-feature-pill {
-  padding: 5px 10px;
-  border-radius: 20px;
-  font-size: 10px;
+/* ── Error / success toasts ── */
+.auth-error {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(255,78,106,.1);
+  border: 1px solid rgba(255,78,106,.25);
+  color: #ff4e6a;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: .06em;
-  background: rgba(255,255,255,.04);
-  border: 1px solid rgba(255,255,255,.07);
-  color: rgba(240,234,255,.3);
-  text-transform: uppercase;
+}
+.auth-success {
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(0,229,160,.08);
+  border: 1px solid rgba(0,229,160,.25);
+  color: #00e5a0;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ── Spinner ── */
+@keyframes auth-spin { to { transform: rotate(360deg); } }
+.auth-spinner {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid rgba(0,0,0,.2);
+  border-top-color: #000;
+  animation: auth-spin .7s linear infinite;
 }
 
 /* ── Logo pulse ── */
@@ -199,6 +327,20 @@ const CSS = `
   50%     { filter: drop-shadow(0 0 22px rgba(245,200,66,.8)) drop-shadow(0 0 40px rgba(245,200,66,.3)); }
 }
 .auth-logo { animation: auth-logo-glow 2.5s ease-in-out infinite; }
+
+/* ── Referral toggle ── */
+.auth-referral-toggle {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(245,200,66,.4);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color .2s;
+  text-align: left;
+}
+.auth-referral-toggle:hover { color: rgba(245,200,66,.8); }
 
 /* ── Divider ── */
 .auth-divider {
@@ -219,6 +361,28 @@ const CSS = `
   letter-spacing: .14em;
   text-transform: uppercase;
 }
+
+/* ── Clerk badge ── */
+.auth-badge {
+  text-align: center;
+  font-size: 10px;
+  color: rgba(240,234,255,.12);
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+/* ── Forgot password link ── */
+.auth-forgot {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(245,200,66,.5);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: color .2s;
+}
+.auth-forgot:hover { color: #f5c842; }
 `;
 
 /* ─── Particles ──────────────────────────────────────────────────── */
@@ -253,30 +417,119 @@ const Particles = ({ count = 14 }) => {
   );
 };
 
+/* ─── Field component ────────────────────────────────────────────── */
+const Field = ({ icon: Icon, type = 'text', placeholder, value, onChange, showToggle, onToggle, showPw }) => (
+  <div className="auth-input-wrap">
+    <input
+      className="auth-input"
+      type={showToggle ? (showPw ? 'text' : 'password') : type}
+      placeholder={placeholder}
+      value={value}
+      onChange={e => onChange(e.target.value)}
+      autoComplete="off"
+    />
+    <div className="auth-input-icon">
+      <Icon style={{ width: 15, height: 15 }} />
+    </div>
+    {showToggle && (
+      <button type="button" className="auth-eye-btn" onClick={onToggle}>
+        {showPw
+          ? <EyeOff style={{ width: 14, height: 14 }} />
+          : <Eye style={{ width: 14, height: 14 }} />}
+      </button>
+    )}
+  </div>
+);
+
 /* ─── Main ───────────────────────────────────────────────────────── */
 export default function Authpage() {
-  const { isAuthenticated, navigateToLogin } = useAuth();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // If already logged in, go straight to Home
+  const [mode, setMode]                 = useState('signin');
+  const [email, setEmail]               = useState('');
+  const [password, setPw]               = useState('');
+  const [username, setUn]               = useState('');
+  const [referralCode, setReferral]     = useState('');
+  const [showReferral, setShowReferral] = useState(false);
+  const [showPw, setShowPw]             = useState(false);
+  const [loading, setLoading]           = useState(false);
+  const [error, setError]               = useState('');
+  const [success, setSuccess]           = useState(false);
+
+  const strength = mode === 'signup' ? getStrength(password) : 0;
+
+  // Already logged in → go home
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/Home');
-    }
+    if (isAuthenticated) navigate('/Home');
   }, [isAuthenticated]);
 
-  const handleSignIn = () => {
-    // Triggers base44's native login modal
-    navigateToLogin();
+  const switchMode = (m) => {
+    setMode(m);
+    setError('');
+    setEmail('');
+    setPw('');
+    setUn('');
+    setReferral('');
+    setShowReferral(false);
+    setSuccess(false);
   };
 
-  const handleSignUp = () => {
-    // Triggers base44's native login modal (sign up tab)
-    navigateToLogin();
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+
+    // Basic validation
+    if (!email.trim())                         { setError('Email is required'); return; }
+    if (!password)                             { setError('Password is required'); return; }
+    if (mode === 'signup' && !username.trim()) { setError('Username is required'); return; }
+    if (mode === 'signup' && strength < 2)     { setError('Password is too weak'); return; }
+
+    setLoading(true);
+    try {
+      if (mode === 'signin') {
+        // ── Sign in via base44 SDK ──────────────────────────────────
+        await base44.auth.loginViaEmailPassword(email, password);
+        // Token is automatically set — reload so AuthContext picks it up
+        window.location.reload();
+
+      } else {
+        // ── Sign up via base44 SDK ──────────────────────────────────
+        await base44.auth.register({
+          email,
+          password,
+          full_name: username,
+        });
+        // Sync our User entity with game defaults
+        await syncBase44User({
+          email,
+          full_name: username,
+          username,
+          referred_by: referralCode,
+        });
+        setSuccess(true);
+        setTimeout(() => window.location.reload(), 1800);
+      }
+    } catch (err) {
+      // base44 SDK throws an error object with a message field
+      const msg = err?.message || err?.error || 'Something went wrong. Please try again.';
+      // Clean up common base44 error messages
+      if (msg.toLowerCase().includes('invalid') || msg.toLowerCase().includes('credentials')) {
+        setError('Incorrect email or password.');
+      } else if (msg.toLowerCase().includes('exists') || msg.toLowerCase().includes('already')) {
+        setError('An account with this email already exists.');
+      } else if (msg.toLowerCase().includes('password')) {
+        setError('Password must be at least 8 characters.');
+      } else {
+        setError(msg);
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleGuest = () => {
-    // Skip auth entirely — go straight to Home as guest
+    // Skip auth — go straight to Home
     navigate('/Home');
   };
 
@@ -304,75 +557,227 @@ export default function Authpage() {
         {/* Top accent bar */}
         <div style={{ height: 2, background: 'linear-gradient(90deg,transparent,#f5c842,#9d6fff,transparent)' }} />
 
-        {/* Logo area */}
-        <div style={{ padding: '36px 28px 0', textAlign: 'center', position: 'relative', zIndex: 2 }}>
+        {/* Logo */}
+        <div style={{ padding: '28px 28px 0', textAlign: 'center', position: 'relative', zIndex: 2 }}>
           <div className="auth-logo" style={{
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: 64,
-            height: 64,
-            borderRadius: 18,
+            width: 58,
+            height: 58,
+            borderRadius: 16,
             background: 'linear-gradient(135deg,rgba(245,200,66,.15),rgba(157,111,255,.1))',
             border: '1px solid rgba(245,200,66,.25)',
-            marginBottom: 16,
+            marginBottom: 14,
           }}>
-            <Sparkles style={{ width: 28, height: 28, color: '#f5c842' }} />
+            <Sparkles style={{ width: 26, height: 26, color: '#f5c842' }} />
           </div>
-          <h1 className="auth-title" style={{ fontSize: 34, fontWeight: 700, color: '#f0eaff', letterSpacing: '.06em', marginBottom: 6 }}>
+          <h1 className="auth-title" style={{ fontSize: 28, fontWeight: 700, color: '#f0eaff', letterSpacing: '.04em', marginBottom: 4 }}>
             CASERIFT
           </h1>
-          <p style={{ fontSize: 13, color: 'rgba(240,234,255,.35)', fontWeight: 600, letterSpacing: '.06em', marginBottom: 20 }}>
-            The ultimate case opening experience
+          <p style={{ fontSize: 12, color: 'rgba(240,234,255,.3)', fontWeight: 600, letterSpacing: '.08em' }}>
+            {mode === 'signin' ? 'Welcome back, player' : 'Join the arena'}
           </p>
-
-          {/* Feature pills */}
-          <div className="auth-features">
-            <span className="auth-feature-pill">🎰 Case Opening</span>
-            <span className="auth-feature-pill">⚔️ Battles</span>
-            <span className="auth-feature-pill">🪙 Coinflip</span>
-            <span className="auth-feature-pill">📈 Crash</span>
-          </div>
         </div>
 
-        {/* Buttons */}
-        <div style={{ padding: '28px 28px 32px', display: 'flex', flexDirection: 'column', gap: 12, position: 'relative', zIndex: 2 }}>
-
-          {/* Sign In */}
-          <motion.button
-            className="auth-btn-primary"
-            onClick={handleSignIn}
-            whileTap={{ scale: .98 }}
-          >
-            <LogIn style={{ width: 18, height: 18 }} />
+        {/* Tabs */}
+        <div style={{ display: 'flex', margin: '22px 28px 0', borderBottom: '1px solid rgba(255,255,255,.06)', position: 'relative', zIndex: 2 }}>
+          <button className={`auth-tab ${mode === 'signin' ? 'active' : 'inactive'}`} onClick={() => switchMode('signin')}>
             Sign In
-          </motion.button>
-
-          {/* Sign Up */}
-          <motion.button
-            className="auth-btn-secondary"
-            onClick={handleSignUp}
-            whileTap={{ scale: .98 }}
-          >
-            <User style={{ width: 18, height: 18 }} />
-            Create Account
-          </motion.button>
-
-          {/* Divider */}
-          <div className="auth-divider">
-            <div className="auth-divider-line" />
-            <span className="auth-divider-text">or</span>
-            <div className="auth-divider-line" />
-          </div>
-
-          {/* Guest */}
-          <button type="button" className="auth-guest" onClick={handleGuest}>
-            👻 Continue as Guest
           </button>
+          <button className={`auth-tab ${mode === 'signup' ? 'active' : 'inactive'}`} onClick={() => switchMode('signup')}>
+            Sign Up
+          </button>
+        </div>
 
-          <p style={{ textAlign: 'center', fontSize: 11, color: 'rgba(240,234,255,.15)', fontWeight: 600, marginTop: 4 }}>
-            By continuing you agree to our Terms of Service
-          </p>
+        {/* Form */}
+        <div style={{ padding: '24px 28px 28px', position: 'relative', zIndex: 2 }}>
+          <AnimatePresence mode="wait">
+            <motion.form
+              key={mode}
+              onSubmit={handleSubmit}
+              initial={{ opacity: 0, x: mode === 'signup' ? 18 : -18 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: mode === 'signup' ? -18 : 18 }}
+              transition={{ duration: .22 }}
+              style={{ display: 'flex', flexDirection: 'column', gap: 12 }}
+            >
+              {/* Username — signup only */}
+              {mode === 'signup' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                >
+                  <Field
+                    icon={User}
+                    placeholder="Username"
+                    value={username}
+                    onChange={setUn}
+                  />
+                </motion.div>
+              )}
+
+              {/* Email */}
+              <Field
+                icon={Mail}
+                type="email"
+                placeholder="Email address"
+                value={email}
+                onChange={setEmail}
+              />
+
+              {/* Password + strength bar */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <Field
+                  icon={Lock}
+                  placeholder="Password"
+                  value={password}
+                  onChange={setPw}
+                  showToggle
+                  showPw={showPw}
+                  onToggle={() => setShowPw(v => !v)}
+                />
+                {mode === 'signup' && password.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    style={{ display: 'flex', flexDirection: 'column', gap: 5 }}
+                  >
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      {[1, 2, 3, 4].map(i => (
+                        <div key={i} style={{
+                          flex: 1,
+                          height: 3,
+                          borderRadius: 3,
+                          background: i <= strength ? STRENGTH_COLORS[strength] : 'rgba(255,255,255,.07)',
+                          transition: 'background .3s',
+                        }} />
+                      ))}
+                    </div>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: STRENGTH_COLORS[strength] || 'rgba(240,234,255,.25)', letterSpacing: '.06em' }}>
+                      {STRENGTH_LABELS[strength] || 'Enter a password'}
+                    </span>
+                  </motion.div>
+                )}
+              </div>
+
+              {/* Referral code — signup only */}
+              {mode === 'signup' && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  style={{ display: 'flex', flexDirection: 'column', gap: 6 }}
+                >
+                  <button
+                    type="button"
+                    className="auth-referral-toggle"
+                    onClick={() => setShowReferral(v => !v)}
+                  >
+                    {showReferral ? '▾ Hide referral code' : '▸ Have a referral code?'}
+                  </button>
+                  <AnimatePresence>
+                    {showReferral && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                      >
+                        <Field
+                          icon={Sparkles}
+                          placeholder="Referral code (optional)"
+                          value={referralCode}
+                          onChange={setReferral}
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
+              )}
+
+              {/* Forgot password — signin only */}
+              {mode === 'signin' && (
+                <div style={{ textAlign: 'right' }}>
+                  <button type="button" className="auth-forgot">
+                    Forgot password?
+                  </button>
+                </div>
+              )}
+
+              {/* Error */}
+              <AnimatePresence>
+                {error && (
+                  <motion.div
+                    className="auth-error"
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0 }}
+                  >
+                    {error}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Success */}
+              <AnimatePresence>
+                {success && (
+                  <motion.div
+                    className="auth-success"
+                    initial={{ opacity: 0, y: -6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <span style={{ fontSize: 16 }}>🎉</span>
+                    Account created! Welcome to the arena.
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Submit */}
+              <motion.button
+                type="submit"
+                className="auth-submit"
+                disabled={loading}
+                whileTap={{ scale: .98 }}
+                style={{ marginTop: 4 }}
+              >
+                {loading ? (
+                  <div className="auth-spinner" />
+                ) : (
+                  <>
+                    {mode === 'signin' ? 'Sign In' : 'Create Account'}
+                    <ArrowRight style={{ width: 16, height: 16 }} />
+                  </>
+                )}
+              </motion.button>
+
+              {/* Divider */}
+              <div className="auth-divider">
+                <div className="auth-divider-line" />
+                <span className="auth-divider-text">or</span>
+                <div className="auth-divider-line" />
+              </div>
+
+              {/* Guest */}
+              <button type="button" className="auth-guest" onClick={handleGuest}>
+                👻 Continue as Guest
+              </button>
+
+              {/* Switch mode */}
+              <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(240,234,255,.25)', fontWeight: 600, marginTop: 4 }}>
+                {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
+                <button
+                  type="button"
+                  onClick={() => switchMode(mode === 'signin' ? 'signup' : 'signin')}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f5c842', fontWeight: 800, fontFamily: 'Outfit,sans-serif', fontSize: 12 }}
+                >
+                  {mode === 'signin' ? 'Sign up' : 'Sign in'}
+                </button>
+              </p>
+
+              <p className="auth-badge">🔐 Secured by base44</p>
+
+            </motion.form>
+          </AnimatePresence>
         </div>
 
         {/* Bottom accent */}
