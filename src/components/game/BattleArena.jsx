@@ -151,18 +151,7 @@ const TEAM_PALETTE = [
 ];
 const PLAYER_COLORS = ['#f5c842','#c084fc','#60a5fa','#34d399','#f472b6','#fb923c','#22d3ee','#a3e635'];
 
-/* ─── Audio ──────────────────────────────────────────────────────────
-   Safari requires AudioContext to be created AND have audio scheduled
-   directly inside a synchronous user-gesture call stack. A resume() call
-   alone is not enough — Safari also suspends a context that hasn't
-   produced any sound recently, even if it was previously unlocked.
-
-   Solution: on the first pointerdown we create the context, resume it,
-   and start a SILENT KEEPALIVE — a zero-gain oscillator that runs
-   forever. This keeps the context in an "audible" state so that later
-   async calls (from setTimeout chains in launchRound) work on Safari.
-   The keepalive is inaudible (gain = 0) and costs essentially nothing.
-─────────────────────────────────────────────────────────────────── */
+/* ─── Audio ─────────────────────────────────────────────────────── */
 let _ctx = null;
 let _keepaliveStarted = false;
 
@@ -179,30 +168,24 @@ const startKeepalive = (c) => {
   if(_keepaliveStarted) return;
   _keepaliveStarted = true;
   try {
-    // Silent oscillator running forever — tricks Safari into thinking
-    // the context is actively producing audio, preventing auto-suspend
     const osc = c.createOscillator();
     const gain = c.createGain();
-    gain.gain.value = 0; // completely silent
+    gain.gain.value = 0;
     osc.connect(gain);
     gain.connect(c.destination);
     osc.start();
-    // No osc.stop() — intentionally runs for the page lifetime
   } catch {}
 };
 
 const unlockAudio = () => {
   const c = getCtx();
   if(!c) return;
-  // Must resume() synchronously inside the gesture handler
   if(c.state === 'suspended') c.resume();
-  // Silent buffer — satisfies Safari's "must schedule audio in gesture" rule
   try {
     const b = c.createBuffer(1,1,c.sampleRate);
     const s = c.createBufferSource();
     s.buffer = b; s.connect(c.destination); s.start(0);
   } catch {}
-  // Start keepalive on first gesture so context stays alive for async calls
   startKeepalive(c);
 };
 
@@ -236,7 +219,6 @@ const playSpin = (fast) => {
   if(c && c.state==='suspended') { c.resume().then(tick).catch(tick); } else tick();
 };
 
-/* Rising C5-E5-G5-C6 arpeggio + warm chord swell. Fires once when battle ends. */
 const playReward = () => {
   const c = getCtx(); if(!c) return;
   const run = () => {
@@ -602,6 +584,7 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
     if(roundDone.current>=players.length){ if(r+1>=totalRounds)setTimeout(()=>isJackpot?setJackpot(true):finishBattle(),isFast?1100:2400); else setTimeout(()=>launchRound(r+1),isFast?1400:4000); }
   };
   const getTotal=pi=>{ if(!allRolled.current)return 0; if(isTerminal)return allRolled.current[totalRounds-1]?.[pi]?.item?.value||0; return allRolled.current.reduce((s,r)=>s+(r[pi]?.item?.value||0),0); };
+
   const finishBattle=(forced=null)=>{
     let wi; if(forced!==null)wi=forced; else if(isGroup)wi=-1; else{const v=teamList.map(mi=>mi.reduce((s,pi)=>s+getTotal(pi),0)/mi.length);wi=isCrazy?v.indexOf(Math.min(...v)):v.indexOf(Math.max(...v));}
     setWT(wi);setDone(true);setJackpot(false);
@@ -612,6 +595,28 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
       const upi=players.findIndex(p=>p.email===userEmail);
       if(isGroup){setConf(true);setTimeout(()=>setConf(false),5500);onReward&&onReward(Math.floor(tv/players.length));}
       else if(wi>=0&&teamList[wi]?.includes(upi)){setConf(true);setTimeout(()=>setConf(false),5500);onReward&&onReward(Math.floor(tv/(teamList[wi]?.length||1)));}
+
+      // ── Save all items to UserInventory for every real player ──
+      import('@/api/base44Client').then(({ base44: b44 }) => {
+        allRolled.current.forEach((rnd, roundIdx) => {
+          rnd.forEach((rolled, pi) => {
+            const p = players[pi];
+            if (!p?.email || p.isBot) return;
+            const item = rolled?.item;
+            if (!item) return;
+            b44.entities.UserInventory.create({
+              user_email:     p.email,
+              item_name:      item.name,
+              item_image_url: item.image || item.image_url || null, // ← FIXED
+              rarity:         item.rarity,
+              value:          item.value,
+              source:         'battle_win',
+              source_case:    selectedCases[roundIdx]?.name || '',
+              status:         'owned',
+            }).catch(() => {});
+          });
+        });
+      }).catch(() => {});
     }
   };
 
