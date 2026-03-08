@@ -138,6 +138,30 @@ export default function LiveChat({ onClose }) {
   const [userRoles,    setUserRoles]    = useState({});
   const bottomRef = useRef(null);
 
+  // Enrich inventory drops with Item entity image/name/rarity data
+  const enrichDrops = async (rawDrops) => {
+    const itemIds = [...new Set(rawDrops.map(d => d.item_id).filter(Boolean))];
+    let itemMap = {};
+    if (itemIds.length > 0) {
+      try {
+        const items = await base44.entities.Item.filter({ id: itemIds });
+        items.forEach(item => { itemMap[item.id] = item; });
+      } catch {
+        // silently fall back — drops will just show Package icon
+      }
+    }
+    return rawDrops.map(d => {
+      const item = itemMap[d.item_id] || {};
+      return {
+        ...d,
+        item_image_url: d.item_image_url || item.image_url || item.image || null,
+        item_name:      d.item_name      || item.name      || 'Unknown Item',
+        rarity:         d.rarity         || item.rarity    || 'common',
+        value:          d.value          ?? item.value     ?? 0,
+      };
+    });
+  };
+
   useEffect(() => {
     base44.auth.me().then(u => {
       setUser(u);
@@ -161,17 +185,19 @@ export default function LiveChat({ onClose }) {
       }
     });
 
-    // Load recent drops — fetch full inventory items with item image data
-    base44.entities.UserInventory.list('-created_date', 20).then(data => {
+    // Load recent drops then enrich with Item entity for images
+    base44.entities.UserInventory.list('-created_date', 20).then(async data => {
       const drops = data.filter(i =>
         i.status === 'owned' && ['case_opening', 'battle_win'].includes(i.source)
       );
-      setRecentDrops(drops);
+      const enriched = await enrichDrops(drops);
+      setRecentDrops(enriched);
     });
 
-    const unsubInv = base44.entities.UserInventory.subscribe(event => {
+    const unsubInv = base44.entities.UserInventory.subscribe(async event => {
       if (event.type === 'create' && ['case_opening', 'battle_win'].includes(event.data.source)) {
-        setRecentDrops(prev => [event.data, ...prev].slice(0, 30));
+        const [enriched] = await enrichDrops([event.data]);
+        setRecentDrops(prev => [enriched, ...prev].slice(0, 30));
       }
     });
 
@@ -363,8 +389,7 @@ export default function LiveChat({ onClose }) {
             <div style={{ display:'flex', flexDirection:'column', gap:7 }}>
               {recentDrops.map((drop, i) => {
                 const r = rs(drop.rarity);
-                // item_image_url is stored on UserInventory, fallback to item_image
-                const imgSrc = drop.item_image_url || drop.item_image || drop.image_url || drop.image || null;
+                const imgSrc = drop.item_image_url || null;
 
                 return (
                   <motion.div
@@ -400,7 +425,7 @@ export default function LiveChat({ onClose }) {
                           src={imgSrc}
                           alt={drop.item_name || ''}
                           style={{ width:'100%', height:'100%', objectFit:'contain' }}
-                          onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                          onError={e => { e.currentTarget.style.display = 'none'; e.currentTarget.nextSibling.style.display = 'flex'; }}
                         />
                       ) : null}
                       <div style={{
