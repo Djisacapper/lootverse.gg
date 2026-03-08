@@ -3,7 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { useWallet } from '../components/game/useWallet';
 import { safeAvatarUrl } from '../components/game/usePlayerAvatars';
-import { normalizeItemImage } from '../components/game/normalizeItem';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Swords, Plus, Eye, ChevronDown } from 'lucide-react';
 import CreateBattle from '../components/game/CreateBattle';
@@ -169,7 +168,6 @@ function ModeBadge({ label, color, bg, border }) {
 function BattleRow({ battle: b, user, balance, cases, onJoin, onWatch, onView, index }) {
   const [hov, setHov] = useState(false);
   const caseTemplate = cases.find(c => c.id === b.case_template_id);
-  const items = caseTemplate?.items || [];
   const isCreator = b.creator_email === user?.email;
   const isLive = b.status === 'in_progress';
   const filledPlayers = (b.players || []).filter(p => p?.email);
@@ -257,11 +255,11 @@ function BattleRow({ battle: b, user, balance, cases, onJoin, onWatch, onView, i
           </div>
         </div>
 
-        {/* ── Col 2: Case Items preview ── */}
+        {/* ── Col 2: Case preview (case image repeated per round) ── */}
         <div style={{ display:'flex', alignItems:'center', gap:6, flex:1, minWidth:0 }}>
-          {caseTemplate && items.length > 0
-            ? items.slice(0, Math.min(5, b.rounds || 1)).map((item, i) => {
-                const imageUrl = normalizeItemImage(item);
+          {caseTemplate
+            ? Array.from({ length: Math.min(5, b.rounds || 1) }).map((_, i) => {
+                const imageUrl = caseTemplate.image_url || caseTemplate.image || null;
                 return (
                   <motion.div
                     key={i}
@@ -273,8 +271,15 @@ function BattleRow({ battle: b, user, balance, cases, onJoin, onWatch, onView, i
                       border:'1px solid rgba(255,255,255,.1)',
                       boxShadow: hov ? '0 4px 16px rgba(0,0,0,.6)' : '0 2px 8px rgba(0,0,0,.5)',
                       transition:'box-shadow .25s',
+                      display:'flex', alignItems:'center', justifyContent:'center',
                     }}
-                  />
+                  >
+                    {!imageUrl && (
+                      <span style={{ fontSize:10, color:'rgba(255,255,255,.25)', fontWeight:700, textAlign:'center', padding:'0 4px', lineHeight:1.2 }}>
+                        {caseTemplate.name?.[0] || '?'}
+                      </span>
+                    )}
+                  </motion.div>
                 );
               })
             : (
