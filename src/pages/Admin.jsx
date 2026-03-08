@@ -640,8 +640,12 @@ export default function Admin() {
   };
 
   const loadAllUsers = async () => {
-    const users = await base44.entities.User.list('', 100);
-    setAllUsers(users);
+    try {
+      const result = await base44.functions.invoke('syncAdminUsers', {});
+      setAllUsers(result?.data?.users || result?.users || []);
+    } catch {
+      flash('Failed to load users');
+    }
   };
 
   const flash = (msg) => { setMessage(msg); setTimeout(() => setMessage(''), 3500); };
