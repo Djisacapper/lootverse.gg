@@ -151,7 +151,7 @@ export default function CaseOpen() {
   const [user,          setUser]          = useState(null);
   const [userLoading,   setUserLoading]   = useState(true);
   const [isDemo,        setIsDemo]        = useState(false);
-  const [demoLocked,    setDemoLocked]    = useState(false); // one-way lock
+  const [demoLocked,    setDemoLocked]    = useState(false);
   const [showParticles, setShowParticles] = useState(false);
   const [hovItem,       setHovItem]       = useState(null);
   const [activeTab,     setActiveTab]     = useState('contents');
@@ -179,7 +179,6 @@ export default function CaseOpen() {
   };
 
   const handleOpen = async () => {
-    // Blocked entirely if demo was ever used
     if (demoLocked || !caseData || spinning || !user) return;
     if ((user.balance || 0) < caseData.price) return;
     const wonItem = rollItem(caseData.items || []);
@@ -200,7 +199,7 @@ export default function CaseOpen() {
   const handleDemo = () => {
     if (spinning || !caseData) return;
     setIsDemo(true);
-    setDemoLocked(true); // 🔒 permanent — never resets
+    setDemoLocked(true);
     doSpin(rollItem(caseData.items || []));
   };
 
@@ -225,20 +224,23 @@ export default function CaseOpen() {
       });
       base44.entities.CaseTemplate.update(caseData.id, { total_opened: (caseData.total_opened || 0) + 1 });
       base44.entities.UserInventory.create({
-        user_email: user.email, item_name: result.name,
-        rarity: result.rarity, value: result.value,
-        source: 'case_opening', source_case: caseData.name, status: 'owned',
+        user_email: user.email,
+        item_name: result.name,
+        item_image_url: result.image || result.image_url || null, // ← FIXED
+        rarity: result.rarity,
+        value: result.value,
+        source: 'case_opening',
+        source_case: caseData.name,
+        status: 'owned',
       });
     }
   };
 
-  // Always routes through demo if locked — no escape
   const handleTryAgain = () => {
     if (demoLocked) {
       handleDemo();
       return;
     }
-    // Real re-open (only reachable if demo was never triggered)
     setResult(null);
     setShowResult(false);
     base44.auth.me().then(me => {
@@ -253,7 +255,6 @@ export default function CaseOpen() {
     });
   };
 
-  /* ── Loading ── */
   if (loading || userLoading) return (
     <div style={{ display:'flex', alignItems:'center', justifyContent:'center', minHeight:'60vh', background:'#04000a' }}>
       <div style={{ position:'relative', width:48, height:48 }}>
@@ -315,7 +316,6 @@ export default function CaseOpen() {
 
           <div style={{ flex:1 }}>
             <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:4 }}>
-              {/* Demo locked banner */}
               {demoLocked && (
                 <motion.div
                   initial={{ opacity:0, scale:.8 }} animate={{ opacity:1, scale:1 }}
@@ -416,7 +416,6 @@ export default function CaseOpen() {
                 background:`radial-gradient(circle,${resultRs.color}18 0%,transparent 70%)`,
               }} />
 
-              {/* Demo watermark */}
               {demoLocked && (
                 <div style={{
                   position:'absolute', top:10, right:12,
@@ -443,8 +442,8 @@ export default function CaseOpen() {
                     boxShadow:`0 0 40px ${resultRs.glow}, 0 8px 30px rgba(0,0,0,.6)`,
                     border:`1px solid ${resultRs.color}50`,
                   }}>
-                    {result.image
-                      ? <img src={result.image} alt="" style={{ width:85, height:85, objectFit:'contain' }} />
+                    {result.image || result.image_url
+                      ? <img src={result.image || result.image_url} alt="" style={{ width:85, height:85, objectFit:'contain' }} />
                       : <Sparkles style={{ width:44, height:44, color:resultRs.color }} />
                     }
                   </div>
@@ -474,7 +473,6 @@ export default function CaseOpen() {
         <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:28 }}>
 
           {showResult ? (
-            /* After result — always demo if locked */
             <motion.button
               className={`open-btn ${demoLocked ? 'demo-lock-pulse' : ''}`}
               whileTap={{ scale:.97 }}
@@ -498,7 +496,6 @@ export default function CaseOpen() {
             </motion.button>
 
           ) : demoLocked ? (
-            /* Demo locked — only show demo button as primary */
             <>
               <motion.button
                 className="open-btn demo-lock-pulse"
@@ -520,7 +517,6 @@ export default function CaseOpen() {
                 {spinning ? 'Spinning…' : 'Demo Spin — Free Preview'}
               </motion.button>
 
-              {/* Lock notice */}
               <div style={{
                 display:'flex', alignItems:'center', justifyContent:'center', gap:6,
                 padding:'10px 16px', borderRadius:10,
@@ -534,7 +530,6 @@ export default function CaseOpen() {
             </>
 
           ) : (
-            /* Normal state — both buttons available */
             <>
               <motion.button
                 className="open-btn"
@@ -661,8 +656,8 @@ export default function CaseOpen() {
                         border:`1px solid ${itemRs.color}25`,
                         transition:'box-shadow .25s',
                       }}>
-                        {item.image
-                          ? <img src={item.image} alt="" style={{ width:38, height:38, objectFit:'contain' }} />
+                        {item.image || item.image_url
+                          ? <img src={item.image || item.image_url} alt="" style={{ width:38, height:38, objectFit:'contain' }} />
                           : <Sparkles style={{ width:18, height:18, color:itemRs.color }} />
                         }
                       </div>
