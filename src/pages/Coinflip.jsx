@@ -612,7 +612,7 @@ const BOT_NAMES = ['CoinBot', 'FlipMaster', 'LuckyBot', 'RNGod', 'ShadowBot', 'C
 
 /* ─── Main ───────────────────────────────────────────────────────── */
 export default function Coinflip() {
-  const { user, balance, updateBalance, addXp, addRakeback } = useWallet();
+  const { user, balance, updateBalance, addXp, addRakeback, reload } = useWallet();
   useRequireAuth();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -620,7 +620,7 @@ export default function Coinflip() {
   const [flipping, setFlipping] = useState(null);
   const [flipResult, setFlipResult] = useState(null);
 
-  // Guard so we never double-credit the same game in one session
+  // Track which completed games this client has already paid out
   const paidOut = React.useRef(new Set());
 
   const loadGames = async () => {
@@ -629,23 +629,25 @@ export default function Coinflip() {
     setLoading(false);
   };
 
-  // Called on mount AND on every subscription update.
-  // Finds games where this user is the creator AND the winner,
-  // then credits them — but only once per session via the paidOut ref.
-  const collectCreatorWins = async () => {
+  // Runs every time the subscription fires or on mount.
+  // Looks for completed PvP games where the CURRENT USER is the creator
+  // and the winner — meaning the joiner's client already wrote winner_email
+  // and it's now safe for the creator's client to call updateBalance for itself.
+  const collectMyCreatorWins = React.useCallback(async () => {
     if (!user?.email) return;
     try {
-      const won = await base44.entities.CoinflipGame.filter({
-        status: 'completed',
-        creator_email: user.email,
-        winner_email: user.email,
-      }, '-created_date', 20);
-
-      for (const g of won) {
-        // Skip bot games — those are paid inline in handleCreate
-        if (!g.opponent_email || g.opponent_email === 'bot@system') continue;
-        // Only pay once per browser session
+      // Fetch recent completed games where this user was the creator
+      const myCreatedGames = await base44.entities.CoinflipGame.filter(
+        { status: 'completed', creator_email: user.email },
+        '-created_date',
+        50
+      );
+      for (const g of myCreatedGames) {
+        // Only PvP (not bot), only if this user won, only if not already paid
+        if (g.opponent_email === 'bot@system') continue;
+        if (g.winner_email !== user.email) continue;
         if (paidOut.current.has(g.id)) continue;
+        // Mark immediately so concurrent subscription fires don't double-pay
         paidOut.current.add(g.id);
         await updateBalance(
           g.bet_amount * 2,
@@ -655,18 +657,18 @@ export default function Coinflip() {
         await addXp(50);
       }
     } catch (_) {}
-  };
+  }, [user?.email, updateBalance, addXp]);
 
   useEffect(() => {
     if (!user?.email) return;
     loadGames();
-    collectCreatorWins();
+    collectMyCreatorWins();
     const unsub = base44.entities.CoinflipGame.subscribe(() => {
       loadGames();
-      collectCreatorWins();
+      collectMyCreatorWins();
     });
     return unsub;
-  }, [user?.email]);
+  }, [user?.email, collectMyCreatorWins]);
 
   const handleCreate = async (amount, side, vsBot = false) => {
     if (amount <= 0 || amount > balance) return;
@@ -686,6 +688,8 @@ export default function Coinflip() {
         bet_amount: amount, opponent_email: 'bot@system', opponent_name: botName,
         status: 'completed', result, winner_email: winnerEmail,
       });
+      // Mark as paid immediately so collectMyCreatorWins skips it
+      if (game?.id) paidOut.current.add(game.id);
       setShowCreate(false);
       setFlipping(game.id);
       setFlipResult({ result, winnerEmail, game: { ...game, bet_amount: amount } });
@@ -697,7 +701,7 @@ export default function Coinflip() {
         setTimeout(() => { setFlipping(null); setFlipResult(null); loadGames(); }, 2500);
       }, 2000);
     } else {
-      await base44.entities.CoinflipGame.create({
+      const game = await base44.entities.CoinflipGame.create({
         creator_email: freshUser.email, creator_name: creatorName,
         creator_avatar_url: creatorAvatar, creator_side: side,
         bet_amount: amount, status: 'waiting',
@@ -710,7 +714,7 @@ export default function Coinflip() {
   const handleJoin = async (game) => {
     if (game.bet_amount > balance) return;
 
-    // Deduct the joiner's bet immediately
+    // Deduct the joiner's bet
     await updateBalance(-game.bet_amount, 'coinflip_bet', `Joined coinflip for ${game.bet_amount}`);
     addRakeback(game.bet_amount);
 
@@ -722,8 +726,10 @@ export default function Coinflip() {
     setFlipResult({ result, winnerEmail, game });
 
     setTimeout(async () => {
-      // Writing winner_email + status: completed to the DB is what triggers
-      // collectCreatorWins() on the creator's tab via the subscription.
+      // Write the result to DB. This is what the creator's subscription
+      // picks up — seeing status=completed + winner_email=their email
+      // triggers collectMyCreatorWins() on their client, which calls
+      // updateBalance for themselves.
       await base44.entities.CoinflipGame.update(game.id, {
         opponent_email: user.email,
         opponent_name: user.full_name || user.username || 'Anonymous',
@@ -732,8 +738,15 @@ export default function Coinflip() {
         winner_email: winnerEmail,
       });
 
-      if (!creatorWon) {
-        // Joiner won — pay them directly right now
+      if (creatorWon) {
+        // Mark this game as paid on the JOINER's paidOut ref too, so if
+        // somehow the joiner is also the creator (shouldn't happen) we don't double-pay.
+        paidOut.current.add(game.id);
+        // The creator's client will handle their own payout via collectMyCreatorWins.
+        // Nothing to do here for the joiner — they lost, bet already deducted above.
+      } else {
+        // Joiner won — pay them right now
+        paidOut.current.add(game.id);
         await updateBalance(
           game.bet_amount * 2,
           'coinflip_win',
@@ -741,8 +754,6 @@ export default function Coinflip() {
         );
         await addXp(50);
       }
-      // If creatorWon: the creator's subscription fires collectCreatorWins()
-      // on their tab and they get credited automatically.
 
       setTimeout(() => { setFlipping(null); setFlipResult(null); loadGames(); }, 2500);
     }, 2000);
@@ -752,6 +763,8 @@ export default function Coinflip() {
     const botName = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
     const result = Math.random() < 0.5 ? 'heads' : 'tails';
     const winnerEmail = result === game.creator_side ? game.creator_email : 'bot@system';
+    // Mark as paid before writing to DB so the subscription doesn't double-pay
+    paidOut.current.add(game.id);
     await base44.entities.CoinflipGame.update(game.id, {
       opponent_email: 'bot@system', opponent_name: botName,
       status: 'completed', result, winner_email: winnerEmail,
