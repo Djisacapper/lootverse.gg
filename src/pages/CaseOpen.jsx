@@ -10,8 +10,8 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Mono:wght@400;500&display=swap');
-.co { font-family: 'Syne', sans-serif; }
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800;900&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap');
+.co { font-family: 'Syne', sans-serif; -webkit-font-smoothing:antialiased; }
 
 @keyframes spin-loader { to { transform: rotate(360deg); } }
 @keyframes shimmer-bg {
@@ -20,8 +20,13 @@ const CSS = `
 }
 .shimmer-text {
   background: linear-gradient(90deg,#fbbf24,#f59e0b,#fde68a,#fbbf24);
-  background-size:200% auto; -webkit-background-clip:text;
-  -webkit-text-fill-color:transparent; animation:shimmer-bg 3s linear infinite;
+  background-size:200% auto;
+  background-clip:text;
+  -webkit-background-clip:text;
+  -webkit-text-fill-color:transparent;
+  color:transparent;
+  animation:shimmer-bg 3s linear infinite;
+  display:inline-block;
 }
 @keyframes float-slow {
   0%,100% { transform:translateY(0) rotate(-2deg); }
@@ -111,8 +116,35 @@ function Particles({ color, count = 14 }) {
 }
 
 /* Single spinner lane — one CaseSpinner per case */
-function SpinnerLane({ items, result, spinning, onComplete, index, total }) {
-  const itemRs = result ? rs(result.rarity) : null;
+const CYCLE_GLOWS = [
+  'rgba(156,163,175,.35)',
+  'rgba(52,211,153,.4)',
+  'rgba(96,165,250,.45)',
+  'rgba(192,132,252,.5)',
+  'rgba(251,191,36,.55)',
+  'rgba(192,132,252,.45)',
+  'rgba(96,165,250,.4)',
+  'rgba(52,211,153,.35)',
+];
+
+function SpinnerLane({ items, result, spinning, onComplete, index, total, done }) {
+  // Only show result rarity glow AFTER the lane finishes
+  const itemRs = (done && result) ? rs(result.rarity) : null;
+  const [cycleIdx, setCycleIdx] = React.useState(index % CYCLE_GLOWS.length);
+
+  React.useEffect(() => {
+    if (!spinning) { setCycleIdx(index % CYCLE_GLOWS.length); return; }
+    const iv = setInterval(() => {
+      setCycleIdx(i => (i + 1) % CYCLE_GLOWS.length);
+    }, 150 + index * 37);
+    return () => clearInterval(iv);
+  }, [spinning, index]);
+
+  // While spinning: cycle through rarity colors. After done: show won rarity. Idle: no glow.
+  const glowColor = spinning
+    ? CYCLE_GLOWS[cycleIdx]
+    : itemRs ? itemRs.glow : undefined;
+
   return (
     <div style={{
       position:'relative', overflow:'hidden', flex:1,
@@ -123,8 +155,8 @@ function SpinnerLane({ items, result, spinning, onComplete, index, total }) {
         : index === 0 ? '0 0 0 16px'
         : index === total-1 ? '0 0 16px 0'
         : '0',
-      boxShadow: itemRs ? `inset 0 0 28px ${itemRs.glow}` : undefined,
-      transition:'box-shadow .4s',
+      boxShadow: glowColor ? `inset 0 0 28px ${glowColor}` : undefined,
+      transition: spinning ? 'box-shadow .14s' : 'box-shadow .5s',
     }}>
       <div className="scan" />
       {total > 1 && (
@@ -137,6 +169,8 @@ function SpinnerLane({ items, result, spinning, onComplete, index, total }) {
           </span>
         </div>
       )}
+      {/* Pass result to CaseSpinner only when done so it can snap to final item,
+          but during the spin the spinner animates through items freely */}
       <CaseSpinner items={items} result={result} spinning={spinning} onComplete={onComplete} />
     </div>
   );
@@ -387,8 +421,8 @@ export default function CaseOpen() {
               <ArrowLeft style={{ width:14, height:14 }} />
             </motion.button>
           </Link>
-          <div style={{ flex:1 }}>
-            <h1 className="shimmer-text" style={{ margin:'0 0 3px', fontSize:24, fontWeight:900, lineHeight:1.15 }}>
+          <div style={{ flex:1, minWidth:0 }}>
+            <h1 className="shimmer-text" style={{ margin:'0 0 3px', fontSize:22, fontWeight:900, lineHeight:1.2, maxWidth:'100%', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
               {caseData.name}
             </h1>
             {caseData.description && (
@@ -439,6 +473,7 @@ export default function CaseOpen() {
               onComplete={handleLaneDone}
               index={i}
               total={openQty}
+              done={!spinning && showResults && !!wonItems[i]}
             />
           ))}
         </div>
