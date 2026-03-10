@@ -21,12 +21,10 @@ const CSS = `
 .shimmer-text {
   background: linear-gradient(90deg,#fbbf24,#f59e0b,#fde68a,#fbbf24);
   background-size:200% auto;
-  background-clip:text;
   -webkit-background-clip:text;
   -webkit-text-fill-color:transparent;
-  color:transparent;
+  background-clip:text;
   animation:shimmer-bg 3s linear infinite;
-  display:inline-block;
 }
 @keyframes float-slow {
   0%,100% { transform:translateY(0) rotate(-2deg); }
@@ -117,33 +115,53 @@ function Particles({ color, count = 14 }) {
 
 /* Single spinner lane — one CaseSpinner per case */
 const CYCLE_GLOWS = [
-  'rgba(156,163,175,.35)',
-  'rgba(52,211,153,.4)',
-  'rgba(96,165,250,.45)',
+  'rgba(156,163,175,.4)',
+  'rgba(52,211,153,.45)',
+  'rgba(96,165,250,.5)',
+  'rgba(192,132,252,.55)',
+  'rgba(251,191,36,.6)',
   'rgba(192,132,252,.5)',
-  'rgba(251,191,36,.55)',
-  'rgba(192,132,252,.45)',
-  'rgba(96,165,250,.4)',
-  'rgba(52,211,153,.35)',
+  'rgba(96,165,250,.45)',
+  'rgba(52,211,153,.4)',
 ];
 
 function SpinnerLane({ items, result, spinning, onComplete, index, total, done }) {
-  // Only show result rarity glow AFTER the lane finishes
-  const itemRs = (done && result) ? rs(result.rarity) : null;
-  const [cycleIdx, setCycleIdx] = React.useState(index % CYCLE_GLOWS.length);
+  const itemRs = result ? rs(result.rarity) : null;
+  const [cycleIdx, setCycleIdx]       = React.useState(index % CYCLE_GLOWS.length);
+  const [settling,  setSettling]      = React.useState(false);
+  const [settled,   setSettled]       = React.useState(false);
 
+  // Cycle colors while spinning
   React.useEffect(() => {
-    if (!spinning) { setCycleIdx(index % CYCLE_GLOWS.length); return; }
+    if (!spinning) return;
+    setSettling(false);
+    setSettled(false);
     const iv = setInterval(() => {
       setCycleIdx(i => (i + 1) % CYCLE_GLOWS.length);
-    }, 150 + index * 37);
+    }, 130 + index * 31);
     return () => clearInterval(iv);
   }, [spinning, index]);
 
-  // While spinning: cycle through rarity colors. After done: show won rarity. Idle: no glow.
-  const glowColor = spinning
-    ? CYCLE_GLOWS[cycleIdx]
-    : itemRs ? itemRs.glow : undefined;
+  // When done: keep cycling briefly, then snap to rarity color
+  React.useEffect(() => {
+    if (!done || !itemRs) return;
+    setSettling(true);
+    // After 400ms of continued cycling, lock to result color
+    const t = setTimeout(() => setSettled(true), 400);
+    return () => clearTimeout(t);
+  }, [done]);
+
+  // Color logic:
+  // spinning → cycling color (fast swap)
+  // settling → still cycling but slowing (fast transition still)
+  // settled  → result rarity glow (slow fade in)
+  // idle     → no glow
+  let glowColor;
+  if (settled && itemRs)    glowColor = itemRs.glow;
+  else if (spinning || settling) glowColor = CYCLE_GLOWS[cycleIdx];
+  else                           glowColor = undefined;
+
+  const transitionDur = settled ? '0.7s' : '0.12s';
 
   return (
     <div style={{
@@ -155,8 +173,8 @@ function SpinnerLane({ items, result, spinning, onComplete, index, total, done }
         : index === 0 ? '0 0 0 16px'
         : index === total-1 ? '0 0 16px 0'
         : '0',
-      boxShadow: glowColor ? `inset 0 0 28px ${glowColor}` : undefined,
-      transition: spinning ? 'box-shadow .14s' : 'box-shadow .5s',
+      boxShadow: glowColor ? `inset 0 0 32px ${glowColor}` : 'none',
+      transition: `box-shadow ${transitionDur} ease`,
     }}>
       <div className="scan" />
       {total > 1 && (
@@ -169,8 +187,6 @@ function SpinnerLane({ items, result, spinning, onComplete, index, total, done }
           </span>
         </div>
       )}
-      {/* Pass result to CaseSpinner only when done so it can snap to final item,
-          but during the spin the spinner animates through items freely */}
       <CaseSpinner items={items} result={result} spinning={spinning} onComplete={onComplete} />
     </div>
   );
@@ -422,7 +438,7 @@ export default function CaseOpen() {
             </motion.button>
           </Link>
           <div style={{ flex:1, minWidth:0 }}>
-            <h1 className="shimmer-text" style={{ margin:'0 0 3px', fontSize:22, fontWeight:900, lineHeight:1.2, maxWidth:'100%', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+            <h1 className="shimmer-text" style={{ margin:'0 0 3px', fontSize:20, fontWeight:800, lineHeight:1.2 }}>
               {caseData.name}
             </h1>
             {caseData.description && (
@@ -540,36 +556,46 @@ export default function CaseOpen() {
 
         {/* ── ACTION PANEL ── */}
         <div style={{ marginBottom:22 }}>
+          {/* Scrollable row — never wraps, never stretches */}
+          <div style={{
+            display:'flex', alignItems:'center', gap:6,
+            overflowX:'auto', overflowY:'visible',
+            paddingBottom:2,
+            /* hide scrollbar */
+            scrollbarWidth:'none', msOverflowStyle:'none',
+          }}>
 
-          {/* Row: [OPEN btn] [FREE TRY] [1][2][3][4][5] — all inline, natural widths */}
-          <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:6 }}>
-
-            {/* OPEN button — fixed comfortable width */}
+            {/* OPEN button */}
             <button
               className="action-btn"
               onClick={showResults ? handleOpenAgain : handleOpen}
               disabled={spinning || !canAfford}
               style={{
-                padding:'11px 18px', borderRadius:10, border:'none',
-                cursor:spinning||!canAfford?'not-allowed':'pointer',
-                fontSize:13, fontWeight:900, fontFamily:'Syne, sans-serif',
-                color:canAfford?'#000':'rgba(255,255,255,.2)',
-                background:canAfford
-                  ? 'linear-gradient(135deg,#fbbf24,#f59e0b)'
-                  : 'rgba(255,255,255,.06)',
-                border:canAfford?'none':'1px solid rgba(255,255,255,.07)',
-                boxShadow:canAfford?'0 0 24px rgba(251,191,36,.4)':'none',
-                opacity:spinning?.65:1,
-                display:'inline-flex', alignItems:'center', gap:6,
-                whiteSpace:'nowrap', flexShrink:0,
+                flexShrink:0,
+                height:36, padding:'0 14px', borderRadius:9,
+                border: canAfford ? 'none' : '1px solid rgba(255,255,255,.08)',
+                cursor: spinning||!canAfford ? 'not-allowed' : 'pointer',
+                fontSize:12, fontWeight:700, letterSpacing:'.01em',
+                fontFamily:'system-ui, sans-serif',
+                color: canAfford ? '#000' : 'rgba(255,255,255,.25)',
+                background: canAfford ? 'linear-gradient(135deg,#fbbf24,#f59e0b)' : 'rgba(255,255,255,.05)',
+                boxShadow: canAfford ? '0 0 20px rgba(251,191,36,.35)' : 'none',
+                opacity: spinning ? .6 : 1,
+                display:'inline-flex', alignItems:'center', gap:5,
+                whiteSpace:'nowrap',
               }}>
               {spinning
-                ? <div style={{ width:13, height:13, borderRadius:'50%', border:'2px solid rgba(0,0,0,.25)', borderTopColor:'#000', animation:'spin-loader 1s linear infinite' }} />
-                : showResults ? <RefreshCw style={{ width:13, height:13 }} /> : <Zap style={{ width:13, height:13 }} />
+                ? <div style={{ width:12, height:12, borderRadius:'50%', border:'2px solid rgba(0,0,0,.2)', borderTopColor:'#000', animation:'spin-loader 1s linear infinite' }} />
+                : showResults
+                  ? <RefreshCw style={{ width:12, height:12 }} />
+                  : <Zap style={{ width:12, height:12 }} />
               }
-              {spinning ? 'Opening…'
-                : showResults ? `Open Again${openQty>1?` ×${openQty}`:''}`
-                : `Open for ${totalCost.toLocaleString()} ¢`}
+              <span>
+                {spinning ? 'Opening…'
+                  : showResults
+                    ? `Open Again${openQty > 1 ? ` ×${openQty}` : ''}`
+                    : `Open for ${totalCost.toLocaleString()} ¢`}
+              </span>
             </button>
 
             {/* FREE TRY button */}
@@ -578,27 +604,28 @@ export default function CaseOpen() {
               onClick={showResults ? handleDemoAgain : handleDemo}
               disabled={spinning}
               style={{
-                padding:'11px 14px', borderRadius:10,
-                cursor:spinning?'not-allowed':'pointer',
-                fontSize:12, fontWeight:700, fontFamily:'Syne, sans-serif',
+                flexShrink:0,
+                height:36, padding:'0 12px', borderRadius:9,
+                cursor: spinning ? 'not-allowed' : 'pointer',
+                fontSize:12, fontWeight:600, fontFamily:'system-ui, sans-serif',
                 color:'rgba(192,132,252,.9)',
                 background:'rgba(168,85,247,.1)',
-                border:'1px solid rgba(168,85,247,.25)',
-                opacity:spinning?.45:1,
+                border:'1px solid rgba(168,85,247,.22)',
+                opacity: spinning ? .4 : 1,
                 display:'inline-flex', alignItems:'center', gap:5,
-                whiteSpace:'nowrap', flexShrink:0,
+                whiteSpace:'nowrap',
               }}>
               <Eye style={{ width:12, height:12 }} />
-              Free Try
+              <span>Free Try</span>
             </button>
 
-            {/* Divider */}
-            <div style={{ width:1, height:28, background:'rgba(255,255,255,.08)', flexShrink:0 }} />
+            {/* Thin divider */}
+            <div style={{ flexShrink:0, width:1, height:22, background:'rgba(255,255,255,.1)' }} />
 
-            {/* Qty pills — fixed 32×32 squares */}
+            {/* Qty pills */}
             {[1,2,3,4,5].map(qty => {
               const sel = openQty === qty;
-              const affordable = (user?.balance||0) >= (caseData.price||0)*qty;
+              const affordable = (user?.balance||0) >= (caseData.price||0) * qty;
               return (
                 <button
                   key={qty}
@@ -606,16 +633,16 @@ export default function CaseOpen() {
                   onClick={() => !spinning && setOpenQty(qty)}
                   disabled={spinning}
                   style={{
-                    width:32, height:32, borderRadius:7, border:'none', padding:0,
-                    cursor:spinning?'not-allowed':'pointer',
-                    fontSize:13, fontWeight:800, fontFamily:'Syne, sans-serif',
-                    background:sel
+                    flexShrink:0,
+                    width:30, height:30, padding:0, borderRadius:7, border:'none',
+                    cursor: spinning ? 'not-allowed' : 'pointer',
+                    fontSize:12, fontWeight:700, fontFamily:'system-ui, sans-serif',
+                    background: sel
                       ? 'linear-gradient(135deg,#fbbf24,#f59e0b)'
                       : affordable ? 'rgba(255,255,255,.07)' : 'rgba(255,255,255,.03)',
-                    color:sel?'#000':affordable?'rgba(255,255,255,.6)':'rgba(255,255,255,.18)',
-                    boxShadow:sel?'0 0 10px rgba(251,191,36,.35)':'none',
-                    outline:sel?'none':`1px solid ${affordable?'rgba(255,255,255,.1)':'rgba(255,255,255,.04)'}`,
-                    flexShrink:0,
+                    color: sel ? '#000' : affordable ? 'rgba(255,255,255,.55)' : 'rgba(255,255,255,.15)',
+                    boxShadow: sel ? '0 0 10px rgba(251,191,36,.3)' : 'none',
+                    outline: sel ? 'none' : `1px solid ${affordable ? 'rgba(255,255,255,.09)' : 'rgba(255,255,255,.04)'}`,
                   }}>
                   {qty}
                 </button>
@@ -623,10 +650,10 @@ export default function CaseOpen() {
             })}
           </div>
 
-          {/* Not enough coins — small, inline below */}
+          {/* Not enough coins */}
           {!canAfford && !spinning && (
-            <p style={{ fontSize:11, color:'rgba(239,68,68,.5)', fontWeight:700, margin:'7px 0 0' }}>
-              {(totalCost-(user?.balance||0)).toLocaleString()} ¢ short —{' '}
+            <p style={{ fontSize:11, color:'rgba(239,68,68,.5)', fontWeight:600, margin:'6px 0 0', fontFamily:'system-ui, sans-serif' }}>
+              {(totalCost - (user?.balance||0)).toLocaleString()} ¢ short —{' '}
               <Link to={createPageUrl('Deposit')} style={{ color:'#a78bfa', textDecoration:'underline' }}>Deposit</Link>
             </p>
           )}
