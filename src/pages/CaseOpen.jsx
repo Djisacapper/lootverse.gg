@@ -504,107 +504,95 @@ export default function CaseOpen() {
         </AnimatePresence>
 
         {/* ── ACTION PANEL ── */}
-        <div style={{
-          borderRadius:13,
-          background:'rgba(255,255,255,.03)',
-          border:'1px solid rgba(255,255,255,.07)',
-          padding:'12px',
-          marginBottom:22,
-        }}>
+        <div style={{ marginBottom:22 }}>
 
-          {/* Quantity row */}
-          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:10 }}>
-            <span style={{ fontSize:10, fontWeight:700, color:'rgba(255,255,255,.28)', fontFamily:'DM Mono, monospace', whiteSpace:'nowrap' }}>
-              QTY
-            </span>
-            <div style={{ display:'flex', gap:4, flex:1 }}>
-              {[1,2,3,4,5].map(qty => {
-                const sel = openQty === qty;
-                const affordable = (user?.balance||0) >= (caseData.price||0)*qty;
-                return (
-                  <button
-                    key={qty}
-                    className="qty-pill"
-                    onClick={() => !spinning && setOpenQty(qty)}
-                    disabled={spinning}
-                    style={{
-                      flex:1, height:30, borderRadius:7, border:'none',
-                      cursor:spinning?'not-allowed':'pointer',
-                      fontSize:12, fontWeight:800, fontFamily:'Syne, sans-serif',
-                      background: sel
-                        ? 'linear-gradient(135deg,#fbbf24,#f59e0b)'
-                        : affordable ? 'rgba(251,191,36,.07)' : 'rgba(255,255,255,.03)',
-                      color: sel ? '#000' : affordable ? 'rgba(251,191,36,.6)' : 'rgba(255,255,255,.16)',
-                      boxShadow: sel ? '0 0 14px rgba(251,191,36,.3)' : 'none',
-                      outline: sel ? 'none' : `1px solid ${affordable?'rgba(251,191,36,.1)':'rgba(255,255,255,.04)'}`,
-                    }}>
-                    {qty}
-                  </button>
-                );
-              })}
-            </div>
-            <span style={{ fontSize:11, fontWeight:800, color:canAfford?'#fbbf24':'rgba(239,68,68,.7)', fontFamily:'DM Mono, monospace', whiteSpace:'nowrap' }}>
-              {totalCost.toLocaleString()} ¢
-            </span>
-          </div>
+          {/* Row: [OPEN btn] [FREE TRY] [1][2][3][4][5] — all inline, natural widths */}
+          <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', gap:6 }}>
 
-          {/* Buttons row */}
-          <div style={{ display:'flex', gap:8 }}>
-            {/* Primary: Open / Open Again */}
+            {/* OPEN button — fixed comfortable width */}
             <button
               className="action-btn"
               onClick={showResults ? handleOpenAgain : handleOpen}
               disabled={spinning || !canAfford}
               style={{
-                flex:3, padding:'13px 0', borderRadius:10, border:'none',
+                padding:'11px 18px', borderRadius:10, border:'none',
                 cursor:spinning||!canAfford?'not-allowed':'pointer',
-                fontSize:14, fontWeight:900, fontFamily:'Syne, sans-serif',
-                color:canAfford?'#000':'rgba(255,255,255,.18)',
+                fontSize:13, fontWeight:900, fontFamily:'Syne, sans-serif',
+                color:canAfford?'#000':'rgba(255,255,255,.2)',
                 background:canAfford
-                  ? 'linear-gradient(135deg,#fbbf24,#f59e0b,#fde68a)'
-                  : 'rgba(255,255,255,.04)',
-                border:canAfford?'none':'1px solid rgba(255,255,255,.05)',
-                boxShadow:canAfford?'0 0 30px rgba(251,191,36,.35),0 3px 10px rgba(0,0,0,.5)':'none',
+                  ? 'linear-gradient(135deg,#fbbf24,#f59e0b)'
+                  : 'rgba(255,255,255,.06)',
+                border:canAfford?'none':'1px solid rgba(255,255,255,.07)',
+                boxShadow:canAfford?'0 0 24px rgba(251,191,36,.4)':'none',
                 opacity:spinning?.65:1,
-                display:'flex', alignItems:'center', justifyContent:'center', gap:7,
-                transition:'background .25s, box-shadow .25s, color .25s, opacity .18s',
+                display:'inline-flex', alignItems:'center', gap:6,
+                whiteSpace:'nowrap', flexShrink:0,
               }}>
               {spinning
-                ? <div style={{ width:15, height:15, borderRadius:'50%', border:'2px solid rgba(0,0,0,.25)', borderTopColor:'#000', animation:'spin-loader 1s linear infinite' }} />
-                : showResults ? <RefreshCw style={{ width:14, height:14 }} /> : <Zap style={{ width:14, height:14 }} />
+                ? <div style={{ width:13, height:13, borderRadius:'50%', border:'2px solid rgba(0,0,0,.25)', borderTopColor:'#000', animation:'spin-loader 1s linear infinite' }} />
+                : showResults ? <RefreshCw style={{ width:13, height:13 }} /> : <Zap style={{ width:13, height:13 }} />
               }
-              {spinning ? 'Opening…' : showResults
-                ? `Open Again${openQty>1?` ×${openQty}`:''}`
-                : `Open${openQty>1?` ×${openQty}`:''} — ${totalCost.toLocaleString()} ¢`
-              }
+              {spinning ? 'Opening…'
+                : showResults ? `Open Again${openQty>1?` ×${openQty}`:''}`
+                : `Open for ${totalCost.toLocaleString()} ¢`}
             </button>
 
-            {/* Secondary: Demo */}
+            {/* FREE TRY button */}
             <button
               className="action-btn"
               onClick={showResults ? handleDemoAgain : handleDemo}
               disabled={spinning}
               style={{
-                flex:1, padding:'13px 0', borderRadius:10,
+                padding:'11px 14px', borderRadius:10,
                 cursor:spinning?'not-allowed':'pointer',
                 fontSize:12, fontWeight:700, fontFamily:'Syne, sans-serif',
-                color:'rgba(192,132,252,.8)',
-                background:'rgba(168,85,247,.08)',
-                border:'1px solid rgba(168,85,247,.18)',
+                color:'rgba(192,132,252,.9)',
+                background:'rgba(168,85,247,.1)',
+                border:'1px solid rgba(168,85,247,.25)',
                 opacity:spinning?.45:1,
-                display:'flex', alignItems:'center', justifyContent:'center', gap:6,
-                transition:'opacity .18s, background .18s',
+                display:'inline-flex', alignItems:'center', gap:5,
+                whiteSpace:'nowrap', flexShrink:0,
               }}>
-              <Eye style={{ width:13, height:13 }} />
-              Demo
+              <Eye style={{ width:12, height:12 }} />
+              Free Try
             </button>
+
+            {/* Divider */}
+            <div style={{ width:1, height:28, background:'rgba(255,255,255,.08)', flexShrink:0 }} />
+
+            {/* Qty pills — fixed 32×32 squares */}
+            {[1,2,3,4,5].map(qty => {
+              const sel = openQty === qty;
+              const affordable = (user?.balance||0) >= (caseData.price||0)*qty;
+              return (
+                <button
+                  key={qty}
+                  className="qty-pill"
+                  onClick={() => !spinning && setOpenQty(qty)}
+                  disabled={spinning}
+                  style={{
+                    width:32, height:32, borderRadius:7, border:'none', padding:0,
+                    cursor:spinning?'not-allowed':'pointer',
+                    fontSize:13, fontWeight:800, fontFamily:'Syne, sans-serif',
+                    background:sel
+                      ? 'linear-gradient(135deg,#fbbf24,#f59e0b)'
+                      : affordable ? 'rgba(255,255,255,.07)' : 'rgba(255,255,255,.03)',
+                    color:sel?'#000':affordable?'rgba(255,255,255,.6)':'rgba(255,255,255,.18)',
+                    boxShadow:sel?'0 0 10px rgba(251,191,36,.35)':'none',
+                    outline:sel?'none':`1px solid ${affordable?'rgba(255,255,255,.1)':'rgba(255,255,255,.04)'}`,
+                    flexShrink:0,
+                  }}>
+                  {qty}
+                </button>
+              );
+            })}
           </div>
 
-          {/* Not enough coins */}
+          {/* Not enough coins — small, inline below */}
           {!canAfford && !spinning && (
-            <p style={{ textAlign:'center', fontSize:11, color:'rgba(239,68,68,.55)', fontWeight:700, margin:'9px 0 0' }}>
+            <p style={{ fontSize:11, color:'rgba(239,68,68,.5)', fontWeight:700, margin:'7px 0 0' }}>
               {(totalCost-(user?.balance||0)).toLocaleString()} ¢ short —{' '}
-              <Link to={createPageUrl('Deposit')} style={{ color:'#c084fc', textDecoration:'underline' }}>Deposit</Link>
+              <Link to={createPageUrl('Deposit')} style={{ color:'#a78bfa', textDecoration:'underline' }}>Deposit</Link>
             </p>
           )}
         </div>
