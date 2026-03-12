@@ -309,10 +309,10 @@ export default function Cases() {
 
         {/* ── Grid ── */}
         {loading ? (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:8 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:10 }}>
             {Array(12).fill(0).map((_, i) => (
               <div key={i} style={{
-                borderRadius:10, height:130,
+                borderRadius:12, height:175,
                 background:`rgba(255,255,255,${0.015 + (i % 3) * 0.005})`,
                 border:'1px solid rgba(251,191,36,.04)',
                 animation:'gold-pulse 2s ease-in-out infinite',
@@ -322,7 +322,7 @@ export default function Cases() {
           </div>
         ) : (
           <AnimatePresence mode="popLayout">
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:8 }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:10 }}>
               {filtered.map((c, i) => {
                 const isHov        = hovId === c.id;
                 const isExpensive  = c.price > 5000;
@@ -353,12 +353,12 @@ export default function Cases() {
                         onMouseEnter={() => setHovId(c.id)}
                         onMouseLeave={() => setHovId(null)}
                         style={{
-                          position:'relative', overflow:'hidden', borderRadius:10, cursor:'pointer',
+                          position:'relative', overflow:'hidden', borderRadius:12, cursor:'pointer',
                           background: isExpensive
                             ? 'linear-gradient(160deg,#0f0800,#1c0e00)'
                             : 'linear-gradient(160deg,#080012,#0e001e)',
                           border:`1px solid ${isHov ? accentFaint+'0.3)' : accentFaint+'0.07)'}`,
-                          padding:'8px 6px 9px',
+                          padding:'12px 10px 13px',
                           display:'flex', flexDirection:'column', alignItems:'center',
                         }}>
 
@@ -366,30 +366,30 @@ export default function Cases() {
 
                         {/* Corner glow */}
                         <div style={{
-                          position:'absolute', top:0, right:0, width:44, height:44, pointerEvents:'none',
-                          background:`radial-gradient(circle,${accentFaint}0.12) 0%,transparent 70%)`,
+                          position:'absolute', top:0, right:0, width:60, height:60, pointerEvents:'none',
+                          background:`radial-gradient(circle,${accentFaint}0.14) 0%,transparent 70%)`,
                         }} />
 
                         {/* Category dot */}
                         <div style={{
-                          position:'absolute', top:5, right:5, width:5, height:5,
+                          position:'absolute', top:7, right:7, width:6, height:6,
                           borderRadius:'50%', background: accentColor,
-                          boxShadow:`0 0 5px ${accentColor}`,
-                          opacity: 0.7,
+                          boxShadow:`0 0 6px ${accentColor}`,
+                          opacity: 0.8,
                         }} />
 
                         {/* Badge */}
                         {(isNew || isExpensive) && (
                           <div style={{
-                            position:'absolute', top:5, left:5, zIndex:3,
-                            fontSize:7, fontWeight:900, letterSpacing:'.08em',
-                            textTransform:'uppercase', padding:'1px 4px',
-                            borderRadius:3, lineHeight:'13px',
+                            position:'absolute', top:7, left:7, zIndex:3,
+                            fontSize:8, fontWeight:900, letterSpacing:'.08em',
+                            textTransform:'uppercase', padding:'2px 6px',
+                            borderRadius:4, lineHeight:'14px',
                             color: isExpensive ? '#000' : '#fff',
                             background: isExpensive
                               ? 'linear-gradient(135deg,#fbbf24,#f59e0b)'
                               : 'linear-gradient(135deg,#7c3aed,#6d28d9)',
-                            boxShadow: isExpensive ? '0 0 7px rgba(251,191,36,.5)' : '0 0 7px rgba(124,58,237,.5)',
+                            boxShadow: isExpensive ? '0 0 8px rgba(251,191,36,.5)' : '0 0 8px rgba(124,58,237,.5)',
                           }}>
                             {isExpensive ? '⭐' : 'NEW'}
                           </div>
@@ -397,55 +397,55 @@ export default function Cases() {
 
                         {/* Case image */}
                         <motion.div
-                          animate={{ scale: isHov ? 1.1 : 1, y: isHov ? -3 : 0 }}
+                          animate={{ scale: isHov ? 1.1 : 1, y: isHov ? -4 : 0 }}
                           transition={{ type:'spring', stiffness:240, damping:18 }}
                           style={{
                             width:'100%', display:'flex',
                             alignItems:'center', justifyContent:'center',
-                            marginBottom:5, height:62,
+                            marginBottom:8, height:90,
                           }}>
                           {c.image_url ? (
                             <img
                               src={c.image_url}
                               alt={c.name}
                               style={{
-                                maxWidth:'88%', maxHeight:60,
+                                maxWidth:'92%', maxHeight:88,
                                 width:'auto', height:'auto',
                                 objectFit:'contain',
                                 filter: isHov
-                                  ? `drop-shadow(0 0 10px ${accentColor})`
-                                  : `drop-shadow(0 0 4px ${accentFaint}0.3))`,
+                                  ? `drop-shadow(0 0 12px ${accentColor})`
+                                  : `drop-shadow(0 0 5px ${accentFaint}0.35))`,
                                 transition:'filter .25s',
                               }}
                             />
                           ) : (
-                            <Box style={{ width:28, height:28, color: accentColor, opacity:.3 }} />
+                            <Box style={{ width:38, height:38, color: accentColor, opacity:.3 }} />
                           )}
                         </motion.div>
 
                         {/* Name */}
                         <p style={{
-                          margin:'0 0 3px', fontSize:9, fontWeight:800, textAlign:'center',
-                          color: isHov ? '#fff' : 'rgba(255,255,255,.65)',
+                          margin:'0 0 5px', fontSize:11, fontWeight:800, textAlign:'center',
+                          color: isHov ? '#fff' : 'rgba(255,255,255,.7)',
                           transition:'color .25s',
                           overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
                           width:'100%', lineHeight:1.2, letterSpacing:'.01em',
                         }}>{c.name}</p>
 
                         {/* Price */}
-                        <div style={{ display:'flex', alignItems:'center', gap:3, marginBottom:5 }}>
+                        <div style={{ display:'flex', alignItems:'center', gap:4, marginBottom:7 }}>
                           <div style={{
-                            width:11, height:11, borderRadius:'50%', flexShrink:0,
+                            width:14, height:14, borderRadius:'50%', flexShrink:0,
                             background:'linear-gradient(135deg,#fbbf24,#f59e0b)',
                             display:'flex', alignItems:'center', justifyContent:'center',
-                            boxShadow:'0 0 5px rgba(251,191,36,.4)',
+                            boxShadow:'0 0 6px rgba(251,191,36,.45)',
                           }}>
-                            <span style={{ fontSize:6, fontWeight:900, color:'#000' }}>$</span>
+                            <span style={{ fontSize:8, fontWeight:900, color:'#000' }}>$</span>
                           </div>
                           <span style={{
-                            fontSize:10, fontWeight:900,
-                            color: isExpensive ? '#fbbf24' : 'rgba(251,191,36,.7)',
-                            textShadow: isExpensive ? '0 0 8px rgba(251,191,36,.35)' : undefined,
+                            fontSize:13, fontWeight:900,
+                            color: isExpensive ? '#fbbf24' : 'rgba(251,191,36,.75)',
+                            textShadow: isExpensive ? '0 0 10px rgba(251,191,36,.4)' : undefined,
                           }}>{c.price?.toLocaleString()}</span>
                         </div>
 
