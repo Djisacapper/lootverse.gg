@@ -6,6 +6,7 @@ import JackpotWheel from './JackpotWheel';
 import { usePlayerAvatars, safeAvatarUrl } from './usePlayerAvatars';
 import { useProvablyFairArena } from './useprovablyfair';
 import ProvablyFairVerifier from './Provablyfairverifier';
+
 /* ─── CSS ─────────────────────────────────────────────────────────── */
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
@@ -582,10 +583,10 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
   },[phase,countdown,isWaiting,fairStatus]); // ← fairStatus added to deps
 
   const launchRound=r=>{ roundDone.current=0; crRef.current=r; setCR(r); setPP(players.map(()=>'spinning')); playSpin(isFast); };
-  const handleSpinDone=pi=>{ if(roundDone.current===0)stopSpin(); const r=crRef.current; if(!allRolled.current||!allRolled.current[r]||!allRolled.current[r][pi])return; const rolled=allRolled.current[r]; if(rolled[pi].isMagic){setPP(prev=>{const n=[...prev];n[pi]='magic_spin';return n;});}else markDone(pi,r); };
-  const handleMagicDone=pi=>{ stopSpin(); if(!allRolled.current||!allRolled.current[crRef.current])return; markDone(pi,crRef.current); };
+  const handleSpinDone=pi=>{ if(roundDone.current===0)stopSpin(); const r=crRef.current; if(!allRolled.current||!allRolled.current[r]||!allRolled.current[r][pi]){ roundDone.current+=1; if(roundDone.current>=players.length){ if(r+1>=totalRounds)setTimeout(()=>isJackpot?setJackpot(true):finishBattle(),isFast?1100:2400); else setTimeout(()=>launchRound(r+1),isFast?1400:4000); } return; } const rolled=allRolled.current[r]; if(rolled[pi].isMagic){setPP(prev=>{const n=[...prev];n[pi]='magic_spin';return n;});}else markDone(pi,r); };
+  const handleMagicDone=pi=>{ stopSpin(); if(!allRolled.current||!allRolled.current[crRef.current]){ roundDone.current+=1; return; } markDone(pi,crRef.current); };
   const markDone=(pi,r)=>{
-    if(!allRolled.current||!allRolled.current[r]||!allRolled.current[r][pi])return;
+    if(!allRolled.current||!allRolled.current[r]||!allRolled.current[r][pi]){ roundDone.current+=1; return; }
     const rolled=allRolled.current[r];
     setPI(prev=>{const n=[...prev];n[pi]=[...n[pi],rolled[pi].item];return n;});
     setPP(prev=>{const n=[...prev];n[pi]='idle';return n;});
