@@ -4,6 +4,8 @@ import { rollItem } from './useWallet';
 import { motion, AnimatePresence } from 'framer-motion';
 import JackpotWheel from './JackpotWheel';
 import { usePlayerAvatars, safeAvatarUrl } from './usePlayerAvatars';
+import { useProvablyFairArena } from '@/hooks/useProvablyFair';       // ← ADDED
+import ProvablyFairVerifier from '@/components/game/ProvablyFairVerifier'; // ← ADDED
 
 /* ─── CSS ─────────────────────────────────────────────────────────── */
 const CSS = `
@@ -526,6 +528,13 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
   const teamList   = useMemo(()=>teams||[players.map((_,i)=>i)],[teams,players.length]);
   const isWaiting  = battle?.status==='waiting';
 
+  // ── ADDED: provably fair hook — reads committed rolls from battle record ──
+  const { rolls: fairRolls, blockHash, blockNum, status: fairStatus } =
+    useProvablyFairArena(battle, selectedCases, players, battleModes);
+
+  const [showVerifier, setShowVerifier] = useState(false); // ← ADDED
+  // ── END ADDED ──
+
   const cbRef=useRef(onBattleUpdated); useEffect(()=>{cbRef.current=onBattleUpdated;},[onBattleUpdated]);
   const lastFilled=useRef(-1), lastStatus=useRef('');
   useEffect(()=>{
@@ -558,20 +567,20 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
 
   const allRolled=useRef(null), roundDone=useRef(0), crRef=useRef(0), rewardGiven=useRef(false);
 
-  const rollWithMagic=useCallback((items)=>{
-    const item=rollItem(items)||{name:'Nothing',value:0,rarity:'common',image_url:null};
-    if(!isMagicSpin)return{item,isMagic:false};
-    const top=items.filter(it=>['epic','legendary'].includes(it.rarity));
-    if(top.length>0&&Math.random()<.20)return{item:rollItem(top)||item,isMagic:true};
-    return{item,isMagic:false};
-  },[isMagicSpin]);
+  // ── ADDED: sync fairRolls into allRolled.current when they arrive ──
+  useEffect(() => {
+    if (fairRolls) {
+      allRolled.current = fairRolls;
+    }
+  }, [fairRolls]);
+  // ── END ADDED ──
 
-  useEffect(()=>{ if(isWaiting)return; allRolled.current=selectedCases.map(c=>players.map(()=>rollWithMagic(c.items||[]))); },[]);
+  // ── CHANGED: pause countdown until rolls are ready ──
   useEffect(()=>{
-    if(isWaiting||phase!=='countdown')return;
+    if(isWaiting || phase !== 'countdown' || fairStatus !== 'ready') return; // ← fairStatus check added
     if(countdown===0){setPhase('spinning');launchRound(0);return;}
     const t=setTimeout(()=>setCd(c=>c-1),1000); return()=>clearTimeout(t);
-  },[phase,countdown,isWaiting]);
+  },[phase,countdown,isWaiting,fairStatus]); // ← fairStatus added to deps
 
   const launchRound=r=>{ roundDone.current=0; crRef.current=r; setCR(r); setPP(players.map(()=>'spinning')); playSpin(isFast); };
   const handleSpinDone=pi=>{ if(roundDone.current===0)stopSpin(); const r=crRef.current,rolled=allRolled.current[r]; if(rolled[pi].isMagic){setPP(prev=>{const n=[...prev];n[pi]='magic_spin';return n;});}else markDone(pi,r); };
@@ -596,7 +605,6 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
       if(isGroup){setConf(true);setTimeout(()=>setConf(false),5500);onReward&&onReward(Math.floor(tv/players.length));}
       else if(wi>=0&&teamList[wi]?.includes(upi)){setConf(true);setTimeout(()=>setConf(false),5500);onReward&&onReward(Math.floor(tv/(teamList[wi]?.length||1)));}
 
-      // ── Save all items to UserInventory for every real player ──
       import('@/api/base44Client').then(({ base44: b44 }) => {
         allRolled.current.forEach((rnd, roundIdx) => {
           rnd.forEach((rolled, pi) => {
@@ -607,7 +615,7 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
             b44.entities.UserInventory.create({
               user_email:     p.email,
               item_name:      item.name,
-              item_image_url: item.image || item.image_url || null, // ← FIXED
+              item_image_url: item.image || item.image_url || null,
               rarity:         item.rarity,
               value:          item.value,
               source:         'battle_win',
@@ -657,6 +665,19 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
     <div className="ba" style={{background:'var(--bg-deep)',minHeight:'100vh',padding:'20px 0 80px',position:'relative'}}>
       <style>{CSS}</style>
       <ConfettiEffect active={confetti}/>
+
+      {/* ── ADDED: Provably Fair verifier modal ── */}
+      {showVerifier && (
+        <ProvablyFairVerifier
+          battle={{ ...battle, eos_block_hash: blockHash, eos_block_num: blockNum }}
+          selectedCases={selectedCases}
+          players={players}
+          battleModes={battleModes}
+          onClose={() => setShowVerifier(false)}
+        />
+      )}
+      {/* ── END ADDED ── */}
+
       <div style={{maxWidth:900,margin:'0 auto',display:'flex',flexDirection:'column',gap:14,padding:'0 16px'}}>
         <div style={{position:'relative',overflow:'hidden',borderRadius:16,background:'linear-gradient(120deg,#07041a 0%,#0d0822 50%,#060110 100%)',border:'1px solid rgba(157,111,255,.14)',padding:'14px 18px'}}>
           <div className="ba-scan"/><div className="ba-noise"/>
@@ -673,6 +694,24 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
               <span style={{fontSize:9,color:'rgba(245,200,66,.45)',fontWeight:600}}>coins</span>
             </div>
             {activeModes.map(m=><ModeBadge key={m.label} {...m}/>)}
+
+            {/* ── ADDED: Provably Fair button ── */}
+            {blockHash && (
+              <button
+                onClick={() => setShowVerifier(true)}
+                style={{
+                  display:'flex', alignItems:'center', gap:5,
+                  padding:'4px 10px', borderRadius:8,
+                  background:'rgba(0,229,160,.08)', border:'1px solid rgba(0,229,160,.22)',
+                  color:'#00e5a0', fontSize:10, fontWeight:800,
+                  fontFamily:'Outfit,sans-serif', cursor:'pointer',
+                  letterSpacing:'.06em', textTransform:'uppercase',
+                }}>
+                <Shield style={{width:10,height:10}}/> Provably Fair
+              </button>
+            )}
+            {/* ── END ADDED ── */}
+
             <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:5}}>
               {selectedCases.map((_,i)=>(
                 <div key={i} className={i===currentRound&&!done?'ba-pip-live':''} style={{height:5,borderRadius:3,transition:'all .35s',width:i===currentRound?22:i<currentRound?15:7,background:i<currentRound?'#9d6fff':i===currentRound?'#f5c842':'rgba(255,255,255,.1)'}}/>
@@ -686,6 +725,15 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
         {isTerminal&&!done&&<ModeNotice icon="⚡" color="#f5c842">Terminal — only the <strong>last round</strong> determines the winner</ModeNotice>}
         {isCrazy&&!done&&<ModeNotice icon="🎭" color="#f472b6">Crazy mode — player with the <strong>lowest</strong> total wins!</ModeNotice>}
         {isGroup&&!done&&<ModeNotice icon="🔄" color="#00e5a0">Group mode — profit is split equally among all players</ModeNotice>}
+
+        {/* ── ADDED: waiting for rolls notice ── */}
+        {fairStatus === 'resolving' && !isWaiting && (
+          <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 16px',borderRadius:12,background:'rgba(0,229,160,.06)',border:'1px solid rgba(0,229,160,.2)'}}>
+            <Loader2 style={{width:13,height:13,color:'#00e5a0'}} className="animate-spin"/>
+            <span style={{fontSize:12,color:'#00e5a0',fontWeight:600}}>Fetching EOS block · locking outcomes…</span>
+          </div>
+        )}
+        {/* ── END ADDED ── */}
 
         <AnimatePresence mode="wait">{!done&&<RoundLabel key={currentRound} round={currentRound} total={totalRounds} caseName={selectedCases[currentRound]?.name}/>}</AnimatePresence>
 
@@ -750,7 +798,9 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
                   {countdown===0?'⚔️':countdown}
                 </motion.div>
               </AnimatePresence>
-              <span className="ba-title" style={{fontSize:12,fontWeight:600,color:'var(--text-dim)',letterSpacing:'.22em',textTransform:'uppercase',position:'relative',zIndex:2}}>{countdown>0?'Battle starts in…':'Fight!'}</span>
+              <span className="ba-title" style={{fontSize:12,fontWeight:600,color:'var(--text-dim)',letterSpacing:'.22em',textTransform:'uppercase',position:'relative',zIndex:2}}>
+                {fairStatus==='resolving' ? '🔗 Locking outcomes on EOS…' : countdown>0 ? 'Battle starts in…' : 'Fight!'}
+              </span>
             </motion.div>
           )}
         </AnimatePresence>
