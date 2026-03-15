@@ -7,8 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Swords, Plus, Eye, ChevronDown } from 'lucide-react';
 import CreateBattle from '../components/game/CreateBattle';
 import BattleArena from '../components/game/BattleArena';
-import { commitEosBlock, resolveAndCommitRolls } from '../components/game/useProvablyFair'; // ← ADDED
-
+import { commitEosBlock, resolveAndCommitRolls } from '../components/game/useprovablyfair';
 /* ─── CSS ──────────────────────────────────────────────────────── */
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
