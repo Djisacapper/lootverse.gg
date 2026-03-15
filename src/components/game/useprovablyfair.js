@@ -92,10 +92,13 @@ function mulberry32(seed) {
  */
 function seededRollItem(rng, items) {
   if (!items || items.length === 0) return { name: 'Nothing', value: 0, rarity: 'common', image_url: null };
-  const totalWeight = items.reduce((s, it) => s + (it.weight || it.drop_chance || 1), 0);
+  // Use drop_rate as the weight — this is the field defined in your CaseTemplate schema.
+  // If drop_rate is missing or 0, fall back to 1 so the item still has a tiny chance.
+  const getWeight = (it) => (typeof it.drop_rate === 'number' && it.drop_rate > 0) ? it.drop_rate : 1;
+  const totalWeight = items.reduce((s, it) => s + getWeight(it), 0);
   let roll = rng() * totalWeight;
   for (const item of items) {
-    roll -= (item.weight || item.drop_chance || 1);
+    roll -= getWeight(item);
     if (roll <= 0) return item;
   }
   return items[items.length - 1];
