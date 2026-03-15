@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Swords, Plus, Eye, ChevronDown } from 'lucide-react';
 import CreateBattle from '../components/game/CreateBattle';
 import BattleArena from '../components/game/BattleArena';
+import { commitEosBlock, resolveAndCommitRolls } from '@/hooks/useProvablyFair'; // ← ADDED
 
 /* ─── CSS ──────────────────────────────────────────────────────── */
 const CSS = `
@@ -255,7 +256,7 @@ function BattleRow({ battle: b, user, balance, cases, onJoin, onWatch, onView, i
           </div>
         </div>
 
-        {/* ── Col 2: Case preview (case image repeated per round) ── */}
+        {/* ── Col 2: Case preview ── */}
         <div style={{ display:'flex', alignItems:'center', gap:6, flex:1, minWidth:0 }}>
           {caseTemplate
             ? Array.from({ length: Math.min(5, b.rounds || 1) }).map((_, i) => {
@@ -297,10 +298,7 @@ function BattleRow({ battle: b, user, balance, cases, onJoin, onWatch, onView, i
 
         {/* ── Col 3: Cost + Action ── */}
         <div style={{ display:'flex', alignItems:'center', gap:14, marginLeft:'auto', flexShrink:0 }}>
-          {/* Cost pill */}
-          <div style={{
-            display:'flex', flexDirection:'column', alignItems:'flex-end', gap:2,
-          }}>
+          <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:2 }}>
             <span style={{ fontSize:9, color:'rgba(255,255,255,.3)', textTransform:'uppercase', letterSpacing:'.12em', fontWeight:700 }}>Entry</span>
             <div style={{ display:'flex', alignItems:'center', gap:5 }}>
               <span style={{ fontSize:14, fontWeight:900, color:'#fbbf24' }}>{b.entry_cost?.toLocaleString()}</span>
@@ -308,7 +306,6 @@ function BattleRow({ battle: b, user, balance, cases, onJoin, onWatch, onView, i
             </div>
           </div>
 
-          {/* Action button */}
           {isLive ? (
             <motion.button
               whileHover={{ scale:1.05, y:-1 }} whileTap={{ scale:.96 }}
@@ -485,6 +482,16 @@ export default function Battles() {
       entry_cost: totalCost, status, battle_modes: battleModes,
       mode_label: modeLabel, teams_config: JSON.stringify(teams), players: filledPlayers,
     });
+
+    // ── ADDED: commit to future EOS block immediately ──
+    await commitEosBlock(battle.id);
+
+    // If all slots are already filled (e.g. all bots), resolve rolls now
+    if (allFilled) {
+      await resolveAndCommitRolls(battle, [...selectedCases], filledPlayers, battleModes);
+    }
+    // ── END ADDED ──
+
     const newArenaData = { battle, selectedCases: [...selectedCases], teams, modeLabel, battleModes };
     arenaDataRef.current = newArenaData;
     setArenaData(newArenaData);
@@ -506,6 +513,19 @@ export default function Battles() {
     else updatedPlayers.push(joinerSlot);
     const selectedCasesArr = Array.from({ length: battle.rounds || 1 }, () => caseTemplate);
     await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers });
+
+    // ── ADDED: last player joined — resolve EOS block + commit all rolls ──
+    const allFilled = updatedPlayers.filter(p => p?.email).length >= (battle.max_players || 2);
+    if (allFilled) {
+      await resolveAndCommitRolls(
+        { ...battle, players: updatedPlayers },
+        selectedCasesArr,
+        updatedPlayers,
+        battle.battle_modes || {}
+      );
+    }
+    // ── END ADDED ──
+
     const teams = battle.teams_config ? JSON.parse(battle.teams_config) : [updatedPlayers.map((_, i) => i)];
     const joinArenaData = { battle: { ...battle, players: updatedPlayers }, selectedCases: selectedCasesArr, teams, modeLabel: battle.mode_label || '1v1', battleModes: battle.battle_modes || {} };
     arenaDataRef.current = joinArenaData;
@@ -540,6 +560,22 @@ export default function Battles() {
     const allFilled = updatedPlayers.length >= maxPlayers;
     const patch = { players: updatedPlayers, ...(allFilled ? { status: 'in_progress' } : {}) };
     await base44.entities.CaseBattle.update(battle.id, patch);
+
+    // ── ADDED: if now full, resolve rolls ──
+    if (allFilled) {
+      const caseTemplate = cases.find(c => c.id === battle.case_template_id);
+      if (caseTemplate) {
+        const selectedCasesArr = Array.from({ length: battle.rounds || 1 }, () => caseTemplate);
+        await resolveAndCommitRolls(
+          { ...battle, ...patch },
+          selectedCasesArr,
+          updatedPlayers,
+          battle.battle_modes || {}
+        );
+      }
+    }
+    // ── END ADDED ──
+
     updateArena({ ...battle, ...patch });
     loadBattles();
   };
@@ -554,6 +590,20 @@ export default function Battles() {
     while (updatedPlayers.length < maxPlayers) updatedPlayers.push(makeBot());
     const patch = { players: updatedPlayers, status: 'in_progress' };
     await base44.entities.CaseBattle.update(battle.id, patch);
+
+    // ── ADDED: all bots filled — resolve rolls now ──
+    const caseTemplate = cases.find(c => c.id === battle.case_template_id);
+    if (caseTemplate) {
+      const selectedCasesArr = Array.from({ length: battle.rounds || 1 }, () => caseTemplate);
+      await resolveAndCommitRolls(
+        { ...battle, ...patch },
+        selectedCasesArr,
+        updatedPlayers,
+        battle.battle_modes || {}
+      );
+    }
+    // ── END ADDED ──
+
     updateArena({ ...battle, ...patch });
     loadBattles();
   };
@@ -671,7 +721,6 @@ export default function Battles() {
             background:'radial-gradient(ellipse 50% 80% at 85% 50%,rgba(168,85,247,.18) 0%,transparent 60%)',
           }} />
 
-          {/* Floating swords deco */}
           <div className="bt-swords-idle" style={{
             position:'absolute', right:32, top:'50%', transform:'translateY(-50%)',
             opacity:.18, pointerEvents:'none',
@@ -690,7 +739,6 @@ export default function Battles() {
             </p>
           </div>
 
-          {/* Bottom accent line */}
           <div style={{
             position:'absolute', bottom:0, left:0, right:0, height:2,
             background:'linear-gradient(90deg,transparent,rgba(251,191,36,.5),rgba(168,85,247,.5),transparent)',
@@ -716,7 +764,6 @@ export default function Battles() {
           </div>
 
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-            {/* Sort */}
             <div style={{ position:'relative' }}>
               <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="bt-select">
                 <option value="recent">Recent</option>
@@ -729,7 +776,6 @@ export default function Battles() {
               }} />
             </div>
 
-            {/* Create CTA */}
             <motion.button
               whileHover={{ scale:1.05, y:-2 }} whileTap={{ scale:.96 }}
               onClick={() => setView('create')}
