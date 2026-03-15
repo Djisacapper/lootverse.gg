@@ -4,8 +4,8 @@ import { rollItem } from './useWallet';
 import { motion, AnimatePresence } from 'framer-motion';
 import JackpotWheel from './JackpotWheel';
 import { usePlayerAvatars, safeAvatarUrl } from './usePlayerAvatars';
-import { useProvablyFairArena } from './useprovablyfair';
-import ProvablyFairVerifier from './Provablyfairverifier';
+import { useProvablyFairArena } from './useProvablyFair';       // ← ADDED
+import ProvablyFairVerifier from './ProvablyFairVerifier'; // ← ADDED
 
 /* ─── CSS ─────────────────────────────────────────────────────────── */
 const CSS = `
@@ -583,9 +583,10 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
   },[phase,countdown,isWaiting,fairStatus]); // ← fairStatus added to deps
 
   const launchRound=r=>{ roundDone.current=0; crRef.current=r; setCR(r); setPP(players.map(()=>'spinning')); playSpin(isFast); };
-  const handleSpinDone=pi=>{ if(roundDone.current===0)stopSpin(); const r=crRef.current,rolled=allRolled.current[r]; if(rolled[pi].isMagic){setPP(prev=>{const n=[...prev];n[pi]='magic_spin';return n;});}else markDone(pi,r); };
-  const handleMagicDone=pi=>{ stopSpin(); markDone(pi,crRef.current); };
+  const handleSpinDone=pi=>{ if(roundDone.current===0)stopSpin(); const r=crRef.current; if(!allRolled.current||!allRolled.current[r]||!allRolled.current[r][pi])return; const rolled=allRolled.current[r]; if(rolled[pi].isMagic){setPP(prev=>{const n=[...prev];n[pi]='magic_spin';return n;});}else markDone(pi,r); };
+  const handleMagicDone=pi=>{ stopSpin(); if(!allRolled.current||!allRolled.current[crRef.current])return; markDone(pi,crRef.current); };
   const markDone=(pi,r)=>{
+    if(!allRolled.current||!allRolled.current[r]||!allRolled.current[r][pi])return;
     const rolled=allRolled.current[r];
     setPI(prev=>{const n=[...prev];n[pi]=[...n[pi],rolled[pi].item];return n;});
     setPP(prev=>{const n=[...prev];n[pi]='idle';return n;});
