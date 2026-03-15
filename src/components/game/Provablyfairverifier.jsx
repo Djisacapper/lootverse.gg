@@ -21,8 +21,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Shield, ExternalLink, Copy, CheckCheck, RefreshCw, ChevronDown, ChevronUp, Hash } from 'lucide-react';
-import { deriveRolls, getEosBlock } from './useProvablyFair';
-
+import { deriveRolls, getEosBlock } from './useprovablyfair';
 /* ─── CSS ─────────────────────────────────────────────────────────────────── */
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Outfit:wght@400;600;700;800;900&display=swap');
