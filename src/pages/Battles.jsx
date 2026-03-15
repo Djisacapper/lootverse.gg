@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Swords, Plus, Eye, ChevronDown } from 'lucide-react';
 import CreateBattle from '../components/game/CreateBattle';
 import BattleArena from '../components/game/BattleArena';
-import { commitEosBlock, resolveAndCommitRolls } from '@/hooks/useProvablyFair'; // ← ADDED
+import { commitEosBlock, resolveAndCommitRolls } from '../components/game/useProvablyFair'; // ← ADDED
 
 /* ─── CSS ──────────────────────────────────────────────────────── */
 const CSS = `
