@@ -4,9 +4,8 @@ import { rollItem } from './useWallet';
 import { motion, AnimatePresence } from 'framer-motion';
 import JackpotWheel from './JackpotWheel';
 import { usePlayerAvatars, safeAvatarUrl } from './usePlayerAvatars';
-import { useProvablyFairArena } from './useProvablyFair';       // ← ADDED
-import ProvablyFairVerifier from './ProvablyFairVerifier'; // ← ADDED
-
+import { useProvablyFairArena } from './useprovablyfair';
+import ProvablyFairVerifier from './Provablyfairverifier';
 /* ─── CSS ─────────────────────────────────────────────────────────── */
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
