@@ -4,8 +4,8 @@ import { rollItem } from './useWallet';
 import { motion, AnimatePresence } from 'framer-motion';
 import JackpotWheel from './JackpotWheel';
 import { usePlayerAvatars, safeAvatarUrl } from './usePlayerAvatars';
-import { useProvablyFairArena } from '@/hooks/useProvablyFair';       // ← ADDED
-import ProvablyFairVerifier from '@/components/game/ProvablyFairVerifier'; // ← ADDED
+import { useProvablyFairArena } from './useProvablyFair';       // ← ADDED
+import ProvablyFairVerifier from './ProvablyFairVerifier'; // ← ADDED
 
 /* ─── CSS ─────────────────────────────────────────────────────────── */
 const CSS = `
