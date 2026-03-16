@@ -336,7 +336,13 @@ const ItemChip = React.memo(({ item, index=0 }) => {
 });
 
 /* ─── Player Column ──────────────────────────────────────────────── */
-const PlayerColumn = ({ player, playerColor:pc, isWinner, wonItems, spinPhase, caseItems, spinnerKey, spinnerItem, magicItem, onSpinDone, onMagicSpinDone, fast, showPct, pct }) => {
+const PlayerColumn = ({
+  player, playerColor:pc, isWinner, wonItems,
+  spinPhase, caseItems, spinnerKey,
+  spinnerItem, magicItem,
+  onSpinDone, onMagicSpinDone,
+  fast, showPct, pct,
+}) => {
   if(!player)return null;
   const total=wonItems.reduce((s,it)=>s+(it?.value||0),0);
   const topItems=caseItems.filter(it=>['epic','legendary'].includes(it.rarity));
@@ -386,7 +392,13 @@ const PlayerColumn = ({ player, playerColor:pc, isWinner, wonItems, spinPhase, c
         {spinPhase==='magic_spin'&&<span className="ba-magic-lbl" style={{marginBottom:5}}>✦ Magic Spin ✦</span>}
         <div className="ba-spin-slot">
           {isSpinning&&caseItems.length>0
-            ? <VerticalSpinner key={`${spinnerKey}-${spinPhase}`} items={spinPhase==='magic_spin'?magicPool:caseItems} winnerItem={spinPhase==='magic_spin'?magicItem:spinnerItem} onDone={spinPhase==='magic_spin'?onMagicSpinDone:onSpinDone} fast={fast}/>
+            ? <VerticalSpinner
+                key={`${spinnerKey}-${spinPhase}`}
+                items={spinPhase==='magic_spin'?magicPool:caseItems}
+                winnerItem={spinPhase==='magic_spin'?magicItem:spinnerItem}
+                onDone={spinPhase==='magic_spin'?onMagicSpinDone:onSpinDone}
+                fast={fast}
+              />
             : <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10}}>
                 {lastItem
                   ? <>
@@ -522,20 +534,25 @@ const RoundLabel = ({ round, total, caseName }) => (
 );
 
 /* ─── Main ───────────────────────────────────────────────────────── */
-export default function BattleArena({ battle, selectedCases, players:rawPlayers, teams, modeLabel, battleModes={}, userEmail, onClose, onReward, onJoin, onAddBot, onFillBots, onBattleUpdated, balance=0 }) {
+export default function BattleArena({
+  battle, selectedCases, players:rawPlayers, teams,
+  modeLabel, battleModes={}, userEmail,
+  onClose, onReward, onJoin, onAddBot, onFillBots,
+  onBattleUpdated, balance=0,
+}) {
   const players    = usePlayerAvatars(rawPlayers);
   const totalRounds= selectedCases.length;
   const teamList   = useMemo(()=>teams||[players.map((_,i)=>i)],[teams,players.length]);
   const isWaiting  = battle?.status==='waiting';
 
-  // ── ADDED: provably fair hook — reads committed rolls from battle record ──
   const { rolls: fairRolls, blockHash, blockNum, status: fairStatus } =
     useProvablyFairArena(battle, selectedCases, players, battleModes);
 
-  const [showVerifier, setShowVerifier] = useState(false); // ← ADDED
-  // ── END ADDED ──
+  const [showVerifier, setShowVerifier] = useState(false);
 
-  const cbRef=useRef(onBattleUpdated); useEffect(()=>{cbRef.current=onBattleUpdated;},[onBattleUpdated]);
+  const cbRef=useRef(onBattleUpdated);
+  useEffect(()=>{cbRef.current=onBattleUpdated;},[onBattleUpdated]);
+
   const lastFilled=useRef(-1), lastStatus=useRef('');
   useEffect(()=>{
     if(!isWaiting||!battle?.id)return;
@@ -567,52 +584,91 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
 
   const allRolled=useRef(null), roundDone=useRef(0), crRef=useRef(0), rewardGiven=useRef(false);
 
-  // ── ADDED: sync fairRolls into allRolled.current when they arrive ──
   useEffect(() => {
-    if (fairRolls) {
-      allRolled.current = fairRolls;
-    }
+    if (fairRolls) allRolled.current = fairRolls;
   }, [fairRolls]);
-  // ── END ADDED ──
 
-  // ── CHANGED: pause countdown until rolls are ready ──
   useEffect(()=>{
-    if(isWaiting || phase !== 'countdown' || fairStatus !== 'ready') return; // ← fairStatus check added
+    if(isWaiting || phase !== 'countdown' || fairStatus !== 'ready') return;
     if(countdown===0){setPhase('spinning');launchRound(0);return;}
     const t=setTimeout(()=>setCd(c=>c-1),1000); return()=>clearTimeout(t);
-  },[phase,countdown,isWaiting,fairStatus]); // ← fairStatus added to deps
+  },[phase,countdown,isWaiting,fairStatus]);
 
-  const launchRound=r=>{ roundDone.current=0; crRef.current=r; setCR(r); setPP(players.map(()=>'spinning')); playSpin(isFast); };
-  const handleSpinDone=pi=>{ if(roundDone.current===0)stopSpin(); const r=crRef.current; if(!allRolled.current||!allRolled.current[r]||!allRolled.current[r][pi]){ roundDone.current+=1; if(roundDone.current>=players.length){ if(r+1>=totalRounds)setTimeout(()=>isJackpot?setJackpot(true):finishBattle(),isFast?1100:2400); else setTimeout(()=>launchRound(r+1),isFast?1400:4000); } return; } const rolled=allRolled.current[r]; if(rolled[pi].isMagic){setPP(prev=>{const n=[...prev];n[pi]='magic_spin';return n;});}else markDone(pi,r); };
-  const handleMagicDone=pi=>{ stopSpin(); if(!allRolled.current||!allRolled.current[crRef.current]){ roundDone.current+=1; return; } markDone(pi,crRef.current); };
-  const markDone=(pi,r)=>{
-    if(!allRolled.current||!allRolled.current[r]||!allRolled.current[r][pi]){ roundDone.current+=1; return; }
-    const rolled=allRolled.current[r];
-    setPI(prev=>{const n=[...prev];n[pi]=[...n[pi],rolled[pi].item];return n;});
-    setPP(prev=>{const n=[...prev];n[pi]='idle';return n;});
-    roundDone.current+=1;
-    if(roundDone.current>=players.length){ if(r+1>=totalRounds)setTimeout(()=>isJackpot?setJackpot(true):finishBattle(),isFast?1100:2400); else setTimeout(()=>launchRound(r+1),isFast?1400:4000); }
+  const launchRound = (r) => {
+    roundDone.current = 0;
+    crRef.current = r;
+    setCR(r);
+    setPP(players.map(()=>'spinning'));
+    playSpin(isFast);
   };
-  const getTotal=pi=>{ if(!allRolled.current)return 0; if(isTerminal)return allRolled.current[totalRounds-1]?.[pi]?.item?.value||0; return allRolled.current.reduce((s,r)=>s+(r[pi]?.item?.value||0),0); };
 
-  const finishBattle=(forced=null)=>{
-    let wi; if(forced!==null)wi=forced; else if(isGroup)wi=-1; else{const v=teamList.map(mi=>mi.reduce((s,pi)=>s+getTotal(pi),0)/mi.length);wi=isCrazy?v.indexOf(Math.min(...v)):v.indexOf(Math.max(...v));}
-    setWT(wi);setDone(true);setJackpot(false);
+  const handleSpinDone = (pi) => {
+    if(roundDone.current===0) stopSpin();
+    const r = crRef.current;
+    if(!allRolled.current?.[r]?.[pi]){
+      roundDone.current += 1;
+      if(roundDone.current >= players.length){
+        if(r+1 >= totalRounds) setTimeout(()=>isJackpot?setJackpot(true):finishBattle(), isFast?1100:2400);
+        else setTimeout(()=>launchRound(r+1), isFast?1400:4000);
+      }
+      return;
+    }
+    const rolled = allRolled.current[r];
+    if(rolled[pi].isMagic){
+      setPP(prev=>{ const n=[...prev]; n[pi]='magic_spin'; return n; });
+    } else {
+      markDone(pi, r);
+    }
+  };
+
+  const handleMagicDone = (pi) => {
+    stopSpin();
+    if(!allRolled.current?.[crRef.current]){ roundDone.current += 1; return; }
+    markDone(pi, crRef.current);
+  };
+
+  const markDone = (pi, r) => {
+    if(!allRolled.current?.[r]?.[pi]){ roundDone.current += 1; return; }
+    const rolled = allRolled.current[r];
+    setPI(prev=>{ const n=[...prev]; n[pi]=[...n[pi], rolled[pi].item]; return n; });
+    setPP(prev=>{ const n=[...prev]; n[pi]='idle'; return n; });
+    roundDone.current += 1;
+    if(roundDone.current >= players.length){
+      if(r+1 >= totalRounds) setTimeout(()=>isJackpot?setJackpot(true):finishBattle(), isFast?1100:2400);
+      else setTimeout(()=>launchRound(r+1), isFast?1400:4000);
+    }
+  };
+
+  const getTotal = (pi) => {
+    if(!allRolled.current) return 0;
+    if(isTerminal) return allRolled.current[totalRounds-1]?.[pi]?.item?.value || 0;
+    return allRolled.current.reduce((s,r)=>s+(r[pi]?.item?.value||0), 0);
+  };
+
+  const finishBattle = (forced=null) => {
+    let wi;
+    if(forced !== null) wi = forced;
+    else if(isGroup) wi = -1;
+    else {
+      const v = teamList.map(mi=>mi.reduce((s,pi)=>s+getTotal(pi),0)/mi.length);
+      wi = isCrazy ? v.indexOf(Math.min(...v)) : v.indexOf(Math.max(...v));
+    }
+    setWT(wi); setDone(true); setJackpot(false);
     playReward();
     if(!rewardGiven.current){
-      rewardGiven.current=true;
-      const tv=allRolled.current.reduce((a,rnd)=>a+rnd.reduce((b,r)=>b+(r?.item?.value||0),0),0);
-      const upi=players.findIndex(p=>p.email===userEmail);
-      if(isGroup){setConf(true);setTimeout(()=>setConf(false),5500);onReward&&onReward(Math.floor(tv/players.length));}
-      else if(wi>=0&&teamList[wi]?.includes(upi)){setConf(true);setTimeout(()=>setConf(false),5500);onReward&&onReward(Math.floor(tv/(teamList[wi]?.length||1)));}
+      rewardGiven.current = true;
+      const tv = allRolled.current.reduce((a,rnd)=>a+rnd.reduce((b,r)=>b+(r?.item?.value||0),0), 0);
+      const upi = players.findIndex(p=>p.email===userEmail);
+      if(isGroup){ setConf(true); setTimeout(()=>setConf(false),5500); onReward&&onReward(Math.floor(tv/players.length)); }
+      else if(wi>=0&&teamList[wi]?.includes(upi)){ setConf(true); setTimeout(()=>setConf(false),5500); onReward&&onReward(Math.floor(tv/(teamList[wi]?.length||1))); }
 
       import('@/api/base44Client').then(({ base44: b44 }) => {
         allRolled.current.forEach((rnd, roundIdx) => {
           rnd.forEach((rolled, pi) => {
             const p = players[pi];
-            if (!p?.email || p.isBot) return;
+            if(!p?.email || p.isBot) return;
             const item = rolled?.item;
-            if (!item) return;
+            if(!item) return;
             b44.entities.UserInventory.create({
               user_email:     p.email,
               item_name:      item.name,
@@ -622,10 +678,10 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
               source:         'battle_win',
               source_case:    selectedCases[roundIdx]?.name || '',
               status:         'owned',
-            }).catch(() => {});
+            }).catch(()=>{});
           });
         });
-      }).catch(() => {});
+      }).catch(()=>{});
     }
   };
 
@@ -633,13 +689,36 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
   const tTotals  = teamList.map(mi=>mi.reduce((s,pi)=>s+(pTotals[pi]||0),0));
   const grandPot = (battle?.max_players||players.length)*(battle?.entry_cost||0);
   const allPIs   = teamList.flat();
-  const colMap   = {}; allPIs.forEach((pi,i)=>{colMap[pi]=PLAYER_COLORS[i%PLAYER_COLORS.length];});
-  const grandTotal = pTotals.reduce((s,v)=>s+v,0);
-  const caseItems  = (selectedCases[currentRound]||selectedCases[0])?.items||[];
-  const totalItemsVal = allRolled.current?allRolled.current.reduce((a,rnd)=>a+rnd.reduce((b,r)=>b+(r?.item?.value||0),0),0):0;
+  const colMap   = {};
+  allPIs.forEach((pi,i)=>{ colMap[pi]=PLAYER_COLORS[i%PLAYER_COLORS.length]; });
+  const grandTotal    = pTotals.reduce((s,v)=>s+v, 0);
+  const totalItemsVal = allRolled.current
+    ? allRolled.current.reduce((a,rnd)=>a+rnd.reduce((b,r)=>b+(r?.item?.value||0),0), 0)
+    : 0;
+
   let payoutLabel='';
-  if(done){ if(isGroup)payoutLabel=`Split: ${Math.floor(totalItemsVal/players.length).toLocaleString()} coins each`; else if(winnerTeam>=0){const wc=teamList[winnerTeam]?.length||1;payoutLabel=wc===1?`Winner takes ${totalItemsVal.toLocaleString()} coins`:`${Math.floor(totalItemsVal/wc).toLocaleString()} coins each`;} }
-  const activeModes=[isCrazy&&{icon:'🎭',color:'#f472b6',label:'Crazy'},isTerminal&&{icon:'⚡',color:'#f5c842',label:'Terminal'},isGroup&&{icon:'🔄',color:'#00e5a0',label:'Group'},isMagicSpin&&{icon:'✨',color:'#c084fc',label:'Magic Spin'},isFast&&{icon:'💨',color:'#00e5ff',label:'Fast Mode'},isJackpot&&{icon:'👑',color:'#f5c842',label:'Jackpot'}].filter(Boolean);
+  if(done){
+    if(isGroup) payoutLabel=`Split: ${Math.floor(totalItemsVal/players.length).toLocaleString()} coins each`;
+    else if(winnerTeam>=0){ const wc=teamList[winnerTeam]?.length||1; payoutLabel=wc===1?`Winner takes ${totalItemsVal.toLocaleString()} coins`:`${Math.floor(totalItemsVal/wc).toLocaleString()} coins each`; }
+  }
+
+  const activeModes=[
+    isCrazy&&{icon:'🎭',color:'#f472b6',label:'Crazy'},
+    isTerminal&&{icon:'⚡',color:'#f5c842',label:'Terminal'},
+    isGroup&&{icon:'🔄',color:'#00e5a0',label:'Group'},
+    isMagicSpin&&{icon:'✨',color:'#c084fc',label:'Magic Spin'},
+    isFast&&{icon:'💨',color:'#00e5ff',label:'Fast Mode'},
+    isJackpot&&{icon:'👑',color:'#f5c842',label:'Jackpot'},
+  ].filter(Boolean);
+
+  // ─── FIX: derive caseItems from crRef.current (the ref, not the state).
+  // This ensures the spinner always gets items from the CORRECT current case,
+  // not a stale state value. The old code used `currentRound` state (which
+  // lags) AND had a `|| selectedCases[0]` fallback that forced case 0 any
+  // time the index was momentarily undefined during transitions.
+  const getCaseItems = useCallback((roundIndex) => {
+    return selectedCases[roundIndex]?.items || [];
+  }, [selectedCases]);
 
   if(isWaiting) return (
     <div className="ba" style={{background:'var(--bg-deep)',minHeight:'100vh',padding:'20px 0 80px'}}>
@@ -667,19 +746,18 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
       <style>{CSS}</style>
       <ConfettiEffect active={confetti}/>
 
-      {/* ── ADDED: Provably Fair verifier modal ── */}
-      {showVerifier && (
+      {showVerifier&&(
         <ProvablyFairVerifier
-          battle={{ ...battle, eos_block_hash: blockHash, eos_block_num: blockNum }}
+          battle={{...battle,eos_block_hash:blockHash,eos_block_num:blockNum}}
           selectedCases={selectedCases}
           players={players}
           battleModes={battleModes}
-          onClose={() => setShowVerifier(false)}
+          onClose={()=>setShowVerifier(false)}
         />
       )}
-      {/* ── END ADDED ── */}
 
       <div style={{maxWidth:900,margin:'0 auto',display:'flex',flexDirection:'column',gap:14,padding:'0 16px'}}>
+        {/* header */}
         <div style={{position:'relative',overflow:'hidden',borderRadius:16,background:'linear-gradient(120deg,#07041a 0%,#0d0822 50%,#060110 100%)',border:'1px solid rgba(157,111,255,.14)',padding:'14px 18px'}}>
           <div className="ba-scan"/><div className="ba-noise"/>
           <div style={{position:'absolute',right:0,top:0,bottom:0,width:'35%',background:'radial-gradient(ellipse 80% 100% at 100% 50%,rgba(157,111,255,.09) 0%,transparent 70%)',pointerEvents:'none'}}/>
@@ -695,24 +773,11 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
               <span style={{fontSize:9,color:'rgba(245,200,66,.45)',fontWeight:600}}>coins</span>
             </div>
             {activeModes.map(m=><ModeBadge key={m.label} {...m}/>)}
-
-            {/* ── ADDED: Provably Fair button ── */}
-            {blockHash && (
-              <button
-                onClick={() => setShowVerifier(true)}
-                style={{
-                  display:'flex', alignItems:'center', gap:5,
-                  padding:'4px 10px', borderRadius:8,
-                  background:'rgba(0,229,160,.08)', border:'1px solid rgba(0,229,160,.22)',
-                  color:'#00e5a0', fontSize:10, fontWeight:800,
-                  fontFamily:'Outfit,sans-serif', cursor:'pointer',
-                  letterSpacing:'.06em', textTransform:'uppercase',
-                }}>
+            {blockHash&&(
+              <button onClick={()=>setShowVerifier(true)} style={{display:'flex',alignItems:'center',gap:5,padding:'4px 10px',borderRadius:8,background:'rgba(0,229,160,.08)',border:'1px solid rgba(0,229,160,.22)',color:'#00e5a0',fontSize:10,fontWeight:800,fontFamily:'Outfit,sans-serif',cursor:'pointer',letterSpacing:'.06em',textTransform:'uppercase'}}>
                 <Shield style={{width:10,height:10}}/> Provably Fair
               </button>
             )}
-            {/* ── END ADDED ── */}
-
             <div style={{marginLeft:'auto',display:'flex',alignItems:'center',gap:5}}>
               {selectedCases.map((_,i)=>(
                 <div key={i} className={i===currentRound&&!done?'ba-pip-live':''} style={{height:5,borderRadius:3,transition:'all .35s',width:i===currentRound?22:i<currentRound?15:7,background:i<currentRound?'#9d6fff':i===currentRound?'#f5c842':'rgba(255,255,255,.1)'}}/>
@@ -727,16 +792,16 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
         {isCrazy&&!done&&<ModeNotice icon="🎭" color="#f472b6">Crazy mode — player with the <strong>lowest</strong> total wins!</ModeNotice>}
         {isGroup&&!done&&<ModeNotice icon="🔄" color="#00e5a0">Group mode — profit is split equally among all players</ModeNotice>}
 
-        {/* ── ADDED: waiting for rolls notice ── */}
-        {fairStatus === 'resolving' && !isWaiting && (
+        {fairStatus==='resolving'&&!isWaiting&&(
           <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 16px',borderRadius:12,background:'rgba(0,229,160,.06)',border:'1px solid rgba(0,229,160,.2)'}}>
             <Loader2 style={{width:13,height:13,color:'#00e5a0'}} className="animate-spin"/>
             <span style={{fontSize:12,color:'#00e5a0',fontWeight:600}}>Fetching EOS block · locking outcomes…</span>
           </div>
         )}
-        {/* ── END ADDED ── */}
 
-        <AnimatePresence mode="wait">{!done&&<RoundLabel key={currentRound} round={currentRound} total={totalRounds} caseName={selectedCases[currentRound]?.name}/>}</AnimatePresence>
+        <AnimatePresence mode="wait">
+          {!done&&<RoundLabel key={currentRound} round={currentRound} total={totalRounds} caseName={selectedCases[currentRound]?.name}/>}
+        </AnimatePresence>
 
         {jackpot&&<motion.div initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}><JackpotWheel teamList={teamList} players={players} playerTotals={players.map((_,pi)=>getTotal(pi))} onWinner={wTi=>setTimeout(()=>finishBattle(wTi),800)}/></motion.div>}
 
@@ -777,6 +842,7 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
           </div>
         )}
 
+        {/* countdown overlay */}
         <AnimatePresence>
           {phase==='countdown'&&(
             <motion.div key="cd" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0,transition:{duration:.3}}} style={{position:'fixed',inset:0,zIndex:9000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'rgba(3,0,13,.94)',gap:34,backdropFilter:'blur(8px)'}}>
@@ -800,12 +866,13 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
                 </motion.div>
               </AnimatePresence>
               <span className="ba-title" style={{fontSize:12,fontWeight:600,color:'var(--text-dim)',letterSpacing:'.22em',textTransform:'uppercase',position:'relative',zIndex:2}}>
-                {fairStatus==='resolving' ? '🔗 Locking outcomes on EOS…' : countdown>0 ? 'Battle starts in…' : 'Fight!'}
+                {fairStatus==='resolving'?'🔗 Locking outcomes on EOS…':countdown>0?'Battle starts in…':'Fight!'}
               </span>
             </motion.div>
           )}
         </AnimatePresence>
 
+        {/* player columns */}
         <div style={{display:'flex',gap:8,alignItems:'stretch',width:'100%'}}>
           {teamList.map((mi,ti)=>{
             const pal=TEAM_PALETTE[ti%TEAM_PALETTE.length];
@@ -815,16 +882,29 @@ export default function BattleArena({ battle, selectedCases, players:rawPlayers,
                   {teamList.length>1&&<div style={{textAlign:'center'}}><span className="ba-title" style={{fontSize:10,fontWeight:700,padding:'3px 14px',borderRadius:20,background:pal.bg,color:pal.color,border:`1px solid ${pal.border}`,textTransform:'uppercase',letterSpacing:'.12em'}}>Team {ti+1}{done?` · ${tTotals[ti]?.toLocaleString()}`:''}</span></div>}
                   <div style={{display:'flex',gap:8,alignItems:'stretch'}}>
                     {mi.map(pi=>{
-                      const r=crRef.current,rolled=allRolled.current?.[r]?.[pi];
+                      // ─── FIX: use crRef.current to get the correct round index,
+                      // then look up items from that specific case — no fallback to [0].
+                      const r = crRef.current;
+                      const rolled = allRolled.current?.[r]?.[pi];
+                      const caseItems = getCaseItems(r); // ← correct case for this round
+
                       return (
                         <PlayerColumn
-                          key={pi} player={players[pi]} playerColor={colMap[pi]}
+                          key={pi}
+                          player={players[pi]}
+                          playerColor={colMap[pi]}
                           isWinner={done&&(isGroup||ti===winnerTeam)}
-                          wonItems={playerItems[pi]||[]} spinPhase={pPhases[pi]}
-                          caseItems={caseItems} spinnerKey={`${currentRound}-${pi}`}
-                          spinnerItem={rolled?.item} magicItem={rolled?.isMagic?rolled.item:null}
-                          onSpinDone={()=>handleSpinDone(pi)} onMagicSpinDone={()=>handleMagicDone(pi)}
-                          fast={isFast} pct={grandTotal>0?(pTotals[pi]||0)/grandTotal:0} showPct={isJackpot}
+                          wonItems={playerItems[pi]||[]}
+                          spinPhase={pPhases[pi]}
+                          caseItems={caseItems}          // ← now always the right case
+                          spinnerKey={`${r}-${pi}`}      // ← keyed to ref, not state
+                          spinnerItem={rolled?.item}
+                          magicItem={rolled?.isMagic?rolled.item:null}
+                          onSpinDone={()=>handleSpinDone(pi)}
+                          onMagicSpinDone={()=>handleMagicDone(pi)}
+                          fast={isFast}
+                          pct={grandTotal>0?(pTotals[pi]||0)/grandTotal:0}
+                          showPct={isJackpot}
                         />
                       );
                     })}
