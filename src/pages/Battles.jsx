@@ -8,6 +8,7 @@ import { Swords, Plus, Eye, ChevronDown } from 'lucide-react';
 import CreateBattle from '../components/game/CreateBattle';
 import BattleArena from '../components/game/BattleArena';
 import { commitEosBlock, resolveAndCommitRolls } from '../components/game/useprovablyfair';
+
 /* ─── CSS ──────────────────────────────────────────────────────── */
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
@@ -106,6 +107,46 @@ const CSS = `
 
 const BOT_NAMES = ['Alpha','Blitz','Cipher','Delta','Echo','Forge','Ghost','Havoc','Inferno','Jester'];
 
+/* ─── Helpers ────────────────────────────────────────────────────── */
+
+/**
+ * THE FIX: store the full selected-cases array as JSON on the battle record
+ * (field: selected_cases_json) so we can restore it exactly when re-opening
+ * the arena. Previously the code only stored case_template_id (one case) and
+ * reconstructed with Array.from({length: rounds}, () => caseTemplate) which
+ * repeated the SAME case for every round, discarding all other cases.
+ */
+function buildSelectedCasesFromBattle(battle, cases) {
+  // Prefer the stored full array (set on create)
+  if (battle.selected_cases_json) {
+    try {
+      const stored = JSON.parse(battle.selected_cases_json);
+      if (Array.isArray(stored) && stored.length > 0) {
+        // Each entry in stored is a case id — look up the full object from our cases list
+        // so we always have fresh items[] data.
+        const resolved = stored.map(entry => {
+          const id = typeof entry === 'string' ? entry : entry?.id;
+          return cases.find(c => c.id === id) || entry;
+        });
+        if (resolved.every(c => c?.items?.length > 0)) return resolved;
+        // If some cases don't have items yet (still loading), return as-is so
+        // the arena can render — items will be populated once cases load.
+        return resolved;
+      }
+    } catch {}
+  }
+
+  // Fallback: old battles that don't have selected_cases_json stored.
+  // We can only repeat the single stored case — warn so it's visible in logs.
+  console.warn(
+    '[Battles] battle.selected_cases_json missing — falling back to repeating case_template_id.',
+    'This battle was created before the fix. New battles will be correct.'
+  );
+  const caseTemplate = cases.find(c => c.id === battle.case_template_id);
+  if (!caseTemplate) return [];
+  return Array.from({ length: battle.rounds || 1 }, () => caseTemplate);
+}
+
 /* ─── Particles ─────────────────────────────────────────────────── */
 function Particles({ accent = '#fbbf24', count = 10 }) {
   const pts = React.useRef(
@@ -195,7 +236,6 @@ function BattleRow({ battle: b, user, balance, cases, onJoin, onWatch, onView, i
       <div className="bt-scan" />
       {hov && <Particles accent="#fbbf24" count={7} />}
 
-      {/* Top accent bar */}
       <div style={{
         height:2,
         background: isLive
@@ -208,7 +248,7 @@ function BattleRow({ battle: b, user, balance, cases, onJoin, onWatch, onView, i
 
       <div style={{ padding:'16px 18px', display:'flex', alignItems:'center', gap:16, flexWrap:'wrap' }}>
 
-        {/* ── Col 1: Mode + Players ── */}
+        {/* Col 1: Mode + Players */}
         <div style={{ display:'flex', flexDirection:'column', gap:8, minWidth:130 }}>
           <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
             <span style={{ fontSize:13, fontWeight:900, color:'#fff' }}>{b.rounds} Round{b.rounds !== 1 ? 's' : ''}</span>
@@ -234,7 +274,6 @@ function BattleRow({ battle: b, user, balance, cases, onJoin, onWatch, onView, i
             )}
           </div>
 
-          {/* Players avatars */}
           <div style={{ display:'flex', alignItems:'center', gap:4 }}>
             {filledPlayers.map((p, i) => (
               <Avatar key={i} avatarUrl={p.avatar_url} name={p.name} size={28} bot={p.isBot} />
@@ -255,7 +294,7 @@ function BattleRow({ battle: b, user, balance, cases, onJoin, onWatch, onView, i
           </div>
         </div>
 
-        {/* ── Col 2: Case preview ── */}
+        {/* Col 2: Case preview */}
         <div style={{ display:'flex', alignItems:'center', gap:6, flex:1, minWidth:0 }}>
           {caseTemplate
             ? Array.from({ length: Math.min(5, b.rounds || 1) }).map((_, i) => {
@@ -295,7 +334,7 @@ function BattleRow({ battle: b, user, balance, cases, onJoin, onWatch, onView, i
           )}
         </div>
 
-        {/* ── Col 3: Cost + Action ── */}
+        {/* Col 3: Cost + Action */}
         <div style={{ display:'flex', alignItems:'center', gap:14, marginLeft:'auto', flexShrink:0 }}>
           <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:2 }}>
             <span style={{ fontSize:9, color:'rgba(255,255,255,.3)', textTransform:'uppercase', letterSpacing:'.12em', fontWeight:700 }}>Entry</span>
@@ -437,11 +476,11 @@ export default function Battles() {
   }, [walletUser, freshUser]);
 
   const [battles, setBattles] = useState([]);
-  const [cases, setCases] = useState([]);
+  const [cases,   setCases]   = useState([]);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('list');
+  const [view,    setView]    = useState('list');
   const [arenaData, setArenaData] = useState(null);
-  const [sortBy, setSortBy] = useState('recent');
+  const [sortBy,  setSortBy]  = useState('recent');
   const [, setTick] = useState(0);
 
   useEffect(() => {
@@ -458,62 +497,104 @@ export default function Battles() {
     setLoading(false);
   };
 
+  /* ─── handleCreate ─────────────────────────────────────────────
+     FIX: store the FULL selected cases array as selected_cases_json
+     on the battle record so every subsequent lookup can restore all
+     cases correctly instead of repeating case_template_id N times.
+  ─────────────────────────────────────────────────────────────── */
   const handleCreate = async ({ selectedCases, modeLabel, teams, players, battleModes, totalPlayers }) => {
     if (!user || selectedCases.length === 0) return;
     const totalCost = selectedCases.reduce((s, c) => s + c.price, 0);
     if (totalCost > balance) return;
+
     const firstName = selectedCases[0].name;
-    const caseName = selectedCases.length === 1 ? firstName : `${firstName} +${selectedCases.length - 1} more`;
+    const caseName  = selectedCases.length === 1 ? firstName : `${firstName} +${selectedCases.length - 1} more`;
+
     await updateBalance(-totalCost, 'battle_entry', `Created battle: ${caseName}`);
+
     let latestUser = user;
     try { latestUser = await base44.auth.me() || user; } catch {}
+
     const filledPlayers = players.map(p => ({
-      email: p.email,
-      name: p.isBot ? p.name : (latestUser.username || latestUser.full_name || p.name),
+      email:      p.email,
+      name:       p.isBot ? p.name : (latestUser.username || latestUser.full_name || p.name),
       avatar_url: p.isBot ? null : (latestUser.avatar_url || p.avatar_url || null),
-      isBot: p.isBot, total_value: 0, items_won: []
+      isBot:      p.isBot,
+      total_value: 0,
+      items_won:   [],
     }));
+
     const allFilled = filledPlayers.length >= totalPlayers && filledPlayers.every(p => p.email);
-    const status = allFilled ? 'in_progress' : 'waiting';
+    const status    = allFilled ? 'in_progress' : 'waiting';
+
     const battle = await base44.entities.CaseBattle.create({
-      creator_email: user.email, case_template_id: selectedCases[0].id,
-      case_name: caseName, rounds: selectedCases.length, max_players: totalPlayers,
-      entry_cost: totalCost, status, battle_modes: battleModes,
-      mode_label: modeLabel, teams_config: JSON.stringify(teams), players: filledPlayers,
+      creator_email:      user.email,
+      case_template_id:   selectedCases[0].id,   // keep for display/legacy
+      case_name:          caseName,
+      rounds:             selectedCases.length,
+      max_players:        totalPlayers,
+      entry_cost:         totalCost,
+      status,
+      battle_modes:       battleModes,
+      mode_label:         modeLabel,
+      teams_config:       JSON.stringify(teams),
+      players:            filledPlayers,
+      // ── THE FIX: persist the full ordered list of case IDs ──
+      selected_cases_json: JSON.stringify(selectedCases.map(c => c.id)),
     });
 
-    // ── ADDED: commit to future EOS block immediately ──
     await commitEosBlock(battle.id);
 
-    // If all slots are already filled (e.g. all bots), resolve rolls now
     if (allFilled) {
       await resolveAndCommitRolls(battle, [...selectedCases], filledPlayers, battleModes);
     }
-    // ── END ADDED ──
 
-    const newArenaData = { battle, selectedCases: [...selectedCases], teams, modeLabel, battleModes };
+    const newArenaData = {
+      battle,
+      selectedCases: [...selectedCases],  // pass full objects directly — no lookup needed
+      teams,
+      modeLabel,
+      battleModes,
+    };
     arenaDataRef.current = newArenaData;
     setArenaData(newArenaData);
     setView('arena');
     loadBattles();
   };
 
+  /* ─── handleJoin ───────────────────────────────────────────────
+     FIX: use buildSelectedCasesFromBattle so we restore all cases,
+     not just repeat caseTemplate for every round.
+  ─────────────────────────────────────────────────────────────── */
   const handleJoin = async (battle) => {
     if (battle.entry_cost > balance) return;
-    const caseTemplate = cases.find(c => c.id === battle.case_template_id);
-    if (!caseTemplate) return;
+
+    // Restore full selected cases — this is the fix
+    const selectedCasesArr = buildSelectedCasesFromBattle(battle, cases);
+    if (selectedCasesArr.length === 0) return;
+
     await updateBalance(-battle.entry_cost, 'battle_entry', `Joined battle: ${battle.case_name}`);
+
     const updatedPlayers = [...(battle.players || [])];
-    const emptySlotIdx = updatedPlayers.findIndex(p => !p.email || p.email === '');
+    const emptySlotIdx   = updatedPlayers.findIndex(p => !p.email || p.email === '');
+
     let latestUser = user;
     try { latestUser = await base44.auth.me() || user; } catch {}
-    const joinerSlot = { email: latestUser.email, name: latestUser.username || latestUser.full_name || 'Player', avatar_url: latestUser.avatar_url || null, isBot: false, total_value: 0, items_won: [] };
+
+    const joinerSlot = {
+      email:      latestUser.email,
+      name:       latestUser.username || latestUser.full_name || 'Player',
+      avatar_url: latestUser.avatar_url || null,
+      isBot:      false,
+      total_value: 0,
+      items_won:   [],
+    };
+
     if (emptySlotIdx >= 0) updatedPlayers[emptySlotIdx] = joinerSlot;
     else updatedPlayers.push(joinerSlot);
-    const selectedCasesArr = Array.from({ length: battle.rounds || 1 }, () => caseTemplate);
+
     await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers });
 
-    // ── ADDED: last player joined — resolve EOS block + commit all rolls ──
     const allFilled = updatedPlayers.filter(p => p?.email).length >= (battle.max_players || 2);
     if (allFilled) {
       await resolveAndCommitRolls(
@@ -523,10 +604,18 @@ export default function Battles() {
         battle.battle_modes || {}
       );
     }
-    // ── END ADDED ──
 
-    const teams = battle.teams_config ? JSON.parse(battle.teams_config) : [updatedPlayers.map((_, i) => i)];
-    const joinArenaData = { battle: { ...battle, players: updatedPlayers }, selectedCases: selectedCasesArr, teams, modeLabel: battle.mode_label || '1v1', battleModes: battle.battle_modes || {} };
+    const teams = battle.teams_config
+      ? JSON.parse(battle.teams_config)
+      : [updatedPlayers.map((_, i) => i)];
+
+    const joinArenaData = {
+      battle:       { ...battle, players: updatedPlayers },
+      selectedCases: selectedCasesArr,
+      teams,
+      modeLabel:    battle.mode_label || '1v1',
+      battleModes:  battle.battle_modes || {},
+    };
     arenaDataRef.current = joinArenaData;
     setArenaData(joinArenaData);
     setView('arena');
@@ -534,9 +623,11 @@ export default function Battles() {
   };
 
   const makeBot = () => ({
-    name: BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)],
-    email: `bot_${Date.now()}_${Math.random().toString(36).slice(2)}@system`,
-    isBot: true, total_value: 0, items_won: []
+    name:       BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)],
+    email:      `bot_${Date.now()}_${Math.random().toString(36).slice(2)}@system`,
+    isBot:      true,
+    total_value: 0,
+    items_won:   [],
   });
 
   const updateArena = (updatedBattle) => {
@@ -551,20 +642,18 @@ export default function Battles() {
   const handleAddBotToArena = async () => {
     const current = arenaDataRef.current;
     if (!current?.battle?.id) return;
-    const battle = current.battle;
+    const battle     = current.battle;
     const maxPlayers = battle.max_players || 2;
-    const existingPlayers = (battle.players || []).filter(p => p?.email);
-    if (existingPlayers.length >= maxPlayers) return;
-    const updatedPlayers = [...existingPlayers, makeBot()];
-    const allFilled = updatedPlayers.length >= maxPlayers;
-    const patch = { players: updatedPlayers, ...(allFilled ? { status: 'in_progress' } : {}) };
+    const existing   = (battle.players || []).filter(p => p?.email);
+    if (existing.length >= maxPlayers) return;
+    const updatedPlayers = [...existing, makeBot()];
+    const allFilled      = updatedPlayers.length >= maxPlayers;
+    const patch          = { players: updatedPlayers, ...(allFilled ? { status: 'in_progress' } : {}) };
     await base44.entities.CaseBattle.update(battle.id, patch);
 
-    // ── ADDED: if now full, resolve rolls ──
     if (allFilled) {
-      const caseTemplate = cases.find(c => c.id === battle.case_template_id);
-      if (caseTemplate) {
-        const selectedCasesArr = Array.from({ length: battle.rounds || 1 }, () => caseTemplate);
+      const selectedCasesArr = buildSelectedCasesFromBattle({ ...battle, ...patch }, cases);
+      if (selectedCasesArr.length > 0) {
         await resolveAndCommitRolls(
           { ...battle, ...patch },
           selectedCasesArr,
@@ -573,7 +662,6 @@ export default function Battles() {
         );
       }
     }
-    // ── END ADDED ──
 
     updateArena({ ...battle, ...patch });
     loadBattles();
@@ -582,18 +670,16 @@ export default function Battles() {
   const handleFillBots = async () => {
     const current = arenaDataRef.current;
     if (!current?.battle?.id) return;
-    const battle = current.battle;
+    const battle     = current.battle;
     const maxPlayers = battle.max_players || 2;
-    const existingPlayers = (battle.players || []).filter(p => p?.email);
-    const updatedPlayers = [...existingPlayers];
+    const existing   = (battle.players || []).filter(p => p?.email);
+    const updatedPlayers = [...existing];
     while (updatedPlayers.length < maxPlayers) updatedPlayers.push(makeBot());
     const patch = { players: updatedPlayers, status: 'in_progress' };
     await base44.entities.CaseBattle.update(battle.id, patch);
 
-    // ── ADDED: all bots filled — resolve rolls now ──
-    const caseTemplate = cases.find(c => c.id === battle.case_template_id);
-    if (caseTemplate) {
-      const selectedCasesArr = Array.from({ length: battle.rounds || 1 }, () => caseTemplate);
+    const selectedCasesArr = buildSelectedCasesFromBattle({ ...battle, ...patch }, cases);
+    if (selectedCasesArr.length > 0) {
       await resolveAndCommitRolls(
         { ...battle, ...patch },
         selectedCasesArr,
@@ -601,38 +687,58 @@ export default function Battles() {
         battle.battle_modes || {}
       );
     }
-    // ── END ADDED ──
 
     updateArena({ ...battle, ...patch });
     loadBattles();
   };
 
   const handleBattleUpdated = (updatedBattle) => {
-    const caseTemplate = cases.find(c => c.id === updatedBattle.case_template_id);
-    if (!caseTemplate) return;
-    const selectedCasesArr = Array.from({ length: updatedBattle.rounds || 1 }, () => caseTemplate);
-    const teams = updatedBattle.teams_config ? JSON.parse(updatedBattle.teams_config) : [(updatedBattle.players || []).map((_, i) => i)];
-    const newData = { battle: updatedBattle, selectedCases: selectedCasesArr, teams, modeLabel: updatedBattle.mode_label || '1v1', battleModes: updatedBattle.battle_modes || {} };
+    const selectedCasesArr = buildSelectedCasesFromBattle(updatedBattle, cases);
+    const teams = updatedBattle.teams_config
+      ? JSON.parse(updatedBattle.teams_config)
+      : [(updatedBattle.players || []).map((_, i) => i)];
+    const newData = {
+      battle:       updatedBattle,
+      selectedCases: selectedCasesArr,
+      teams,
+      modeLabel:    updatedBattle.mode_label || '1v1',
+      battleModes:  updatedBattle.battle_modes || {},
+    };
     arenaDataRef.current = newData;
     setArenaData(newData);
     loadBattles();
   };
 
   const handleWatch = (battle) => {
-    const caseTemplate = cases.find(c => c.id === battle.case_template_id);
-    if (!caseTemplate) return;
-    const selectedCasesArr = Array.from({ length: battle.rounds || 1 }, () => caseTemplate);
+    const selectedCasesArr = buildSelectedCasesFromBattle(battle, cases);
     const players = battle.players || [];
-    const teams = battle.teams_config ? JSON.parse(battle.teams_config) : [players.map((_, i) => i)];
-    setArenaData({ battle, selectedCases: selectedCasesArr, players, teams, modeLabel: battle.mode_label || '1v1', battleModes: battle.battle_modes || {}, spectate: true });
+    const teams   = battle.teams_config
+      ? JSON.parse(battle.teams_config)
+      : [players.map((_, i) => i)];
+    setArenaData({
+      battle,
+      selectedCases: selectedCasesArr,
+      players,
+      teams,
+      modeLabel:   battle.mode_label || '1v1',
+      battleModes: battle.battle_modes || {},
+      spectate:    true,
+    });
     setView('arena');
   };
 
   const handleViewOwnBattle = (b) => {
-    const caseTemplate = cases.find(c => c.id === b.case_template_id);
-    const selectedCasesArr = caseTemplate ? Array.from({ length: b.rounds || 1 }, () => caseTemplate) : [];
-    const teams = b.teams_config ? JSON.parse(b.teams_config) : [b.players?.map((_, i) => i) || []];
-    const viewData = { battle: b, selectedCases: selectedCasesArr, teams, modeLabel: b.mode_label || '1v1', battleModes: b.battle_modes || {} };
+    const selectedCasesArr = buildSelectedCasesFromBattle(b, cases);
+    const teams = b.teams_config
+      ? JSON.parse(b.teams_config)
+      : [b.players?.map((_, i) => i) || []];
+    const viewData = {
+      battle:       b,
+      selectedCases: selectedCasesArr,
+      teams,
+      modeLabel:   b.mode_label || '1v1',
+      battleModes: b.battle_modes || {},
+    };
     arenaDataRef.current = viewData;
     setArenaData(viewData);
     setView('arena');
@@ -650,7 +756,7 @@ export default function Battles() {
     loadBattles();
   };
 
-  /* ── Delegate to sub-views ── */
+  /* ── Sub-views ── */
   if (view === 'create') {
     return (
       <CreateBattle cases={cases} balance={balance} user={user}
@@ -659,26 +765,32 @@ export default function Battles() {
   }
 
   if (view === 'arena' && arenaData) {
-    const arenaBattle = arenaData.battle;
+    const arenaBattle  = arenaData.battle;
     const arenaPlayers = arenaBattle?.players || [];
-    const arenaStatus = arenaBattle?.status || 'waiting';
+    const arenaStatus  = arenaBattle?.status || 'waiting';
     return (
       <BattleArena
         key={`${arenaBattle?.id}-${arenaStatus}-${arenaPlayers.length}`}
-        battle={arenaBattle} selectedCases={arenaData.selectedCases}
-        players={arenaPlayers} teams={arenaData.teams}
-        modeLabel={arenaData.modeLabel} battleModes={arenaData.battleModes || {}}
-        userEmail={user?.email} balance={balance}
-        onClose={() => setView('list')} onReward={handleArenaReward}
+        battle={arenaBattle}
+        selectedCases={arenaData.selectedCases}
+        players={arenaPlayers}
+        teams={arenaData.teams}
+        modeLabel={arenaData.modeLabel}
+        battleModes={arenaData.battleModes || {}}
+        userEmail={user?.email}
+        balance={balance}
+        onClose={() => setView('list')}
+        onReward={handleArenaReward}
         onJoin={() => arenaBattle && handleJoin(arenaBattle)}
-        onAddBot={handleAddBotToArena} onFillBots={handleFillBots}
+        onAddBot={handleAddBotToArena}
+        onFillBots={handleFillBots}
         onBattleUpdated={handleBattleUpdated}
       />
     );
   }
 
-  const waitingBattles = battles.filter(b => b.status === 'waiting' || b.status === 'in_progress');
-  const ONE_MIN_MS = 60 * 1000;
+  const waitingBattles   = battles.filter(b => b.status === 'waiting' || b.status === 'in_progress');
+  const ONE_MIN_MS       = 60 * 1000;
   const completedBattles = battles.filter(b =>
     b.status === 'completed' &&
     Date.now() - new Date(b.updated_date || 0).getTime() < ONE_MIN_MS
@@ -690,8 +802,8 @@ export default function Battles() {
     return 0;
   });
 
-  const liveBattles   = sortedBattles.filter(b => b.status === 'in_progress');
-  const openBattles   = sortedBattles.filter(b => b.status === 'waiting');
+  const liveBattles = sortedBattles.filter(b => b.status === 'in_progress');
+  const openBattles = sortedBattles.filter(b => b.status === 'waiting');
 
   return (
     <div className="bt-root" style={{ background:'#04000a', minHeight:'100vh', padding:'20px 0 80px' }}>
@@ -699,7 +811,7 @@ export default function Battles() {
 
       <div style={{ maxWidth:860, margin:'0 auto', display:'flex', flexDirection:'column', gap:28 }}>
 
-        {/* ── Hero Header ── */}
+        {/* Hero Header */}
         <motion.div
           initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }}
           style={{
@@ -707,26 +819,16 @@ export default function Battles() {
             background:'linear-gradient(120deg,#04000a 0%,#0e0020 40%,#160040 70%,#080010 100%)',
             border:'1px solid rgba(251,191,36,.12)',
             boxShadow:'0 0 0 1px rgba(251,191,36,.06), 0 32px 80px rgba(0,0,0,.85), 0 0 100px rgba(168,85,247,.1)',
-            padding:'30px 32px',
-            minHeight:130,
+            padding:'30px 32px', minHeight:130,
           }}>
           <div className="bt-scan" />
           <div className="bt-hex" />
           <Particles accent="#fbbf24" count={8} />
           <Particles accent="#a855f7" count={6} />
-
-          <div style={{
-            position:'absolute', inset:0, pointerEvents:'none',
-            background:'radial-gradient(ellipse 50% 80% at 85% 50%,rgba(168,85,247,.18) 0%,transparent 60%)',
-          }} />
-
-          <div className="bt-swords-idle" style={{
-            position:'absolute', right:32, top:'50%', transform:'translateY(-50%)',
-            opacity:.18, pointerEvents:'none',
-          }}>
+          <div style={{ position:'absolute', inset:0, pointerEvents:'none', background:'radial-gradient(ellipse 50% 80% at 85% 50%,rgba(168,85,247,.18) 0%,transparent 60%)' }} />
+          <div className="bt-swords-idle" style={{ position:'absolute', right:32, top:'50%', transform:'translateY(-50%)', opacity:.18, pointerEvents:'none' }}>
             <Swords style={{ width:80, height:80, color:'#fbbf24' }} />
           </div>
-
           <div style={{ position:'relative', zIndex:2 }}>
             <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
               <div style={{ width:3, height:26, borderRadius:2, background:'linear-gradient(to bottom,#fbbf24,#a855f7)' }} />
@@ -737,31 +839,23 @@ export default function Battles() {
               Open cases against opponents · Winner takes the pot
             </p>
           </div>
-
-          <div style={{
-            position:'absolute', bottom:0, left:0, right:0, height:2,
-            background:'linear-gradient(90deg,transparent,rgba(251,191,36,.5),rgba(168,85,247,.5),transparent)',
-          }} />
+          <div style={{ position:'absolute', bottom:0, left:0, right:0, height:2, background:'linear-gradient(90deg,transparent,rgba(251,191,36,.5),rgba(168,85,247,.5),transparent)' }} />
         </motion.div>
 
-        {/* ── Toolbar ── */}
+        {/* Toolbar */}
         <motion.div
           initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:.15 }}
           style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:12, flexWrap:'wrap' }}>
-
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             <div style={{ width:3, height:20, borderRadius:2, background:'linear-gradient(to bottom,#fbbf24,#a855f7)' }} />
             <Swords style={{ width:15, height:15, color:'#fbbf24' }} />
             <span style={{ fontSize:16, fontWeight:900, color:'#fff' }}>Open Lobbies</span>
             {openBattles.length > 0 && (
-              <span style={{
-                fontSize:10, fontWeight:800, padding:'2px 9px', borderRadius:20,
-                background:'rgba(251,191,36,.15)', color:'#fbbf24',
-                border:'1px solid rgba(251,191,36,.3)',
-              }}>{openBattles.length}</span>
+              <span style={{ fontSize:10, fontWeight:800, padding:'2px 9px', borderRadius:20, background:'rgba(251,191,36,.15)', color:'#fbbf24', border:'1px solid rgba(251,191,36,.3)' }}>
+                {openBattles.length}
+              </span>
             )}
           </div>
-
           <div style={{ display:'flex', alignItems:'center', gap:10 }}>
             <div style={{ position:'relative' }}>
               <select value={sortBy} onChange={e => setSortBy(e.target.value)} className="bt-select">
@@ -769,12 +863,8 @@ export default function Battles() {
                 <option value="price_desc">Price ↓</option>
                 <option value="price_asc">Price ↑</option>
               </select>
-              <ChevronDown style={{
-                position:'absolute', right:9, top:'50%', transform:'translateY(-50%)',
-                width:13, height:13, color:'rgba(255,255,255,.4)', pointerEvents:'none',
-              }} />
+              <ChevronDown style={{ position:'absolute', right:9, top:'50%', transform:'translateY(-50%)', width:13, height:13, color:'rgba(255,255,255,.4)', pointerEvents:'none' }} />
             </div>
-
             <motion.button
               whileHover={{ scale:1.05, y:-2 }} whileTap={{ scale:.96 }}
               onClick={() => setView('create')}
@@ -790,7 +880,7 @@ export default function Battles() {
           </div>
         </motion.div>
 
-        {/* ── Live Battles ── */}
+        {/* Live Battles */}
         <AnimatePresence>
           {liveBattles.length > 0 && (
             <motion.div initial={{ opacity:0, y:12 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0 }}>
@@ -811,7 +901,7 @@ export default function Battles() {
           )}
         </AnimatePresence>
 
-        {/* ── Open Battles ── */}
+        {/* Open Battles */}
         {loading ? (
           <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
             {Array(5).fill(0).map((_, i) => <Skeleton key={i} i={i} />)}
