@@ -459,9 +459,8 @@ export default function Battles() {
     });
 
     await commitEosBlock(battle.id);
-    if (allFilled) {
-      await resolveAndCommitRolls(battle, [...selectedCases], filledPlayers, battleModes);
-    }
+    // Never pre-commit rolls at create time — wait until all players are in.
+    // If we commit with 1 player, stored rolls only have data for index [0].
 
     const newArenaData = { battle, selectedCases:[...selectedCases], teams, modeLabel, battleModes };
     arenaDataRef.current = newArenaData;
@@ -508,17 +507,21 @@ export default function Battles() {
     });
     playersToSave[slotIndex] = joinerSlot;
 
-    await base44.entities.CaseBattle.update(battle.id, { players: playersToSave });
-
     const realPlayerCount = playersToSave.filter(isRealPlayer).length;
     const allFilled = realPlayerCount >= maxPlayers;
 
+    // Clear stale committed_rolls whenever a new player joins — they may have
+    // been committed with fewer players (wrong player count = wrong roll count)
+    await base44.entities.CaseBattle.update(battle.id, {
+      players: playersToSave,
+      committed_rolls: null,
+    });
+
     if (allFilled) {
-      // Pass full array (with placeholders) — roll engine uses array indices matching teams_config
       await resolveAndCommitRolls(
-        { ...battle, players: playersToSave },
+        { ...battle, players: playersToSave, committed_rolls: null },
         selectedCasesArr,
-        playersToSave,   // ← full array, not filtered
+        playersToSave,
         battle.battle_modes || {}
       );
     }
@@ -579,7 +582,8 @@ export default function Battles() {
     playersArr[firstEmpty] = makeBot();
 
     const allFilled = playersArr.filter(isRealPlayer).length >= maxPlayers;
-    const patch     = { players: playersArr, ...(allFilled ? { status:'in_progress' } : {}) };
+    // Clear any stale committed_rolls so resolveAndCommitRolls re-derives fresh
+    const patch     = { players: playersArr, committed_rolls: null, ...(allFilled ? { status:'in_progress' } : {}) };
     await base44.entities.CaseBattle.update(battle.id, patch);
 
     if (allFilled) {
@@ -610,7 +614,8 @@ export default function Battles() {
       if (!isRealPlayer(p)) playersArr[i] = makeBot();
     });
 
-    const patch = { players: playersArr, status: 'in_progress' };
+    // Clear stale committed_rolls so resolveAndCommitRolls re-derives with all players
+    const patch = { players: playersArr, status: 'in_progress', committed_rolls: null };
     await base44.entities.CaseBattle.update(battle.id, patch);
 
     const selectedCasesArr = buildSelectedCasesFromBattle({...battle,...patch}, cases);
