@@ -5,9 +5,9 @@ import { base44 } from '@/api/base44Client';
 import LiveChat from './components/game/LiveChat';
 import ProfileModal from './components/game/ProfileModal';
 import {
-  Box, Swords, Coins, TrendingUp, Gift, Award, Users,
+  Swords, Coins, TrendingUp, Gift, Award, Users,
   Menu, X, ChevronLeft, ChevronRight, Wallet,
-  Shield, MessageCircle, Home, ScrollText,
+  Shield, MessageCircle, Home, ScrollText, Box,
 } from 'lucide-react';
 
 const CSS = `
@@ -22,13 +22,13 @@ body, #root { font-family: 'Nunito', sans-serif; background: #04000a; }
 }
 .sidebar-scan {
   position:absolute; left:0; right:0; height:1px; z-index:2;
-  background:linear-gradient(90deg,transparent,rgba(255,220,0,.15),transparent);
+  background:linear-gradient(90deg,transparent,rgba(168,85,247,.15),transparent);
   animation:scan 8s linear infinite; pointer-events:none;
 }
 
 @keyframes logo-pulse {
-  0%,100%{ box-shadow: 0 0 0 0 rgba(251,191,36,.3); }
-  50%    { box-shadow: 0 0 0 6px rgba(251,191,36,0); }
+  0%,100%{ box-shadow: 0 0 0 0 rgba(168,85,247,.4); }
+  50%    { box-shadow: 0 0 0 6px rgba(168,85,247,0); }
 }
 .logo-pulse { animation: logo-pulse 2.5s ease-in-out infinite; }
 
@@ -43,14 +43,14 @@ body, #root { font-family: 'Nunito', sans-serif; background: #04000a; }
 }
 
 @keyframes nav-glow {
-  0%,100%{ box-shadow: inset 0 0 0 0 rgba(251,191,36,0); }
-  50%    { box-shadow: inset 0 0 20px rgba(251,191,36,.04); }
+  0%,100%{ box-shadow: inset 0 0 0 0 rgba(168,85,247,0); }
+  50%    { box-shadow: inset 0 0 20px rgba(168,85,247,.04); }
 }
 .nav-active { animation: nav-glow 3s ease-in-out infinite; }
 
 @keyframes gold-pulse-border {
-  0%,100%{ border-color: rgba(251,191,36,.15); }
-  50%    { border-color: rgba(251,191,36,.35); }
+  0%,100%{ border-color: rgba(168,85,247,.15); }
+  50%    { border-color: rgba(168,85,247,.35); }
 }
 .balance-chip { animation: gold-pulse-border 3s ease-in-out infinite; }
 
@@ -71,18 +71,18 @@ body, #root { font-family: 'Nunito', sans-serif; background: #04000a; }
   position: relative; overflow: hidden;
 }
 .nav-link:hover {
-  color: rgba(251,191,36,.9);
-  background: rgba(251,191,36,.06);
-  border-color: rgba(251,191,36,.12);
+  color: rgba(192,132,252,.9);
+  background: rgba(168,85,247,.06);
+  border-color: rgba(168,85,247,.12);
 }
 .nav-link.active {
-  color: #fbbf24;
-  background: linear-gradient(90deg,rgba(251,191,36,.12),rgba(168,85,247,.06));
-  border-color: rgba(251,191,36,.25);
+  color: #c084fc;
+  background: linear-gradient(90deg,rgba(168,85,247,.12),rgba(251,191,36,.06));
+  border-color: rgba(168,85,247,.25);
 }
 .nav-link.active::before {
   content:''; position:absolute; left:0; top:0; bottom:0; width:3px;
-  background: linear-gradient(to bottom, #fbbf24, #a855f7);
+  background: linear-gradient(to bottom, #c084fc, #fbbf24);
   border-radius: 0 2px 2px 0;
 }
 .nav-link.collapsed { justify-content: center; margin: 2px 6px; padding: 10px 0; }
@@ -90,7 +90,7 @@ body, #root { font-family: 'Nunito', sans-serif; background: #04000a; }
 
 .sidebar-section-label {
   font-size: 9px; font-weight: 800; letter-spacing: .18em;
-  text-transform: uppercase; color: rgba(251,191,36,.25);
+  text-transform: uppercase; color: rgba(192,132,252,.25);
   padding: 0 16px; margin: 14px 0 4px;
   font-family: 'Nunito', sans-serif;
 }
@@ -108,7 +108,7 @@ body, #root { font-family: 'Nunito', sans-serif; background: #04000a; }
 .lv-avatar img.loaded { opacity: 1; }
 
 ::-webkit-scrollbar { width: 3px; }
-::-webkit-scrollbar-thumb { background: rgba(251,191,36,.15); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(168,85,247,.15); border-radius: 3px; }
 ::-webkit-scrollbar-track { background: transparent; }
 `;
 
@@ -181,11 +181,11 @@ const StableAvatar = React.memo(({ avatarUrl, name, size, fontSize, gradient, bo
       onClick={onClick}
       style={{
         width: size, height: size, borderRadius: '50%',
-        background: gradient || 'linear-gradient(135deg,#fbbf24,#a855f7)',
+        background: gradient || 'linear-gradient(135deg,#a855f7,#fbbf24)',
         border: 'none', cursor: onClick ? 'pointer' : 'default', padding: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize, fontWeight: 900, color: '#000',
-        boxShadow: boxShadow || '0 0 12px rgba(251,191,36,.4)',
+        fontSize, fontWeight: 900, color: '#fff',
+        boxShadow: boxShadow || '0 0 12px rgba(168,85,247,.4)',
         position: 'relative', overflow: 'hidden', flexShrink: 0,
         ...style,
       }}
@@ -256,26 +256,25 @@ export default function Layout({ children, currentPageName }) {
       {/* Logo */}
       <div style={{
         padding: collapsed ? '18px 0' : '16px 18px',
-        borderBottom: '1px solid rgba(251,191,36,.08)',
+        borderBottom: '1px solid rgba(168,85,247,.08)',
         display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start',
         gap: 10,
       }}>
         <Link to={createPageUrl('Home')} style={{ display:'flex', alignItems:'center', gap:10, textDecoration:'none' }}>
           <div className="logo-pulse" style={{
             width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-            background: 'linear-gradient(135deg,#fbbf24,#f59e0b,#a855f7)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: '0 0 20px rgba(251,191,36,.35)',
+            overflow: 'hidden',
+            boxShadow: '0 0 20px rgba(168,85,247,.5)',
           }}>
-            <Box style={{ width: 18, height: 18, color: '#000' }} />
+            <img src="/gg4gf.png" alt="Amethyst.GG" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
           </div>
           {!collapsed && (
             <div>
               <div style={{
-                fontSize: 14, fontWeight: 900, letterSpacing: '.18em',
-                background: 'linear-gradient(90deg,#fbbf24,#f59e0b 40%,#c084fc)',
+                fontSize: 14, fontWeight: 900, letterSpacing: '.12em',
+                background: 'linear-gradient(90deg,#c084fc,#a855f7 40%,#fbbf24)',
                 WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-              }}>LOOTVERSE</div>
+              }}>Amethyst.GG</div>
               <div style={{ fontSize: 8, fontWeight: 700, letterSpacing: '.1em', color: 'rgba(255,255,255,.2)', marginTop: 1 }}>
                 PLAY · WIN · EARN
               </div>
@@ -301,14 +300,14 @@ export default function Layout({ children, currentPageName }) {
                 >
                   <item.icon style={{
                     width: 16, height: 16, flexShrink: 0,
-                    color: active ? '#fbbf24' : 'rgba(255,255,255,.3)',
+                    color: active ? '#c084fc' : 'rgba(255,255,255,.3)',
                     transition: 'color .22s',
                   }} />
                   {!collapsed && item.name}
                   {!collapsed && active && (
                     <div style={{
                       marginLeft: 'auto', width: 5, height: 5, borderRadius: '50%',
-                      background: '#a855f7', boxShadow: '0 0 6px #a855f7',
+                      background: '#fbbf24', boxShadow: '0 0 6px #fbbf24',
                     }} />
                   )}
                 </Link>
@@ -322,7 +321,7 @@ export default function Layout({ children, currentPageName }) {
       {user && !collapsed && (
         <div style={{
           margin: '0 10px 12px', padding: '10px 12px', borderRadius: 12,
-          background: 'rgba(251,191,36,.05)', border: '1px solid rgba(251,191,36,.1)',
+          background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.1)',
         }}>
           <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:8 }}>
             <StableAvatar
@@ -335,7 +334,7 @@ export default function Layout({ children, currentPageName }) {
               <div style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,.8)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                 {user.full_name || user.email?.split('@')[0] || 'Player'}
               </div>
-              <div style={{ fontSize:9, fontWeight:700, color:'rgba(251,191,36,.5)' }}>Level {level}</div>
+              <div style={{ fontSize:9, fontWeight:700, color:'rgba(192,132,252,.5)' }}>Level {level}</div>
             </div>
             <div style={{
               padding:'2px 7px', borderRadius:100, fontSize:9, fontWeight:800,
@@ -348,7 +347,7 @@ export default function Layout({ children, currentPageName }) {
           </div>
           <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
             <span style={{ fontSize:8, fontWeight:700, color:'rgba(255,255,255,.2)' }}>XP Progress</span>
-            <span style={{ fontSize:8, fontWeight:700, color:'rgba(251,191,36,.4)' }}>{Math.round(xpProgress)}%</span>
+            <span style={{ fontSize:8, fontWeight:700, color:'rgba(192,132,252,.4)' }}>{Math.round(xpProgress)}%</span>
           </div>
         </div>
       )}
@@ -376,7 +375,7 @@ export default function Layout({ children, currentPageName }) {
         width: sidebarW, flexShrink: 0,
         position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 40,
         background: 'linear-gradient(180deg,#08001a 0%,#04000a 100%)',
-        borderRight: '1px solid rgba(251,191,36,.08)',
+        borderRight: '1px solid rgba(168,85,247,.08)',
         transition: 'width .3s cubic-bezier(.4,0,.2,1)',
         overflow: 'hidden',
         display: 'none',
@@ -385,9 +384,9 @@ export default function Layout({ children, currentPageName }) {
         <button onClick={() => setSidebarCollapsed(v => !v)} style={{
           position:'absolute', right:-12, top:68,
           width:24, height:24, borderRadius:'50%',
-          background:'#0e0020', border:'1px solid rgba(251,191,36,.2)',
+          background:'#0e0020', border:'1px solid rgba(168,85,247,.2)',
           display:'flex', alignItems:'center', justifyContent:'center',
-          cursor:'pointer', zIndex:50, color:'rgba(251,191,36,.5)',
+          cursor:'pointer', zIndex:50, color:'rgba(192,132,252,.5)',
         }}>
           {sidebarCollapsed
             ? <ChevronRight style={{ width:12, height:12 }} />
@@ -401,7 +400,7 @@ export default function Layout({ children, currentPageName }) {
         position: 'fixed', top: 0, right: 0, zIndex: 30,
         left: sidebarW, height: 54,
         background: 'linear-gradient(90deg,#08001a,#0a0015)',
-        borderBottom: '1px solid rgba(251,191,36,.08)',
+        borderBottom: '1px solid rgba(168,85,247,.08)',
         alignItems: 'center',
         padding: '0 16px',
         gap: 10,
@@ -409,7 +408,7 @@ export default function Layout({ children, currentPageName }) {
       }} className="lv-header">
 
         <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-          <div style={{ height:18, width:2, borderRadius:2, background:'linear-gradient(to bottom,#fbbf24,#a855f7)', opacity:.6 }} />
+          <div style={{ height:18, width:2, borderRadius:2, background:'linear-gradient(to bottom,#c084fc,#fbbf24)', opacity:.6 }} />
           <span style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,.2)', letterSpacing:'.1em', textTransform:'uppercase' }}>
             {currentPageName || ''}
           </span>
@@ -419,13 +418,13 @@ export default function Layout({ children, currentPageName }) {
           {user && (
             <Link to={createPageUrl('Deposit')} style={{
               display:'flex', alignItems:'center', gap:7, padding:'6px 16px', borderRadius:10,
-              background:'linear-gradient(135deg,#fbbf24,#f59e0b)',
+              background:'linear-gradient(135deg,#a855f7,#7c3aed)',
               textDecoration:'none',
-              boxShadow:'0 0 20px rgba(251,191,36,.35)',
+              boxShadow:'0 0 20px rgba(168,85,247,.35)',
               transition:'transform .2s, box-shadow .2s',
             }}>
-              <Wallet style={{ width:14, height:14, color:'#000' }} />
-              <span style={{ fontSize:12, fontWeight:900, color:'#000', letterSpacing:'.04em' }}>Deposit</span>
+              <Wallet style={{ width:14, height:14, color:'#fff' }} />
+              <span style={{ fontSize:12, fontWeight:900, color:'#fff', letterSpacing:'.04em' }}>Deposit</span>
             </Link>
           )}
         </div>
@@ -433,7 +432,7 @@ export default function Layout({ children, currentPageName }) {
         {user && (
           <div className="balance-chip" style={{
             display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:10,
-            background:'rgba(251,191,36,.07)', border:'1px solid rgba(251,191,36,.15)',
+            background:'rgba(168,85,247,.07)', border:'1px solid rgba(168,85,247,.15)',
           }}>
             <CoinIcon size={16} />
             <span style={{ fontSize:14, fontWeight:900, color:'#fbbf24', minWidth:50 }}>
@@ -447,14 +446,14 @@ export default function Layout({ children, currentPageName }) {
       <header style={{
         position:'fixed', top:0, left:0, right:0, zIndex:50, height:54,
         background:'linear-gradient(90deg,#08001a,#0a0015)',
-        borderBottom:'1px solid rgba(251,191,36,.08)',
+        borderBottom:'1px solid rgba(168,85,247,.08)',
         display:'flex', alignItems:'center', padding:'0 14px', gap:10,
       }} className="lv-mobile-header">
         <button onClick={() => setMobileOpen(v => !v)} style={{
           width:32, height:32, borderRadius:9,
-          background:'rgba(251,191,36,.08)', border:'1px solid rgba(251,191,36,.15)',
+          background:'rgba(168,85,247,.08)', border:'1px solid rgba(168,85,247,.15)',
           display:'flex', alignItems:'center', justifyContent:'center',
-          color:'rgba(251,191,36,.7)', cursor:'pointer',
+          color:'rgba(192,132,252,.7)', cursor:'pointer',
         }}>
           {mobileOpen ? <X style={{ width:15, height:15 }} /> : <Menu style={{ width:15, height:15 }} />}
         </button>
@@ -462,28 +461,27 @@ export default function Layout({ children, currentPageName }) {
         <Link to={createPageUrl('Home')} style={{ display:'flex', alignItems:'center', gap:8, textDecoration:'none' }}>
           <div style={{
             width:28, height:28, borderRadius:8, flexShrink:0,
-            background:'linear-gradient(135deg,#fbbf24,#a855f7)',
-            display:'flex', alignItems:'center', justifyContent:'center',
-            boxShadow:'0 0 14px rgba(251,191,36,.4)',
+            overflow:'hidden',
+            boxShadow:'0 0 14px rgba(168,85,247,.5)',
           }}>
-            <Box style={{ width:14, height:14, color:'#000' }} />
+            <img src="/gg4gf.png" alt="Amethyst.GG" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
           </div>
           <span style={{
-            fontSize:12, fontWeight:900, letterSpacing:'.15em',
-            background:'linear-gradient(90deg,#fbbf24,#c084fc)',
+            fontSize:12, fontWeight:900, letterSpacing:'.12em',
+            background:'linear-gradient(90deg,#c084fc,#fbbf24)',
             WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
-          }}>LOOTVERSE</span>
+          }}>Amethyst.GG</span>
         </Link>
 
         <div style={{ flex:1, display:'flex', justifyContent:'center' }}>
           {user && (
             <Link to={createPageUrl('Deposit')} style={{
               display:'flex', alignItems:'center', gap:5, padding:'5px 12px', borderRadius:8,
-              background:'linear-gradient(135deg,#fbbf24,#f59e0b)',
-              textDecoration:'none', boxShadow:'0 0 12px rgba(251,191,36,.3)',
+              background:'linear-gradient(135deg,#a855f7,#7c3aed)',
+              textDecoration:'none', boxShadow:'0 0 12px rgba(168,85,247,.4)',
             }}>
-              <Wallet style={{ width:12, height:12, color:'#000' }} />
-              <span style={{ fontSize:11, fontWeight:900, color:'#000' }}>Deposit</span>
+              <Wallet style={{ width:12, height:12, color:'#fff' }} />
+              <span style={{ fontSize:11, fontWeight:900, color:'#fff' }}>Deposit</span>
             </Link>
           )}
         </div>
@@ -491,7 +489,7 @@ export default function Layout({ children, currentPageName }) {
         {user && (
           <div className="balance-chip" style={{
             display:'flex', alignItems:'center', gap:5, padding:'4px 10px', borderRadius:8,
-            background:'rgba(251,191,36,.07)', border:'1px solid rgba(251,191,36,.15)',
+            background:'rgba(168,85,247,.07)', border:'1px solid rgba(168,85,247,.15)',
           }}>
             <CoinIcon size={13} />
             <span style={{ fontSize:11, fontWeight:900, color:'#fbbf24' }}>
@@ -508,7 +506,7 @@ export default function Layout({ children, currentPageName }) {
           <aside style={{
             position:'absolute', left:0, top:0, bottom:0, width:240,
             background:'linear-gradient(180deg,#08001a 0%,#04000a 100%)',
-            borderRight:'1px solid rgba(251,191,36,.1)',
+            borderRight:'1px solid rgba(168,85,247,.1)',
             paddingTop:54, display:'flex', flexDirection:'column', overflow:'hidden',
           }}>
             <div style={{ position:'relative', overflow:'hidden', flex:1 }}>
@@ -525,9 +523,9 @@ export default function Layout({ children, currentPageName }) {
                           to={createPageUrl(item.page)}
                           className={`nav-link expanded ${active ? 'active nav-active' : ''}`}
                         >
-                          <item.icon style={{ width:16, height:16, flexShrink:0, color: active ? '#fbbf24' : 'rgba(255,255,255,.3)' }} />
+                          <item.icon style={{ width:16, height:16, flexShrink:0, color: active ? '#c084fc' : 'rgba(255,255,255,.3)' }} />
                           {item.name}
-                          {active && <div style={{ marginLeft:'auto', width:5, height:5, borderRadius:'50%', background:'#a855f7', boxShadow:'0 0 6px #a855f7' }} />}
+                          {active && <div style={{ marginLeft:'auto', width:5, height:5, borderRadius:'50%', background:'#fbbf24', boxShadow:'0 0 6px #fbbf24' }} />}
                         </Link>
                       );
                     })}
@@ -538,7 +536,7 @@ export default function Layout({ children, currentPageName }) {
 
             {/* Mobile bottom user strip */}
             {user && (
-              <div style={{ margin:'0 10px 12px', padding:'10px 12px', borderRadius:12, background:'rgba(251,191,36,.05)', border:'1px solid rgba(251,191,36,.1)' }}>
+              <div style={{ margin:'0 10px 12px', padding:'10px 12px', borderRadius:12, background:'rgba(168,85,247,.05)', border:'1px solid rgba(168,85,247,.1)' }}>
                 <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
                   <StableAvatar
                     avatarUrl={user.avatar_url}
@@ -550,7 +548,7 @@ export default function Layout({ children, currentPageName }) {
                     <div style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,.7)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
                       {user.full_name || user.email?.split('@')[0] || 'Player'}
                     </div>
-                    <div style={{ fontSize:9, color:'rgba(251,191,36,.4)', fontWeight:700 }}>Level {level}</div>
+                    <div style={{ fontSize:9, color:'rgba(192,132,252,.4)', fontWeight:700 }}>Level {level}</div>
                   </div>
                   <div style={{ padding:'2px 7px', borderRadius:100, fontSize:9, fontWeight:800, background:'rgba(168,85,247,.15)', border:'1px solid rgba(168,85,247,.3)', color:'#c084fc' }}>Lv{level}</div>
                 </div>
@@ -559,7 +557,7 @@ export default function Layout({ children, currentPageName }) {
                 </div>
                 <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
                   <span style={{ fontSize:8, color:'rgba(255,255,255,.2)', fontWeight:700 }}>XP</span>
-                  <span style={{ fontSize:8, color:'rgba(251,191,36,.4)', fontWeight:700 }}>{Math.round(xpProgress)}%</span>
+                  <span style={{ fontSize:8, color:'rgba(192,132,252,.4)', fontWeight:700 }}>{Math.round(xpProgress)}%</span>
                 </div>
               </div>
             )}
@@ -583,7 +581,7 @@ export default function Layout({ children, currentPageName }) {
           display:'none', flexShrink:0,
           height:'calc(100vh - 54px)', position:'sticky', top:54,
           background:'linear-gradient(180deg,#08001a 0%,#04000a 100%)',
-          borderLeft:'1px solid rgba(251,191,36,.07)',
+          borderLeft:'1px solid rgba(168,85,247,.07)',
           transition:'width .3s cubic-bezier(.4,0,.2,1)',
           overflow:'hidden', width: chatOpen ? 260 : 0,
         }} className="lv-chat">
