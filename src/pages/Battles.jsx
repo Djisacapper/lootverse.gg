@@ -563,49 +563,61 @@ export default function Battles() {
   const handleAddBotToArena = async () => {
     const current = arenaDataRef.current;
     if (!current?.battle?.id) return;
-    const battle     = current.battle;
-    const maxPlayers = battle.max_players || 2;
+    const battleId   = current.battle.id;
+    const maxPlayers = current.battle.max_players || 2;
     const emptySlot  = { email:'', name:'', avatar_url:null, isBot:false, total_value:0, items_won:[] };
 
-    // Build full-length array preserving existing players at their exact indices
+    // Fetch fresh battle so we have all current players (including any who joined after us)
+    let freshBattle = current.battle;
+    try {
+      const { base44: b44 } = await import('@/api/base44Client');
+      const res = await b44.entities.CaseBattle.filter({ id: battleId });
+      if (res?.[0]) freshBattle = res[0];
+    } catch {}
+
     const playersArr = Array.from({ length: maxPlayers }, (_, i) => {
-      const p = (battle.players || [])[i];
+      const p = (freshBattle.players || [])[i];
       return isRealPlayer(p) ? p : { ...emptySlot };
     });
 
     const realCount = playersArr.filter(isRealPlayer).length;
     if (realCount >= maxPlayers) return;
 
-    // Place bot in the first empty slot
     const firstEmpty = playersArr.findIndex(p => !isRealPlayer(p));
     if (firstEmpty === -1) return;
     playersArr[firstEmpty] = makeBot();
 
     const allFilled = playersArr.filter(isRealPlayer).length >= maxPlayers;
-    // Clear any stale committed_rolls so resolveAndCommitRolls re-derives fresh
-    const patch     = { players: playersArr, committed_rolls: null, ...(allFilled ? { status:'in_progress' } : {}) };
-    await base44.entities.CaseBattle.update(battle.id, patch);
+    const patch = { players: playersArr, committed_rolls: null, ...(allFilled ? { status:'in_progress' } : {}) };
+    await base44.entities.CaseBattle.update(battleId, patch);
 
     if (allFilled) {
-      const selectedCasesArr = buildSelectedCasesFromBattle({...battle,...patch}, cases);
+      const selectedCasesArr = buildSelectedCasesFromBattle({...freshBattle,...patch}, cases);
       if (selectedCasesArr.length > 0) {
-        await resolveAndCommitRolls({...battle,...patch}, selectedCasesArr, playersArr, battle.battle_modes||{});
+        await resolveAndCommitRolls({...freshBattle,...patch}, selectedCasesArr, playersArr, freshBattle.battle_modes||{});
       }
     }
-    updateArena({...battle,...patch});
+    updateArena({...freshBattle,...patch});
     loadBattles();
   };
 
   const handleFillBots = async () => {
     const current = arenaDataRef.current;
     if (!current?.battle?.id) return;
-    const battle     = current.battle;
-    const maxPlayers = battle.max_players || 2;
+    const battleId   = current.battle.id;
+    const maxPlayers = current.battle.max_players || 2;
     const emptySlot  = { email:'', name:'', avatar_url:null, isBot:false, total_value:0, items_won:[] };
 
-    // Build full-length array preserving existing players at their exact indices
+    // Fetch fresh battle so we have all current players (including any who joined after us)
+    let freshBattle = current.battle;
+    try {
+      const { base44: b44 } = await import('@/api/base44Client');
+      const res = await b44.entities.CaseBattle.filter({ id: battleId });
+      if (res?.[0]) freshBattle = res[0];
+    } catch {}
+
     const playersArr = Array.from({ length: maxPlayers }, (_, i) => {
-      const p = (battle.players || [])[i];
+      const p = (freshBattle.players || [])[i];
       return isRealPlayer(p) ? p : { ...emptySlot };
     });
 
@@ -614,32 +626,28 @@ export default function Battles() {
       if (!isRealPlayer(p)) playersArr[i] = makeBot();
     });
 
-    // Clear stale committed_rolls so resolveAndCommitRolls re-derives with all players
     const patch = { players: playersArr, status: 'in_progress', committed_rolls: null };
-    await base44.entities.CaseBattle.update(battle.id, patch);
+    await base44.entities.CaseBattle.update(battleId, patch);
 
-    const selectedCasesArr = buildSelectedCasesFromBattle({...battle,...patch}, cases);
+    const selectedCasesArr = buildSelectedCasesFromBattle({...freshBattle,...patch}, cases);
     if (selectedCasesArr.length > 0) {
-      await resolveAndCommitRolls({...battle,...patch}, selectedCasesArr, playersArr, battle.battle_modes||{});
+      await resolveAndCommitRolls({...freshBattle,...patch}, selectedCasesArr, playersArr, freshBattle.battle_modes||{});
     }
-    updateArena({...battle,...patch});
+    updateArena({...freshBattle,...patch});
     loadBattles();
   };
 
   const handleBattleUpdated = (updatedBattle) => {
-    const selectedCasesArr = buildSelectedCasesFromBattle(updatedBattle, cases);
-    const teams = updatedBattle.teams_config
-      ? JSON.parse(updatedBattle.teams_config)
-      : [(updatedBattle.players||[]).map((_,i)=>i)];
-    const newData = {
-      battle:        updatedBattle,
-      selectedCases: selectedCasesArr,
-      teams,
-      modeLabel:     updatedBattle.mode_label || '1v1',
-      battleModes:   updatedBattle.battle_modes || {},
-    };
-    arenaDataRef.current = newData;
-    setArenaData(newData);
+    // Only update the battle object inside arenaData — do NOT rebuild teams/selectedCases.
+    // Rebuilding would use the DB players array which may not include this client's slot
+    // position correctly, causing team redirects. The teams and selectedCases were set
+    // correctly when the user joined and must not be overwritten.
+    setArenaData(prev => {
+      if (!prev) return prev;
+      const next = { ...prev, battle: updatedBattle };
+      arenaDataRef.current = next;
+      return next;
+    });
     loadBattles();
   };
 
