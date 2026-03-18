@@ -7,7 +7,7 @@ import ProfileModal from './components/game/ProfileModal';
 import {
   Box, Swords, Coins, TrendingUp, Gift, Award, Users,
   Menu, X, ChevronLeft, ChevronRight, Wallet,
-  Shield, MessageCircle, Home,
+  Shield, MessageCircle, Home, ScrollText,
 } from 'lucide-react';
 
 const CSS = `
@@ -95,7 +95,6 @@ body, #root { font-family: 'Nunito', sans-serif; background: #04000a; }
   font-family: 'Nunito', sans-serif;
 }
 
-/* Stable avatar — reserves space before image loads, no layout jump */
 .lv-avatar {
   display: flex; align-items: center; justify-content: center;
   border-radius: 50%; overflow: hidden; flex-shrink: 0;
@@ -104,7 +103,6 @@ body, #root { font-family: 'Nunito', sans-serif; background: #04000a; }
 .lv-avatar img {
   position: absolute; inset: 0; width: 100%; height: 100%;
   object-fit: cover;
-  /* Fade in once loaded — never flashes white or disappears */
   opacity: 0; transition: opacity 0.2s ease;
 }
 .lv-avatar img.loaded { opacity: 1; }
@@ -133,6 +131,12 @@ const NAV_SECTIONS = (role) => [
       { name: 'Leaderboard', icon: Award,  page: 'Leaderboard' },
     ],
   },
+  {
+    label: 'Legal',
+    items: [
+      { name: 'Terms of Service', icon: ScrollText, page: 'TermsOfService' },
+    ],
+  },
   ...(role === 'admin' ? [{
     label: 'Staff',
     items: [{ name: 'Admin', icon: Shield, page: 'Admin' }],
@@ -152,18 +156,11 @@ function CoinIcon({ size = 16 }) {
   );
 }
 
-/* ── Stable Avatar component ──────────────────────────────────────
-   Uses a persistent <img> that fades in once loaded. The fallback
-   initial letter sits underneath and is only visible before load.
-   Critically: we never unmount/remount the img when user state
-   updates — the src only changes if the actual avatar_url changes.
-────────────────────────────────────────────────────────────────── */
 const StableAvatar = React.memo(({ avatarUrl, name, size, fontSize, gradient, boxShadow, onClick, style = {} }) => {
   const imgRef = useRef(null);
   const [imgLoaded, setImgLoaded] = useState(false);
   const prevUrl = useRef(avatarUrl);
 
-  // Only reset loaded state when the URL genuinely changes
   useEffect(() => {
     if (prevUrl.current !== avatarUrl) {
       prevUrl.current = avatarUrl;
@@ -171,7 +168,6 @@ const StableAvatar = React.memo(({ avatarUrl, name, size, fontSize, gradient, bo
     }
   }, [avatarUrl]);
 
-  // If img is already complete when mounted (browser cache), mark loaded immediately
   useEffect(() => {
     if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
       setImgLoaded(true);
@@ -194,10 +190,7 @@ const StableAvatar = React.memo(({ avatarUrl, name, size, fontSize, gradient, bo
         ...style,
       }}
     >
-      {/* Fallback initial — always rendered underneath */}
       <span style={{ position: 'relative', zIndex: 1, pointerEvents: 'none' }}>{initial}</span>
-
-      {/* Avatar image — fades in over the initial, never causes a flash */}
       {avatarUrl && (
         <img
           ref={imgRef}
@@ -224,9 +217,6 @@ export default function Layout({ children, currentPageName }) {
   const [profileOpen,      setProfileOpen]      = useState(false);
   const [chatOpen,         setChatOpen]         = useState(true);
 
-  // FIX: Track previous user data in a ref so we only call setUser
-  // when something meaningful actually changed. This stops the 3-second
-  // polling from triggering re-renders (and avatar blinks) on every tick.
   const userRef = useRef(null);
 
   const reloadUser = () => base44.auth.me().then(fresh => {
@@ -259,7 +249,6 @@ export default function Layout({ children, currentPageName }) {
   const level      = user?.level || 1;
   const sidebarW   = sidebarCollapsed ? 60 : 210;
 
-  /* ── Sidebar inner ── */
   const SidebarInner = ({ collapsed }) => (
     <div style={{ display:'flex', flexDirection:'column', height:'100%', position:'relative', overflow:'hidden' }}>
       <div className="sidebar-scan" />
@@ -329,7 +318,7 @@ export default function Layout({ children, currentPageName }) {
         ))}
       </nav>
 
-      {/* User card — bottom of sidebar */}
+      {/* User card */}
       {user && !collapsed && (
         <div style={{
           margin: '0 10px 12px', padding: '10px 12px', borderRadius: 12,
@@ -382,7 +371,7 @@ export default function Layout({ children, currentPageName }) {
     <div style={{ minHeight:'100vh', background:'#04000a', display:'flex', fontFamily:'Nunito,sans-serif' }}>
       <style>{CSS}</style>
 
-      {/* ── Desktop Sidebar ── */}
+      {/* Desktop Sidebar */}
       <aside style={{
         width: sidebarW, flexShrink: 0,
         position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 40,
@@ -406,7 +395,7 @@ export default function Layout({ children, currentPageName }) {
         </button>
       </aside>
 
-      {/* ── Desktop Top Header ── */}
+      {/* Desktop Top Header */}
       <header style={{
         display: 'none',
         position: 'fixed', top: 0, right: 0, zIndex: 30,
@@ -454,7 +443,7 @@ export default function Layout({ children, currentPageName }) {
         )}
       </header>
 
-      {/* ── Mobile Header ── */}
+      {/* Mobile Header */}
       <header style={{
         position:'fixed', top:0, left:0, right:0, zIndex:50, height:54,
         background:'linear-gradient(90deg,#08001a,#0a0015)',
@@ -512,7 +501,7 @@ export default function Layout({ children, currentPageName }) {
         )}
       </header>
 
-      {/* ── Mobile Drawer ── */}
+      {/* Mobile Drawer */}
       {mobileOpen && (
         <div style={{ position:'fixed', inset:0, zIndex:40 }}>
           <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.75)' }} onClick={() => setMobileOpen(false)} />
@@ -578,10 +567,10 @@ export default function Layout({ children, currentPageName }) {
         </div>
       )}
 
-      {/* ── Profile Modal ── */}
+      {/* Profile Modal */}
       {profileOpen && user && <ProfileModal user={user} onClose={() => setProfileOpen(false)} />}
 
-      {/* ── Main ── */}
+      {/* Main */}
       <div style={{ display:'flex', flex:1, minHeight:'100vh', paddingTop:54, marginLeft: sidebarW, transition:'margin-left .3s cubic-bezier(.4,0,.2,1)' }} className="lv-main">
         <main style={{ flex:1, minWidth:0, overflowY:'auto' }}>
           <div style={{ maxWidth:900, margin:'0 auto', padding:'20px 20px 40px' }}>
