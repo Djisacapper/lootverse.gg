@@ -23,20 +23,20 @@ const crashImg    = 'https://i.imgur.com/53dgn4r.png';
    nothing can clip or contain them
    ══════════════════════════════════════════════════ */
 const GEM_LEFT = [
-  { shape:'diamond', size:52, c1:'#e9d5ff', c2:'#5b21b6', glow:'rgba(167,139,250,.95)', top:'8vh',  anim:'gfA 7.2s ease-in-out infinite' },
-  { shape:'hex',     size:40, c1:'#fde68a', c2:'#b45309', glow:'rgba(251,191,36,.9)',   top:'22vh', anim:'gfB 8.8s ease-in-out infinite 1.3s' },
-  { shape:'marquise',size:46, c1:'#f9a8d4', c2:'#9d174d', glow:'rgba(236,72,153,.88)', top:'37vh', anim:'gfC 6.9s ease-in-out infinite 2.6s' },
-  { shape:'oval',    size:36, c1:'#a78bfa', c2:'#4c1d95', glow:'rgba(139,92,246,.9)',   top:'53vh', anim:'gfD 9.1s ease-in-out infinite 0.8s' },
-  { shape:'diamond', size:44, c1:'#fbbf24', c2:'#92400e', glow:'rgba(251,191,36,.88)', top:'68vh', anim:'gfE 7.7s ease-in-out infinite 2.0s' },
-  { shape:'hex',     size:32, c1:'#c084fc', c2:'#6d28d9', glow:'rgba(192,132,252,.92)', top:'83vh', anim:'gfF 10.2s ease-in-out infinite 3.4s' },
+  { shape:'diamond', size:46, c1:'#e9d5ff', c2:'#5b21b6', glow:'rgba(167,139,250,.95)', top:'8vh',  anim:'gfA 7.2s ease-in-out infinite' },
+  { shape:'hex',     size:36, c1:'#fde68a', c2:'#b45309', glow:'rgba(251,191,36,.9)',   top:'22vh', anim:'gfB 8.8s ease-in-out infinite 1.3s' },
+  { shape:'marquise',size:42, c1:'#f9a8d4', c2:'#9d174d', glow:'rgba(236,72,153,.88)', top:'37vh', anim:'gfC 6.9s ease-in-out infinite 2.6s' },
+  { shape:'oval',    size:32, c1:'#a78bfa', c2:'#4c1d95', glow:'rgba(139,92,246,.9)',   top:'53vh', anim:'gfD 9.1s ease-in-out infinite 0.8s' },
+  { shape:'diamond', size:40, c1:'#fbbf24', c2:'#92400e', glow:'rgba(251,191,36,.88)', top:'68vh', anim:'gfE 7.7s ease-in-out infinite 2.0s' },
+  { shape:'hex',     size:28, c1:'#c084fc', c2:'#6d28d9', glow:'rgba(192,132,252,.92)', top:'83vh', anim:'gfF 10.2s ease-in-out infinite 3.4s' },
 ];
 const GEM_RIGHT = [
-  { shape:'hex',      size:56, c1:'#fbbf24', c2:'#92400e', glow:'rgba(251,191,36,.95)',  top:'6vh',  anim:'gfB 8.4s ease-in-out infinite 0.4s' },
-  { shape:'marquise', size:38, c1:'#c084fc', c2:'#4c1d95', glow:'rgba(192,132,252,.9)',  top:'20vh', anim:'gfD 9.4s ease-in-out infinite 1.8s' },
-  { shape:'diamond',  size:48, c1:'#fde68a', c2:'#a16207', glow:'rgba(251,191,36,.9)',   top:'35vh', anim:'gfF 7.5s ease-in-out infinite 3.6s' },
-  { shape:'oval',     size:34, c1:'#e879f9', c2:'#7e22ce', glow:'rgba(232,121,249,.86)', top:'51vh', anim:'gfA 8.0s ease-in-out infinite 0.6s' },
-  { shape:'marquise', size:44, c1:'#bfdbfe', c2:'#1d4ed8', glow:'rgba(96,165,250,.84)',  top:'66vh', anim:'gfC 7.1s ease-in-out infinite 2.2s' },
-  { shape:'diamond',  size:36, c1:'#bbf7d0', c2:'#15803d', glow:'rgba(74,222,128,.82)',  top:'81vh', anim:'gfE 9.8s ease-in-out infinite 1.1s' },
+  { shape:'hex',      size:50, c1:'#fbbf24', c2:'#92400e', glow:'rgba(251,191,36,.95)',  top:'6vh',  anim:'gfB 8.4s ease-in-out infinite 0.4s' },
+  { shape:'marquise', size:34, c1:'#c084fc', c2:'#4c1d95', glow:'rgba(192,132,252,.9)',  top:'20vh', anim:'gfD 9.4s ease-in-out infinite 1.8s' },
+  { shape:'diamond',  size:44, c1:'#fde68a', c2:'#a16207', glow:'rgba(251,191,36,.9)',   top:'35vh', anim:'gfF 7.5s ease-in-out infinite 3.6s' },
+  { shape:'oval',     size:30, c1:'#e879f9', c2:'#7e22ce', glow:'rgba(232,121,249,.86)', top:'51vh', anim:'gfA 8.0s ease-in-out infinite 0.6s' },
+  { shape:'marquise', size:40, c1:'#bfdbfe', c2:'#1d4ed8', glow:'rgba(96,165,250,.84)',  top:'66vh', anim:'gfC 7.1s ease-in-out infinite 2.2s' },
+  { shape:'diamond',  size:32, c1:'#bbf7d0', c2:'#15803d', glow:'rgba(74,222,128,.82)',  top:'81vh', anim:'gfE 9.8s ease-in-out infinite 1.1s' },
 ];
 
 const CSS = `
@@ -259,15 +259,15 @@ const SHAPE_MAP = { diamond: DiamondSVG, hex: HexSVG, marquise: MarquiseSVG, ova
 function FixedGem({ shape, size, c1, c2, glow, top, left, right, anim }) {
   const id = useRef(`g${Math.random().toString(36).slice(2,8)}`).current;
   const ShapeSVG = SHAPE_MAP[shape];
-  const pad = 14; // breathing room for glow bleed
 
   return (
     <div style={{
       position: 'fixed',
-      top, left, right,
-      width:  size + pad*2,
-      height: size + pad*2,
-      padding: pad,
+      top,
+      ...(left !== undefined ? { left } : {}),
+      ...(right !== undefined ? { right } : {}),
+      width:  size,
+      height: size,
       pointerEvents: 'none',
       zIndex: 9999,
       animation: anim,
@@ -275,8 +275,9 @@ function FixedGem({ shape, size, c1, c2, glow, top, left, right, anim }) {
       overflow: 'visible',
     }}>
       <div style={{
-        width: size, height: size,
-        filter: `drop-shadow(0 0 ${Math.round(size*.32)}px ${glow}) drop-shadow(0 ${Math.round(size*.08)}px ${Math.round(size*.22)}px rgba(0,0,0,.65))`,
+        width: '100%',
+        height: '100%',
+        filter: `drop-shadow(0 0 ${Math.round(size*.35)}px ${glow}) drop-shadow(0 ${Math.round(size*.08)}px ${Math.round(size*.2)}px rgba(0,0,0,.6))`,
         overflow: 'visible',
       }}>
         <ShapeSVG id={id} c1={c1} c2={c2}/>
@@ -287,13 +288,17 @@ function FixedGem({ shape, size, c1, c2, glow, top, left, right, anim }) {
 
 /* Left & right gem columns */
 function GemColumns() {
+  // Left gems: centered in the sidebar gap (~175px wide)
+  // We center each gem: left = (175 - size) / 2
+  // Right gems: centered in the chat panel gap (~185px wide)  
+  // We center each gem: right = (185 - size) / 2
   return (
     <>
       {GEM_LEFT.map((g, i) => (
-        <FixedGem key={`L${i}`} {...g} left={0}/>
+        <FixedGem key={`L${i}`} {...g} left={Math.round((175 - g.size) / 2)}/>
       ))}
       {GEM_RIGHT.map((g, i) => (
-        <FixedGem key={`R${i}`} {...g} right={0}/>
+        <FixedGem key={`R${i}`} {...g} right={Math.round((185 - g.size) / 2)}/>
       ))}
     </>
   );
