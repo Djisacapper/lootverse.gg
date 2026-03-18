@@ -39,6 +39,12 @@ const CSS = `
 .bt-slot-card{border-radius:14px;border:2px solid;transition:all .22s;cursor:pointer;padding:16px 14px;display:flex;align-items:center;gap:12px;}
 .bt-slot-card.empty:hover{transform:translateY(-2px);}
 .bt-slot-card.taken{cursor:default;opacity:.7;}
+
+/* ── Already-in Toast ── */
+@keyframes bt-toast-in{0%{transform:translateY(24px) scale(.95);opacity:0}100%{transform:translateY(0) scale(1);opacity:1}}
+@keyframes bt-toast-out{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.95)}}
+.bt-toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;align-items:center;gap:10px;padding:13px 22px;border-radius:14px;background:linear-gradient(135deg,#1a0035,#0d001f);border:1px solid rgba(157,111,255,.35);box-shadow:0 8px 40px rgba(0,0,0,.7),0 0 30px rgba(157,111,255,.15);animation:bt-toast-in .32s cubic-bezier(.34,1.56,.64,1) forwards;}
+.bt-toast-exit{animation:bt-toast-out .22s ease-in forwards;}
 `;
 
 const BOT_NAMES = ['Alpha','Blitz','Cipher','Delta','Echo','Forge','Ghost','Havoc','Inferno','Jester'];
@@ -69,6 +75,25 @@ function buildSelectedCasesFromBattle(battle, cases) {
   const caseTemplate = cases.find(c => c.id === battle.case_template_id);
   if (!caseTemplate) return [];
   return Array.from({ length: battle.rounds || 1 }, () => caseTemplate);
+}
+
+/* ─── Already-in Toast ──────────────────────────────────────────── */
+function AlreadyInToast({ onDone }) {
+  const [exiting, setExiting] = React.useState(false);
+  React.useEffect(() => {
+    const t1 = setTimeout(() => setExiting(true), 2600);
+    const t2 = setTimeout(() => onDone(), 2900);
+    return () => { clearTimeout(t1); clearTimeout(t2); };
+  }, []);
+  return (
+    <div className={`bt-toast${exiting ? ' bt-toast-exit' : ''}`}>
+      <span style={{ fontSize: 18 }}>⚔️</span>
+      <div>
+        <p style={{ fontSize: 13, fontWeight: 800, color: '#fff', margin: 0 }}>Already in this battle!</p>
+        <p style={{ fontSize: 11, color: 'rgba(157,111,255,.7)', margin: 0, marginTop: 2 }}>You already have a slot reserved.</p>
+      </div>
+    </div>
+  );
 }
 
 /* ─── Particles ─────────────────────────────────────────────────── */
@@ -116,6 +141,7 @@ function JoinSlotModal({ battle, user, balance, cases, onClose, onJoin }) {
     : [Array.from({length: Math.ceil(maxPlayers/2)}, (_,i)=>i),
        Array.from({length: Math.floor(maxPlayers/2)}, (_,i)=>i+Math.ceil(maxPlayers/2))];
 
+  // ── FIX 2: check across ALL player slots including those just added by bots ──
   const hasJoined = players.some(p => p?.email === user?.email && !p?.isBot);
   const canAfford = battle.entry_cost <= balance;
 
@@ -148,6 +174,7 @@ function JoinSlotModal({ battle, user, balance, cases, onClose, onJoin }) {
           </div>
         </div>
 
+        {/* ── Already joined banner inside modal too ── */}
         {hasJoined && (
           <div style={{padding:'10px 14px',borderRadius:10,background:'rgba(0,229,160,.08)',border:'1px solid rgba(0,229,160,.2)',marginBottom:16}}>
             <p style={{fontSize:12,color:'#00e5a0',fontWeight:600}}>✓ You're already in this battle</p>
@@ -385,6 +412,9 @@ export default function Battles() {
   const [freshUser, setFreshUser] = React.useState(null);
   const arenaDataRef = React.useRef(null);
 
+  // ── FIX 2: toast state for "already in battle" ──
+  const [alreadyInToast, setAlreadyInToast] = React.useState(false);
+
   React.useEffect(() => {
     base44.auth.me().then(setFreshUser).catch(()=>{});
     const iv = setInterval(()=>base44.auth.me().then(setFreshUser).catch(()=>{}), 3000);
@@ -459,8 +489,6 @@ export default function Battles() {
     });
 
     await commitEosBlock(battle.id);
-    // Never pre-commit rolls at create time — wait until all players are in.
-    // If we commit with 1 player, stored rolls only have data for index [0].
 
     const newArenaData = { battle, selectedCases:[...selectedCases], teams, modeLabel, battleModes };
     arenaDataRef.current = newArenaData;
@@ -475,15 +503,37 @@ export default function Battles() {
      with email:'' (valid for the API, treated as empty in UI/logic).
      We do NOT filter the array — preserving slot indices is critical
      so that teams_config indices stay correct throughout the battle.
+
+     FIX (duplicate joins): Before doing anything we fetch a fresh
+     copy of the battle and check whether the user's email already
+     occupies any slot. If so we show the "already in" toast and
+     bail out without charging coins or redirecting.
   ────────────────────────────────────────────────────────────── */
   const handleJoin = async (battle, slotIndex) => {
     if (battle.entry_cost > balance) return;
+
+    // ── FIX 2: fetch latest battle state and guard against duplicate joins ──
+    let freshBattle = battle;
+    try {
+      const res = await base44.entities.CaseBattle.filter({ id: battle.id });
+      if (res?.[0]) freshBattle = res[0];
+    } catch {}
+
+    const alreadyIn = (freshBattle.players || []).some(
+      p => p?.email === user?.email && !p?.isBot
+    );
+    if (alreadyIn) {
+      setJoinModal(null);
+      setAlreadyInToast(true);
+      return;
+    }
+
     setJoinModal(null);
 
-    const selectedCasesArr = buildSelectedCasesFromBattle(battle, cases);
+    const selectedCasesArr = buildSelectedCasesFromBattle(freshBattle, cases);
     if (selectedCasesArr.length === 0) return;
 
-    await updateBalance(-battle.entry_cost, 'battle_entry', `Joined battle: ${battle.case_name}`);
+    await updateBalance(-freshBattle.entry_cost, 'battle_entry', `Joined battle: ${freshBattle.case_name}`);
 
     let latestUser = user;
     try { latestUser = await base44.auth.me() || user; } catch {}
@@ -498,11 +548,11 @@ export default function Battles() {
     };
 
     const emptySlot = { email: '', name: '', avatar_url: null, isBot: false, total_value: 0, items_won: [] };
-    const maxPlayers = battle.max_players || 2;
+    const maxPlayers = freshBattle.max_players || 2;
 
     // Build full maxPlayers-length array preserving existing real players at their indices
     const playersToSave = Array.from({ length: maxPlayers }, (_, i) => {
-      const existing = (battle.players || [])[i];
+      const existing = (freshBattle.players || [])[i];
       return isRealPlayer(existing) ? existing : { ...emptySlot };
     });
     playersToSave[slotIndex] = joinerSlot;
@@ -510,32 +560,32 @@ export default function Battles() {
     const realPlayerCount = playersToSave.filter(isRealPlayer).length;
     const allFilled = realPlayerCount >= maxPlayers;
 
-    // Clear stale committed_rolls whenever a new player joins — they may have
-    // been committed with fewer players (wrong player count = wrong roll count)
-    await base44.entities.CaseBattle.update(battle.id, {
+    await base44.entities.CaseBattle.update(freshBattle.id, {
       players: playersToSave,
       committed_rolls: null,
     });
 
     if (allFilled) {
       await resolveAndCommitRolls(
-        { ...battle, players: playersToSave, committed_rolls: null },
+        { ...freshBattle, players: playersToSave, committed_rolls: null },
         selectedCasesArr,
         playersToSave,
-        battle.battle_modes || {}
+        freshBattle.battle_modes || {}
       );
     }
 
-    const teams = battle.teams_config
-      ? JSON.parse(battle.teams_config)
+    // ── FIX 1: preserve the teams from the original battle config, do NOT
+    //    re-derive from players array (which would re-assign slot positions)
+    const teams = freshBattle.teams_config
+      ? JSON.parse(freshBattle.teams_config)
       : [playersToSave.map((_,i)=>i)];
 
     const joinArenaData = {
-      battle:        { ...battle, players: playersToSave },
+      battle:        { ...freshBattle, players: playersToSave },
       selectedCases: selectedCasesArr,
       teams,
-      modeLabel:     battle.mode_label || '1v1',
-      battleModes:   battle.battle_modes || {},
+      modeLabel:     freshBattle.mode_label || '1v1',
+      battleModes:   freshBattle.battle_modes || {},
     };
     arenaDataRef.current = joinArenaData;
     setArenaData(joinArenaData);
@@ -552,6 +602,9 @@ export default function Battles() {
   });
 
   const updateArena = (updatedBattle) => {
+    // ── FIX 1: ONLY update the battle object — never touch teams or selectedCases.
+    //    Rebuilding teams here would re-parse from the DB players array and could
+    //    reassign the joining user to a different slot after bots are added.
     setArenaData(prev=>{
       if (!prev) return prev;
       const next = { ...prev, battle: updatedBattle };
@@ -567,7 +620,6 @@ export default function Battles() {
     const maxPlayers = current.battle.max_players || 2;
     const emptySlot  = { email:'', name:'', avatar_url:null, isBot:false, total_value:0, items_won:[] };
 
-    // Fetch fresh battle so we have all current players (including any who joined after us)
     let freshBattle = current.battle;
     try {
       const { base44: b44 } = await import('@/api/base44Client');
@@ -597,6 +649,7 @@ export default function Battles() {
         await resolveAndCommitRolls({...freshBattle,...patch}, selectedCasesArr, playersArr, freshBattle.battle_modes||{});
       }
     }
+    // ── FIX 1: updateArena only updates battle, preserving current user's teams ──
     updateArena({...freshBattle,...patch});
     loadBattles();
   };
@@ -608,7 +661,6 @@ export default function Battles() {
     const maxPlayers = current.battle.max_players || 2;
     const emptySlot  = { email:'', name:'', avatar_url:null, isBot:false, total_value:0, items_won:[] };
 
-    // Fetch fresh battle so we have all current players (including any who joined after us)
     let freshBattle = current.battle;
     try {
       const { base44: b44 } = await import('@/api/base44Client');
@@ -621,7 +673,6 @@ export default function Battles() {
       return isRealPlayer(p) ? p : { ...emptySlot };
     });
 
-    // Fill every empty slot with a bot
     playersArr.forEach((p, i) => {
       if (!isRealPlayer(p)) playersArr[i] = makeBot();
     });
@@ -633,15 +684,13 @@ export default function Battles() {
     if (selectedCasesArr.length > 0) {
       await resolveAndCommitRolls({...freshBattle,...patch}, selectedCasesArr, playersArr, freshBattle.battle_modes||{});
     }
+    // ── FIX 1: updateArena only updates battle, preserving current user's teams ──
     updateArena({...freshBattle,...patch});
     loadBattles();
   };
 
   const handleBattleUpdated = (updatedBattle) => {
     // Only update the battle object inside arenaData — do NOT rebuild teams/selectedCases.
-    // Rebuilding would use the DB players array which may not include this client's slot
-    // position correctly, causing team redirects. The teams and selectedCases were set
-    // correctly when the user joined and must not be overwritten.
     setArenaData(prev => {
       if (!prev) return prev;
       const next = { ...prev, battle: updatedBattle };
@@ -694,15 +743,31 @@ export default function Battles() {
     loadBattles();
   };
 
+  // ── FIX 2: intercept "Join" click — fetch fresh battle first and
+  //    show toast immediately if player is already in, before opening modal ──
+  const handleJoinClick = async (battle) => {
+    let freshBattle = battle;
+    try {
+      const res = await base44.entities.CaseBattle.filter({ id: battle.id });
+      if (res?.[0]) freshBattle = res[0];
+    } catch {}
+
+    const alreadyIn = (freshBattle.players || []).some(
+      p => p?.email === user?.email && !p?.isBot
+    );
+    if (alreadyIn) {
+      setAlreadyInToast(true);
+      return;
+    }
+    setJoinModal(freshBattle);
+  };
+
   if (view === 'create') {
     return <CreateBattle cases={cases} balance={balance} user={user} onBack={()=>setView('list')} onCreate={handleCreate}/>;
   }
 
   if (view === 'arena' && arenaData) {
     const arenaBattle  = arenaData.battle;
-    // ── CRITICAL FIX: pass the FULL players array (with empty placeholders) ──
-    // Do NOT filter here. The players array must stay index-aligned with
-    // teams_config and allRolled. BattleArena skips empty slots internally.
     const arenaPlayers = arenaBattle?.players || [];
     const arenaStatus  = arenaBattle?.status || 'waiting';
     return (
@@ -738,6 +803,11 @@ export default function Battles() {
   return (
     <div className="bt-root" style={{background:'#04000a',minHeight:'100vh',padding:'20px 0 80px'}}>
       <style>{CSS}</style>
+
+      {/* ── FIX 2: Already-in Toast ── */}
+      {alreadyInToast && (
+        <AlreadyInToast onDone={() => setAlreadyInToast(false)} />
+      )}
 
       <AnimatePresence>
         {joinModal && (
@@ -805,7 +875,7 @@ export default function Battles() {
               <div style={{display:'flex',flexDirection:'column',gap:10}}>
                 {liveBattles.map((b,i)=>(
                   <BattleRow key={b.id} battle={b} user={user} balance={balance} cases={cases} index={i}
-                    onJoin={b=>setJoinModal(b)} onWatch={handleWatch} onView={handleViewOwnBattle}/>
+                    onJoin={handleJoinClick} onWatch={handleWatch} onView={handleViewOwnBattle}/>
                 ))}
               </div>
             </motion.div>
@@ -822,7 +892,7 @@ export default function Battles() {
           <div style={{display:'flex',flexDirection:'column',gap:10}}>
             {openBattles.map((b,i)=>(
               <BattleRow key={b.id} battle={b} user={user} balance={balance} cases={cases} index={i}
-                onJoin={b=>setJoinModal(b)} onWatch={handleWatch} onView={handleViewOwnBattle}/>
+                onJoin={handleJoinClick} onWatch={handleWatch} onView={handleViewOwnBattle}/>
             ))}
           </div>
         ) : null}
