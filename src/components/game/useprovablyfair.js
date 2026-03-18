@@ -1,16 +1,5 @@
 /**
  * useProvablyFair.js
- * ─────────────────────────────────────────────────────────────────────────────
- * Provably fair engine for case battles using EOS blockchain block hashes.
- *
- * FLOW:
- *   1. Battle CREATED  → commitEosBlock() picks a future block number (+3 from head)
- *                        and saves { eos_block_num, eos_chain_id } to the battle.
- *   2. Battle STARTS   → resolveAndCommitRolls() polls EOS until that block is mined,
- *                        fetches its hash, derives ALL rolls deterministically, and
- *                        saves { eos_block_hash, committed_rolls } to the battle.
- *   3. Every CLIENT    → reads battle.committed_rolls directly. No local randomness.
- *                        Players, spectators, late-joiners all see identical outcomes.
  */
 
 import { useState, useEffect, useRef } from 'react';
@@ -90,39 +79,39 @@ function seededMagicCheck(rng, items, isMagicSpin) {
   return { isMagic: false };
 }
 
-// ─── Core roll derivation ─────────────────────────────────────────────────────
+// ─── Validate stored rolls ────────────────────────────────────────────────────
 /**
- * deriveRolls()
- *
- * BUG FIX: The previous version used selectedCases.map() which iterates
- * correctly, but if selectedCases was stale/partial when called (e.g. only
- * 1 case instead of 4), rolls[1..3] would be undefined — and BattleArena
- * would fall back to selectedCases[0] every round.
- *
- * We now validate each case has items before rolling, and log a clear warning
- * if cases are missing so it's obvious during debugging.
- *
- * @param {string}   blockHash
- * @param {string}   battleId
- * @param {Array}    selectedCases  — must be the FULL array, all rounds
- * @param {Array}    players
- * @param {object}   battleModes
- * @returns {Array}  rolls[roundIndex][playerIndex] = { item, isMagic }
+ * Check that stored rolls are valid for the current battle config.
+ * Rolls are invalid if:
+ *   - Wrong number of rounds
+ *   - Any round has fewer player slots than expected
+ *     (catches the "committed with 1 player" stale data bug)
  */
+function rollsAreValid(parsed, casesLen, expectedPlayerCount) {
+  if (!Array.isArray(parsed) || parsed.length !== casesLen) return false;
+  for (const round of parsed) {
+    if (!Array.isArray(round)) return false;
+    if (round.length < expectedPlayerCount) return false;
+    // Verify every expected slot has actual roll data with an item
+    for (let i = 0; i < expectedPlayerCount; i++) {
+      if (!round[i] || !round[i].item) return false;
+    }
+  }
+  return true;
+}
+
+// ─── Core roll derivation ─────────────────────────────────────────────────────
 export function deriveRolls(blockHash, battleId, selectedCases, players, battleModes = {}) {
-  // ── Guard: if cases or players are empty, bail out cleanly ──
   if (!selectedCases?.length || !players?.length) {
     console.warn('[provablyFair] deriveRolls called with empty cases or players — aborting');
     return [];
   }
 
-  // ── Log so it's easy to spot case-count mismatches during debugging ──
   console.log(
     `[provablyFair] deriveRolls: ${selectedCases.length} case(s) × ${players.length} player(s)`,
     selectedCases.map((c, i) => `[${i}] "${c?.name}" (${c?.items?.length ?? 0} items)`)
   );
 
-  // ── Build a unique seed from blockHash + battleId ──
   const combined = blockHash + '::' + battleId;
   let seedInt = 0;
   for (let i = 0; i < combined.length; i++) {
@@ -130,23 +119,18 @@ export function deriveRolls(blockHash, battleId, selectedCases, players, battleM
   }
   const rng = mulberry32(seedInt >>> 0);
 
-  // ── Roll each round using THAT round's case — not case[0] ──
-  // selectedCases[roundIndex] is the case for that specific round.
-  // The RNG advances continuously so every roll is unique even if two
-  // rounds happen to use the same case.
   const rolls = selectedCases.map((caseObj, roundIndex) => {
     const items = caseObj?.items;
 
-    // Defensive: if this case has no items, warn and return empty rolls
     if (!items || items.length === 0) {
-      console.warn(`[provablyFair] case[${roundIndex}] "${caseObj?.name}" has no items — returning zero-value roll`);
+      console.warn(`[provablyFair] case[${roundIndex}] "${caseObj?.name}" has no items`);
       return players.map(() => ({
         item: { name: 'Empty', value: 0, rarity: 'common', image_url: null },
         isMagic: false,
       }));
     }
 
-    return players.map((_player, playerIndex) => {
+    return players.map(() => {
       const item = seededRollItem(rng, items);
       const { isMagic } = seededMagicCheck(rng, items, battleModes.magic_spin);
 
@@ -186,23 +170,23 @@ export async function resolveAndCommitRolls(battle, selectedCases, players, batt
   try {
     const { base44 } = await import('@/api/base44Client');
 
-    // ── Guard: don't run with incomplete data ──
     if (!selectedCases?.length || !players?.length) {
       console.warn('[provablyFair] resolveAndCommitRolls called with empty cases/players');
       return null;
     }
 
-    // Already have rolls? Parse and return — but validate the round count first.
+    // ── Validate existing rolls: must match BOTH round count AND player count ──
+    // Previously only round count was checked, so stale 1-player rolls passed
+    // validation and were returned for 4-player battles — causing 0 scores.
     if (battle.committed_rolls) {
       try {
         const parsed = JSON.parse(battle.committed_rolls);
-        // If the stored rolls were generated with fewer cases (stale data),
-        // wipe them and re-derive with the correct full set.
-        if (Array.isArray(parsed) && parsed.length === selectedCases.length) {
+        if (rollsAreValid(parsed, selectedCases.length, players.length)) {
+          console.log(`[provablyFair] using stored rolls: ${parsed.length} rounds × ${players.length} players`);
           return parsed;
         }
         console.warn(
-          `[provablyFair] stored rolls have ${parsed.length} rounds but battle has ${selectedCases.length} — re-deriving`
+          `[provablyFair] stored rolls invalid (rounds=${parsed.length}, need ${selectedCases.length}; players=${parsed[0]?.length}, need ${players.length}) — re-deriving`
         );
       } catch {}
     }
@@ -226,7 +210,6 @@ export async function resolveAndCommitRolls(battle, selectedCases, players, batt
           await new Promise(r => setTimeout(r, 1500));
         }
       }
-      // CSPRNG fallback if EOS is unreachable
       if (!blockHash) {
         const arr = new Uint8Array(32);
         crypto.getRandomValues(arr);
@@ -250,21 +233,6 @@ export async function resolveAndCommitRolls(battle, selectedCases, players, batt
 }
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
-/**
- * useProvablyFairArena(battle, selectedCases, players, battleModes)
- *
- * BUG FIX: The dependency array previously only listed [battle?.id].
- * This meant if selectedCases arrived after mount (common — they're passed
- * from parent state that loads async), the effect ran once with an empty/
- * partial array, derived rolls for 0-1 cases, and never re-ran.
- *
- * Fix: depend on selectedCases.length and players.length so the effect
- * re-runs the moment all cases are present.
- *
- * Additional fix: validate that stored committed_rolls has the correct number
- * of rounds before trusting them. If stale/wrong-length rolls are found on the
- * battle record, we re-derive and overwrite.
- */
 export function useProvablyFairArena(battle, selectedCases, players, battleModes = {}) {
   const [rolls,     setRolls]     = useState(null);
   const [blockHash, setBlockHash] = useState(battle?.eos_block_hash || null);
@@ -272,47 +240,41 @@ export function useProvablyFairArena(battle, selectedCases, players, battleModes
   const [status,    setStatus]    = useState('waiting');
   const resolving = useRef(false);
 
-  const casesLen   = selectedCases?.length  ?? 0;
-  const playersLen = players?.length        ?? 0;
+  const casesLen   = selectedCases?.length ?? 0;
+  const playersLen = players?.length       ?? 0;
 
   useEffect(() => {
-    // Don't start until we have all the data we need
     if (!battle?.id || casesLen === 0 || playersLen === 0) return;
 
-    // Reset resolving flag so a re-run (e.g. cases changed) triggers a fresh resolve
     resolving.current = false;
 
-    // ── Check for already-committed rolls ──
+    // ── Validate stored rolls against BOTH round count AND player count ──
     if (battle.committed_rolls) {
       try {
         const parsed = JSON.parse(battle.committed_rolls);
-        // Validate round count matches the actual selected cases
-        if (Array.isArray(parsed) && parsed.length === casesLen) {
+        if (rollsAreValid(parsed, casesLen, playersLen)) {
           setRolls(parsed);
           setBlockHash(battle.eos_block_hash);
           setBlockNum(battle.eos_block_num);
           setStatus('ready');
           return;
         }
-        // Round count mismatch — fall through to re-derive below
         console.warn(
-          `[provablyFair] committed_rolls has ${parsed.length} rounds, need ${casesLen} — re-deriving`
+          `[provablyFair] hook: stored rolls invalid — rounds=${parsed.length}/${casesLen}, players=${parsed[0]?.length}/${playersLen} — re-deriving`
         );
       } catch {}
     }
 
-    // ── Resolve (derive + commit) ──
     if (!resolving.current) {
       resolving.current = true;
       setStatus('resolving');
 
       resolveAndCommitRolls(battle, selectedCases, players, battleModes).then(r => {
-        if (r && r.length === casesLen) {
+        if (r && rollsAreValid(r, casesLen, playersLen)) {
           setRolls(r);
           setStatus('ready');
         } else if (r) {
-          // Got rolls but wrong count — shouldn't happen after the fixes above, but guard anyway
-          console.error(`[provablyFair] resolved ${r.length} rounds, expected ${casesLen}`);
+          console.error(`[provablyFair] resolved rolls still invalid after re-derive`);
           setStatus('error');
         } else {
           setStatus('error');
@@ -320,7 +282,7 @@ export function useProvablyFairArena(battle, selectedCases, players, battleModes
       });
     }
 
-    // ── Poll every 2s in case another client committed the rolls first ──
+    // ── Poll every 2s — picks up rolls committed by other clients ──
     const poll = setInterval(async () => {
       try {
         const { base44 } = await import('@/api/base44Client');
@@ -332,8 +294,8 @@ export function useProvablyFairArena(battle, selectedCases, players, battleModes
         if (u.committed_rolls) {
           try {
             const parsed = JSON.parse(u.committed_rolls);
-            // Only accept if round count matches
-            if (Array.isArray(parsed) && parsed.length === casesLen) {
+            // ── KEY FIX: validate player count too, not just round count ──
+            if (rollsAreValid(parsed, casesLen, playersLen)) {
               clearInterval(poll);
               setRolls(parsed);
               setStatus('ready');
@@ -345,9 +307,6 @@ export function useProvablyFairArena(battle, selectedCases, players, battleModes
 
     return () => clearInterval(poll);
 
-  // ── KEY FIX: depend on casesLen and playersLen, not just battle.id ──
-  // Without this, the effect fires once at mount when selectedCases is still
-  // empty ([]), derives 0 rounds, and never re-runs when the real cases arrive.
   }, [battle?.id, casesLen, playersLen]);
 
   return { rolls, blockHash, blockNum, status };
