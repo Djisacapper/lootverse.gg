@@ -8,20 +8,18 @@ import { motion, useMotionValue, useSpring } from 'framer-motion';
 import { Trophy, ChevronRight, Swords, Box, RotateCcw, Zap, Star, Gift } from 'lucide-react';
 
 /* ══════════ HERO BANNER IMAGES (used in HeroBanner floating cases) ══════════ */
-// ═══════════════════════════════════════════════════
-// HERO BANNER IMAGES (shown in the welcome section)
-// ═══════════════════════════════════════════════════
 const vtechImg = 'https://i.imgur.com/doYHRMp.png';
 const roseImg  = 'https://i.imgur.com/WVoUpzN.png';
 const irishImg = 'https://i.imgur.com/7KIsUqY.png';
 
-// ═══════════════════════════════════════════════════
-
-/* ══════════ GAMEMODE IMAGES — swap each URL with your own image ══════════ */
-const battlesImg  = 'https://i.imgur.com/doYHRMp.png'; // 🔁 Replace with your Battles image URL
-const casesImg    = 'https://i.imgur.com/WVoUpzN.png'; // 🔁 Replace with your Cases image URL
-const coinflipImg = 'https://i.imgur.com/7KIsUqY.png'; // 🔁 Replace with your Coinflip image URL
-const crashImg    = 'https://i.imgur.com/53dgn4r.png'; // 🔁 Replace with your Crash image URL
+/* ══════════════════════════════════════════════════════
+   GAMEMODE CARD IMAGES
+   Replace each URL with your own image per gamemode
+   ══════════════════════════════════════════════════════ */
+const battlesImg  = 'https://i.imgur.com/vHp8zbU.png'; // 🔁 Replace with your Battles image
+const casesImg    = 'https://i.imgur.com/WXw330m.png'; // 🔁 Replace with your Cases image
+const coinflipImg = 'https://i.imgur.com/3AUD8Vu.png'; // 🔁 Replace with your Coinflip image
+const crashImg    = 'https://i.imgur.com/53dgn4r.png'; // 🔁 Replace with your Crash image
 
 /* ══════════ CSS ══════════ */
 const CSS = `
@@ -97,6 +95,14 @@ const CSS = `
 /* glow border pulse */
 @keyframes bp { 0%,100%{box-shadow:var(--bs)} 50%{box-shadow:var(--bsh)} }
 .cbp { animation:bp 3.5s ease-in-out infinite; }
+
+/* hover gradient overlay — fades in on hover */
+.card-hov-grad {
+  position:absolute; inset:0; pointer-events:none; z-index:3;
+  opacity:0; transition:opacity .4s ease;
+  border-radius:inherit;
+}
+.card-wrap:hover .card-hov-grad { opacity:1; }
 
 /* spinner */
 @keyframes spin { to{transform:rotate(360deg)} }
@@ -229,25 +235,20 @@ function GemRound({ size, c1, c2, glow, style, className }) {
   );
 }
 
-/* ══════════ PAGE GEMS (fixed, floating around the page) ══════════ */
+/* ══════════ PAGE GEMS ══════════ */
 function PageGems() {
   return (
     <>
-      {/* Left side */}
       <GemDiamond size={72}  c1="#e9d5ff" c2="#6d28d9" glow="rgba(167,139,250,.8)"  className="gfa" style={{left:'1%',   top:'8%'}}/>
       <GemRound   size={44}  c1="#fde68a" c2="#d97706" glow="rgba(251,191,36,.75)"  className="gfc" style={{left:'2%',   top:'26%'}}/>
       <GemTeardrop size={56} c1="#f9a8d4" c2="#9d174d" glow="rgba(236,72,153,.7)"   className="gfe" style={{left:'0%',   top:'50%'}}/>
       <GemOctagon size={38}  c1="#bbf7d0" c2="#15803d" glow="rgba(74,222,128,.7)"   className="gfb" style={{left:'3%',   top:'72%'}}/>
       <GemRound   size={28}  c1="#c084fc" c2="#7c3aed" glow="rgba(192,132,252,.7)"  className="gfd" style={{left:'1%',   top:'88%'}}/>
-
-      {/* Right side */}
       <GemOctagon size={68}  c1="#fbbf24" c2="#b45309" glow="rgba(251,191,36,.82)"  className="gfb" style={{right:'1%',  top:'6%'}}/>
       <GemTeardrop size={48} c1="#a78bfa" c2="#4c1d95" glow="rgba(139,92,246,.78)"  className="gfd" style={{right:'2%',  top:'24%'}}/>
       <GemDiamond size={60}  c1="#fde68a" c2="#a16207" glow="rgba(251,191,36,.78)"  className="gff" style={{right:'0%',  top:'48%'}}/>
       <GemRound   size={36}  c1="#e879f9" c2="#7e22ce" glow="rgba(232,121,249,.72)" className="gfg" style={{right:'3%',  top:'68%'}}/>
       <GemTeardrop size={50} c1="#bfdbfe" c2="#1d4ed8" glow="rgba(96,165,250,.72)"  className="gfh" style={{right:'1%',  top:'84%'}}/>
-
-      {/* Top scattered */}
       <GemRound   size={32}  c1="#fde68a" c2="#b45309" glow="rgba(251,191,36,.65)"  className="gfc" style={{left:'8%',   top:'2%'}}/>
       <GemDiamond size={42}  c1="#c084fc" c2="#6d28d9" glow="rgba(192,132,252,.7)"  className="gfi" style={{left:'22%',  top:'-1%'}}/>
       <GemOctagon size={30}  c1="#f9a8d4" c2="#9d174d" glow="rgba(236,72,153,.65)"  className="gfj" style={{right:'20%', top:'1%'}}/>
@@ -297,14 +298,12 @@ function HeroBanner() {
         <Particles accent="#fbbf24" count={10}/>
         <Particles accent="#a855f7" count={8}/>
       </div>
-      {/* floating case images — these intentionally use vtechImg / roseImg / irishImg */}
       <img src={vtechImg} alt="" className="hfa" style={{position:'absolute',right:'28%',top:'5%',width:130,pointerEvents:'none',
         filter:'drop-shadow(0 0 28px rgba(168,85,247,.9)) drop-shadow(0 14px 40px rgba(0,0,0,.95))'}}/>
       <img src={roseImg} alt="" className="hfb" style={{position:'absolute',right:'8%',top:'11%',width:148,pointerEvents:'none',
         filter:'drop-shadow(0 0 28px rgba(251,191,36,.8)) drop-shadow(0 14px 40px rgba(0,0,0,.95))'}}/>
       <img src={irishImg} alt="" className="hfc" style={{position:'absolute',right:'18%',bottom:'7%',width:110,pointerEvents:'none',
         filter:'drop-shadow(0 0 22px rgba(251,191,36,.7)) drop-shadow(0 12px 36px rgba(0,0,0,.95))'}}/>
-      {/* small deco shapes near the cases */}
       <div className="hfa" style={{position:'absolute',right:'46%',top:'9%',width:52,height:52,
         background:'radial-gradient(circle at 35% 35%,#e9d5ff,#7c3aed)',
         clipPath:'polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%)',
@@ -312,7 +311,6 @@ function HeroBanner() {
       <div className="hfc" style={{position:'absolute',right:'52%',bottom:'14%',width:42,height:42,
         background:'radial-gradient(circle at 35% 30%,#fde68a,#b45309)',borderRadius:'50%',
         filter:'drop-shadow(0 0 14px rgba(251,191,36,.9))',animationDelay:'1s'}}/>
-      {/* content */}
       <div style={{position:'relative',zIndex:10,padding:'44px 44px'}}>
         <motion.div initial={{opacity:0,x:-12}} animate={{opacity:1,x:0}} transition={{delay:.2}}
           style={{display:'inline-flex',alignItems:'center',gap:8,marginBottom:16,
@@ -324,20 +322,17 @@ function HeroBanner() {
           </div>
           <span style={{fontSize:10,fontWeight:700,letterSpacing:'.18em',color:'rgba(251,191,36,.75)',textTransform:'uppercase'}}>Live Now</span>
         </motion.div>
-
         <motion.h1 initial={{opacity:0,y:22}} animate={{opacity:1,y:0}}
           transition={{delay:.26,duration:.85,ease:[.22,1,.36,1]}}
           style={{margin:0,lineHeight:1.1,marginBottom:10}}>
           <span style={{display:'block',fontSize:'clamp(30px,4vw,46px)',fontWeight:900,color:'#fff'}}>Welcome To</span>
           <span className="title-grad" style={{display:'block',fontSize:'clamp(34px,4.5vw,52px)',fontWeight:900}}>Amethystgg!</span>
         </motion.h1>
-
         <motion.p initial={{opacity:0}} animate={{opacity:1}} transition={{delay:.42}}
           style={{fontSize:13,color:'rgba(255,255,255,.4)',lineHeight:1.65,marginBottom:28,maxWidth:320,fontWeight:400}}>
           Step into a world of magic, luck, and excitement where every unbox and battle brings you closer to{' '}
           <span style={{color:'#fbbf24',fontWeight:700}}>amazing rewards.</span>
         </motion.p>
-
         <motion.div initial={{opacity:0,y:10}} animate={{opacity:1,y:0}} transition={{delay:.54}}
           style={{display:'flex',gap:10,flexWrap:'wrap'}}>
           <Link to={createPageUrl('Leaderboard')}>
@@ -371,39 +366,44 @@ const GAMES = [
     name:'Battles',page:'Battles',icon:Swords,size:'lg',
     bg:'linear-gradient(145deg,#08001a 0%,#150040 45%,#0a0020 100%)',
     accent:'#c084fc', glowColor:'rgba(192,132,252,.3)',
-    caseImg: battlesImg,  // 🔁 swap battlesImg at the top of this file
+    caseImg: battlesImg,
     caseGlow:'drop-shadow(0 0 30px rgba(192,132,252,.88)) drop-shadow(0 14px 44px rgba(0,0,0,.95))',
+    // sleek accent-tinted gradient that fades in on hover
+    hoverGradient:'radial-gradient(ellipse 80% 70% at 60% 40%, rgba(192,132,252,.28) 0%, rgba(109,40,217,.18) 55%, transparent 100%)',
     bs:'0 0 0 1px rgba(192,132,252,.13),0 20px 60px rgba(0,0,0,.8)',
-    bsh:'0 0 0 1px rgba(192,132,252,.32),0 20px 60px rgba(0,0,0,.8),0 0 70px rgba(192,132,252,.18)',
+    bsh:'0 0 0 1px rgba(192,132,252,.38),0 20px 60px rgba(0,0,0,.8),0 0 70px rgba(192,132,252,.22)',
     tag:'HOT',tagBg:'linear-gradient(135deg,#fbbf24,#f59e0b)',tagColor:'#000',
   },
   {
     name:'Cases',page:'Cases',icon:Box,size:'lg',
     bg:'linear-gradient(145deg,#0d0800 0%,#1e1200 45%,#0d0600 100%)',
     accent:'#fbbf24', glowColor:'rgba(251,191,36,.3)',
-    caseImg: casesImg,    // 🔁 swap casesImg at the top of this file
+    caseImg: casesImg,
     caseGlow:'drop-shadow(0 0 30px rgba(251,191,36,.92)) drop-shadow(0 14px 44px rgba(0,0,0,.95))',
+    hoverGradient:'radial-gradient(ellipse 80% 70% at 60% 40%, rgba(251,191,36,.22) 0%, rgba(180,83,9,.15) 55%, transparent 100%)',
     bs:'0 0 0 1px rgba(251,191,36,.12),0 20px 60px rgba(0,0,0,.8)',
-    bsh:'0 0 0 1px rgba(251,191,36,.3),0 20px 60px rgba(0,0,0,.8),0 0 70px rgba(251,191,36,.17)',
+    bsh:'0 0 0 1px rgba(251,191,36,.36),0 20px 60px rgba(0,0,0,.8),0 0 70px rgba(251,191,36,.2)',
     tag:'NEW',tagBg:'#7c3aed',tagColor:'#fff',
   },
   {
     name:'Coinflip',page:'Coinflip',icon:RotateCcw,size:'sm',
     bg:'linear-gradient(145deg,#060010 0%,#10002c 55%,#04000c 100%)',
     accent:'#fbbf24', glowColor:'rgba(251,191,36,.24)',
-    caseImg: coinflipImg, // 🔁 swap coinflipImg at the top of this file
+    caseImg: coinflipImg,
     caseGlow:'drop-shadow(0 0 22px rgba(251,191,36,.88)) drop-shadow(0 10px 32px rgba(0,0,0,.95))',
+    hoverGradient:'radial-gradient(ellipse 80% 70% at 65% 40%, rgba(251,191,36,.2) 0%, rgba(124,58,237,.14) 55%, transparent 100%)',
     bs:'0 0 0 1px rgba(251,191,36,.1),0 14px 44px rgba(0,0,0,.8)',
-    bsh:'0 0 0 1px rgba(251,191,36,.26),0 14px 44px rgba(0,0,0,.8),0 0 55px rgba(251,191,36,.14)',
+    bsh:'0 0 0 1px rgba(251,191,36,.32),0 14px 44px rgba(0,0,0,.8),0 0 55px rgba(251,191,36,.18)',
   },
   {
     name:'Crash',page:'Crash',icon:Zap,size:'sm',
     bg:'linear-gradient(145deg,#060008 0%,#100020 55%,#030008 100%)',
     accent:'#a855f7', glowColor:'rgba(168,85,247,.26)',
-    caseImg: crashImg,    // 🔁 swap crashImg at the top of this file
+    caseImg: crashImg,
     caseGlow:'drop-shadow(0 0 22px rgba(168,85,247,.88)) drop-shadow(0 10px 32px rgba(0,0,0,.95))',
+    hoverGradient:'radial-gradient(ellipse 80% 70% at 65% 40%, rgba(168,85,247,.26) 0%, rgba(109,40,217,.18) 55%, transparent 100%)',
     bs:'0 0 0 1px rgba(168,85,247,.1),0 14px 44px rgba(0,0,0,.8)',
-    bsh:'0 0 0 1px rgba(168,85,247,.26),0 14px 44px rgba(0,0,0,.8),0 0 55px rgba(168,85,247,.15)',
+    bsh:'0 0 0 1px rgba(168,85,247,.32),0 14px 44px rgba(0,0,0,.8),0 0 55px rgba(168,85,247,.2)',
     tag:'LIVE',tagBg:'rgba(124,58,237,.85)',tagColor:'#fff',
   },
 ];
@@ -432,7 +432,7 @@ function LgGameCard({ g, i }) {
       transition={{delay:.12+i*.1,duration:.75,ease:[.22,1,.36,1]}}>
       <Link to={createPageUrl(g.page)}>
         <motion.div
-          ref={ref} className="cshim cbp"
+          ref={ref} className="cshim cbp card-wrap"
           onMouseEnter={()=>setHov(true)} onMouseLeave={handleLeave} onMouseMove={handleMove}
           whileHover={{y:-6,scale:1.015}}
           transition={{type:'spring',stiffness:280,damping:22}}
@@ -448,37 +448,33 @@ function LgGameCard({ g, i }) {
             backgroundImage:`linear-gradient(${g.accent}06 1px,transparent 1px),linear-gradient(90deg,${g.accent}06 1px,transparent 1px)`,
             backgroundSize:'32px 32px'}}/>
 
-          {/* radial atmosphere — follows mouse subtly */}
+          {/* sleek hover gradient — fades in smoothly, no jarring motion */}
+          <div className="card-hov-grad" style={{background: g.hoverGradient}}/>
+
+          {/* subtle radial that follows mouse */}
           <motion.div
             style={{
-              position:'absolute',inset:-60,pointerEvents:'none',zIndex:1,
-              background:`radial-gradient(ellipse 55% 55% at calc(50% + ${sx.get()}px) calc(50% + ${sy.get()}px), ${g.glowColor} 0%, transparent 65%)`,
+              position:'absolute',inset:-60,pointerEvents:'none',zIndex:2,
+              background:`radial-gradient(ellipse 50% 50% at calc(50% + ${sx.get()}px) calc(50% + ${sy.get()}px), ${g.glowColor} 0%, transparent 65%)`,
               x: sx, y: sy,
             }}
-            animate={{opacity:hov?1:.35}} transition={{duration:.5}}/>
+            animate={{opacity:hov?1:.3}} transition={{duration:.45}}/>
 
-          {hov && <Particles accent={g.accent} count={13}/>}
-
-          {/* case image with parallax */}
+          {/* case image */}
           <motion.img src={g.caseImg} alt={g.name}
-            animate={{
-              scale: hov?1.12:1,
-              y: hov?-14:0,
-              rotate: hov?5:0,
-              x: hov ? mx.get()*.06 : 0,
-            }}
+            animate={{ scale: hov?1.1:1, y: hov?-12:0, rotate: hov?4:0 }}
             transition={{type:'spring',stiffness:160,damping:16}}
             style={{position:'absolute',right:14,top:'50%',marginTop:-78,width:156,
               pointerEvents:'none',userSelect:'none',filter:g.caseGlow,zIndex:5}}/>
 
-          {/* bottom gradient info bar */}
+          {/* bottom info bar */}
           <div style={{
             position:'absolute',bottom:0,left:0,right:0,zIndex:8,
-            background:'linear-gradient(to top,rgba(0,0,0,.96) 0%,rgba(0,0,0,.65) 45%,transparent 100%)',
+            background:'linear-gradient(to top,rgba(0,0,0,.96) 0%,rgba(0,0,0,.6) 45%,transparent 100%)',
             padding:'26px 20px 16px',
           }}>
             <div style={{display:'flex',alignItems:'center',gap:8}}>
-              <motion.div animate={{rotate:hov?360:0}} transition={{duration:.55,ease:'easeInOut'}}
+              <motion.div animate={{rotate:hov?360:0}} transition={{duration:.5,ease:'easeInOut'}}
                 style={{display:'flex',alignItems:'center',justifyContent:'center',
                   width:30,height:30,borderRadius:9,
                   background:`linear-gradient(135deg,${g.accent}22,${g.accent}44)`,
@@ -494,18 +490,12 @@ function LgGameCard({ g, i }) {
             </div>
           </div>
 
-          {/* top accent line — animates in on hover */}
+          {/* top accent line */}
           <motion.div
-            animate={{scaleX:hov?1:.2,opacity:hov?1:0}}
-            transition={{duration:.38,ease:[.22,1,.36,1]}}
+            animate={{scaleX:hov?1:.15,opacity:hov?1:0}}
+            transition={{duration:.35,ease:[.22,1,.36,1]}}
             style={{position:'absolute',top:0,left:0,right:0,height:2,zIndex:9,transformOrigin:'center',
-              background:`linear-gradient(90deg,transparent,${g.accent},rgba(251,191,36,.8),${g.accent},transparent)`}}/>
-
-          {/* corner glint */}
-          <motion.div animate={{opacity:hov?.7:0}} transition={{duration:.3}}
-            style={{position:'absolute',top:12,right:16,zIndex:9,
-              width:6,height:6,borderRadius:'50%',
-              background:'#fff',boxShadow:`0 0 12px 4px ${g.accent}`}}/>
+              background:`linear-gradient(90deg,transparent,${g.accent},rgba(255,255,255,.6),${g.accent},transparent)`}}/>
         </motion.div>
       </Link>
     </motion.div>
@@ -536,7 +526,7 @@ function SmGameCard({ g, i }) {
       transition={{delay:.28+i*.09,duration:.65,ease:[.22,1,.36,1]}}>
       <Link to={createPageUrl(g.page)}>
         <motion.div
-          ref={ref} className="cshim"
+          ref={ref} className="cshim card-wrap"
           onMouseEnter={()=>setHov(true)} onMouseLeave={handleLeave} onMouseMove={handleMove}
           whileHover={{y:-6,scale:1.018}}
           transition={{type:'spring',stiffness:280,damping:22}}
@@ -544,7 +534,7 @@ function SmGameCard({ g, i }) {
             position:'relative',overflow:'hidden',borderRadius:18,cursor:'pointer',height:163,
             background:g.bg,
             boxShadow:hov?g.bsh:g.bs,
-            transition:'box-shadow .35s ease',
+            transition:'box-shadow .38s ease',
             '--sx':'7.5s','--sdl':`${(i+2)*.8}s`,
           }}>
 
@@ -552,23 +542,24 @@ function SmGameCard({ g, i }) {
             backgroundImage:`linear-gradient(${g.accent}05 1px,transparent 1px),linear-gradient(90deg,${g.accent}05 1px,transparent 1px)`,
             backgroundSize:'26px 26px'}}/>
 
-          <motion.div
-            style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:1,
-              background:`radial-gradient(ellipse 70% 70% at calc(75% + ${sx.get()}px) calc(35% + ${sy.get()}px), ${g.glowColor} 0%, transparent 60%)`,
-              x:sx,y:sy}}
-            animate={{opacity:hov?1:.35}} transition={{duration:.5}}/>
+          {/* sleek hover gradient */}
+          <div className="card-hov-grad" style={{background: g.hoverGradient}}/>
 
-          {hov && <Particles accent={g.accent} count={9}/>}
+          <motion.div
+            style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2,
+              background:`radial-gradient(ellipse 65% 65% at calc(70% + ${sx.get()}px) calc(38% + ${sy.get()}px), ${g.glowColor} 0%, transparent 60%)`,
+              x:sx,y:sy}}
+            animate={{opacity:hov?1:.3}} transition={{duration:.45}}/>
 
           <motion.img src={g.caseImg} alt={g.name}
-            animate={{scale:hov?1.18:1,y:hov?-10:0,rotate:hov?7:0}}
+            animate={{scale:hov?1.12:1,y:hov?-8:0,rotate:hov?5:0}}
             transition={{type:'spring',stiffness:200,damping:18}}
             style={{position:'absolute',right:9,top:5,width:116,
               pointerEvents:'none',userSelect:'none',filter:g.caseGlow,zIndex:5}}/>
 
           <div style={{
             position:'absolute',bottom:0,left:0,right:0,zIndex:8,
-            background:'linear-gradient(to top,rgba(0,0,0,.96) 0%,rgba(0,0,0,.65) 48%,transparent 100%)',
+            background:'linear-gradient(to top,rgba(0,0,0,.96) 0%,rgba(0,0,0,.6) 48%,transparent 100%)',
             padding:'18px 16px 13px',
           }}>
             <div style={{display:'flex',alignItems:'center',gap:7}}>
@@ -589,15 +580,10 @@ function SmGameCard({ g, i }) {
           </div>
 
           <motion.div
-            animate={{scaleX:hov?1:.2,opacity:hov?1:0}}
-            transition={{duration:.35,ease:[.22,1,.36,1]}}
+            animate={{scaleX:hov?1:.15,opacity:hov?1:0}}
+            transition={{duration:.32,ease:[.22,1,.36,1]}}
             style={{position:'absolute',top:0,left:0,right:0,height:2,zIndex:9,transformOrigin:'center',
-              background:`linear-gradient(90deg,transparent,${g.accent},rgba(251,191,36,.7),${g.accent},transparent)`}}/>
-
-          <motion.div animate={{opacity:hov?.7:0}} transition={{duration:.3}}
-            style={{position:'absolute',top:10,right:12,zIndex:9,
-              width:5,height:5,borderRadius:'50%',
-              background:'#fff',boxShadow:`0 0 10px 3px ${g.accent}`}}/>
+              background:`linear-gradient(90deg,transparent,${g.accent},rgba(255,255,255,.5),${g.accent},transparent)`}}/>
         </motion.div>
       </Link>
     </motion.div>
@@ -612,7 +598,7 @@ function FeaturedSlot() {
       initial={{opacity:0,y:22,scale:.95}} animate={{opacity:1,y:0,scale:1}}
       transition={{delay:.46,duration:.65,ease:[.22,1,.36,1]}}>
       <Link to={createPageUrl('Cases')}>
-        <motion.div className="cshim"
+        <motion.div className="cshim card-wrap"
           onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
           whileHover={{y:-6,scale:1.018}}
           transition={{type:'spring',stiffness:280,damping:22}}
@@ -620,14 +606,19 @@ function FeaturedSlot() {
             position:'relative',overflow:'hidden',borderRadius:18,cursor:'pointer',height:163,
             background:'linear-gradient(145deg,#07001a 0%,#120035 55%,#04000d 100%)',
             boxShadow:hov
-              ?'0 0 0 1px rgba(251,191,36,.28),0 14px 44px rgba(0,0,0,.8),0 0 55px rgba(251,191,36,.16)'
+              ?'0 0 0 1px rgba(251,191,36,.32),0 14px 44px rgba(0,0,0,.8),0 0 55px rgba(251,191,36,.18)'
               :'0 0 0 1px rgba(251,191,36,.12),0 14px 44px rgba(0,0,0,.8)',
-            transition:'box-shadow .35s ease',
+            transition:'box-shadow .38s ease',
             '--sx':'8s','--sdl':'1.4s',
           }}>
+
           <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:1,
             background:'radial-gradient(ellipse 80% 70% at 78% 35%,rgba(251,191,36,.18) 0%,transparent 60%)'}}/>
-          {hov && <Particles accent="#fbbf24" count={9}/>}
+
+          {/* hover gradient */}
+          <div className="card-hov-grad" style={{
+            background:'radial-gradient(ellipse 80% 70% at 65% 40%, rgba(251,191,36,.22) 0%, rgba(168,85,247,.16) 55%, transparent 100%)'
+          }}/>
 
           <img src={vtechImg} alt="" className="hfa" style={{position:'absolute',right:4,top:-6,width:90,zIndex:5,
             filter:'drop-shadow(0 0 20px rgba(168,85,247,.8)) drop-shadow(0 8px 24px rgba(0,0,0,.95))'}}/>
@@ -635,7 +626,7 @@ function FeaturedSlot() {
             filter:'drop-shadow(0 0 16px rgba(251,191,36,.75)) drop-shadow(0 6px 18px rgba(0,0,0,.95))'}}/>
 
           <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:8,
-            background:'linear-gradient(to top,rgba(0,0,0,.96) 0%,rgba(0,0,0,.65) 48%,transparent 100%)',
+            background:'linear-gradient(to top,rgba(0,0,0,.96) 0%,rgba(0,0,0,.6) 48%,transparent 100%)',
             padding:'18px 16px 13px'}}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
               <div style={{display:'flex',alignItems:'center',gap:7}}>
@@ -653,12 +644,9 @@ function FeaturedSlot() {
             </div>
           </div>
 
-          <motion.div animate={{scaleX:hov?1:.2,opacity:hov?1:0}} transition={{duration:.35,ease:[.22,1,.36,1]}}
+          <motion.div animate={{scaleX:hov?1:.15,opacity:hov?1:0}} transition={{duration:.35,ease:[.22,1,.36,1]}}
             style={{position:'absolute',top:0,left:0,right:0,height:2,zIndex:9,transformOrigin:'center',
-              background:'linear-gradient(90deg,transparent,#fbbf24,#a855f7,transparent)'}}/>
-          <motion.div animate={{opacity:hov?.7:0}} transition={{duration:.3}}
-            style={{position:'absolute',top:10,right:12,zIndex:9,
-              width:5,height:5,borderRadius:'50%',background:'#fff',boxShadow:'0 0 10px 3px #fbbf24'}}/>
+              background:'linear-gradient(90deg,transparent,#fbbf24,rgba(255,255,255,.5),#fbbf24,transparent)'}}/>
         </motion.div>
       </Link>
     </motion.div>
@@ -704,13 +692,9 @@ export default function Home() {
       minHeight:'100vh', padding:'20px 0 80px', position:'relative',
     }}>
       <style>{CSS}</style>
-
-      {/* PAGE GEMS — fixed, floating outside cards around the edges */}
       <PageGems/>
-
       <div style={{position:'relative',zIndex:1,display:'flex',flexDirection:'column',gap:32}}>
         <HeroBanner/>
-
         <section>
           <SectionHead label="Magic Games" icon={Zap}/>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:14}}>
