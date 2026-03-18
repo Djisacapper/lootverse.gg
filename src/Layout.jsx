@@ -62,6 +62,15 @@ body, #root { font-family: 'Nunito', sans-serif; background: #04000a; }
 }
 .chat-btn-pulse { animation: chat-btn-pulse 2s ease-in-out infinite; }
 
+/* Mobile chat slide-up sheet */
+@keyframes slideUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+.mobile-chat-sheet {
+  animation: slideUp 0.28s cubic-bezier(.4,0,.2,1) forwards;
+}
+
 .nav-link {
   display: flex; align-items: center; gap: 10px;
   margin: 1px 8px; border-radius: 10px; cursor: pointer;
@@ -96,18 +105,6 @@ body, #root { font-family: 'Nunito', sans-serif; background: #04000a; }
   padding: 0 16px; margin: 14px 0 4px;
   font-family: 'Nunito', sans-serif;
 }
-
-.lv-avatar {
-  display: flex; align-items: center; justify-content: center;
-  border-radius: 50%; overflow: hidden; flex-shrink: 0;
-  position: relative;
-}
-.lv-avatar img {
-  position: absolute; inset: 0; width: 100%; height: 100%;
-  object-fit: cover;
-  opacity: 0; transition: opacity 0.2s ease;
-}
-.lv-avatar img.loaded { opacity: 1; }
 
 ::-webkit-scrollbar { width: 3px; }
 ::-webkit-scrollbar-thumb { background: rgba(168,85,247,.15); border-radius: 3px; }
@@ -158,7 +155,6 @@ function CoinIcon({ size = 16 }) {
   );
 }
 
-// Persistent logo image — never fades out, never re-mounts
 const LogoImg = React.memo(function LogoImg({ size, borderRadius }) {
   return (
     <div
@@ -179,7 +175,7 @@ const LogoImg = React.memo(function LogoImg({ size, borderRadius }) {
   );
 });
 
-const StableAvatar = React.memo(({ avatarUrl, name, size, fontSize, gradient, boxShadow, onClick, style = {} }) => {
+const StableAvatar = React.memo(({ avatarUrl, name, size, fontSize, onClick, style = {} }) => {
   const imgRef = useRef(null);
   const [imgLoaded, setImgLoaded] = useState(false);
   const prevUrl = useRef(avatarUrl);
@@ -204,11 +200,11 @@ const StableAvatar = React.memo(({ avatarUrl, name, size, fontSize, gradient, bo
       onClick={onClick}
       style={{
         width: size, height: size, borderRadius: '50%',
-        background: gradient || 'linear-gradient(135deg,#a855f7,#fbbf24)',
+        background: 'linear-gradient(135deg,#a855f7,#fbbf24)',
         border: 'none', cursor: onClick ? 'pointer' : 'default', padding: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
         fontSize, fontWeight: 900, color: '#fff',
-        boxShadow: boxShadow || '0 0 12px rgba(168,85,247,.4)',
+        boxShadow: '0 0 12px rgba(168,85,247,.4)',
         position: 'relative', overflow: 'hidden', flexShrink: 0,
         ...style,
       }}
@@ -233,15 +229,30 @@ const StableAvatar = React.memo(({ avatarUrl, name, size, fontSize, gradient, bo
   );
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Derive the best display name from a user object.
+// Priority: username > full_name > email prefix > 'Player'
+// This is the single source of truth — used in sidebar + mobile strip.
+// ─────────────────────────────────────────────────────────────────────────────
+function getDisplayName(user) {
+  if (!user) return 'Player';
+  if (user.is_anonymous) return `Anonymous #${user.id?.slice(-4) || '????'}`;
+  return user.username || user.full_name || user.email?.split('@')[0] || 'Player';
+}
+
 export default function Layout({ children, currentPageName }) {
   const [user,             setUser]             = useState(null);
   const [mobileOpen,       setMobileOpen]       = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [profileOpen,      setProfileOpen]      = useState(false);
+  // Desktop chat panel
   const [chatOpen,         setChatOpen]         = useState(true);
+  // Mobile chat sheet (bottom drawer)
+  const [mobileChatOpen,   setMobileChatOpen]   = useState(false);
 
   const userRef = useRef(null);
 
+  // ── Reload user from API, only trigger re-render when something changed ──
   const reloadUser = () => base44.auth.me().then(fresh => {
     const prev = userRef.current;
     if (
@@ -250,7 +261,9 @@ export default function Layout({ children, currentPageName }) {
       prev.xp         !== fresh.xp         ||
       prev.level      !== fresh.level      ||
       prev.avatar_url !== fresh.avatar_url ||
+      prev.username   !== fresh.username   ||   // ← now watching username
       prev.full_name  !== fresh.full_name  ||
+      prev.is_anonymous !== fresh.is_anonymous ||
       prev.role       !== fresh.role       ||
       prev.email      !== fresh.email
     ) {
@@ -262,15 +275,68 @@ export default function Layout({ children, currentPageName }) {
   useEffect(() => {
     reloadUser();
     const interval = setInterval(reloadUser, 3000);
-    const unsub = base44.entities.User.subscribe(e => { if (e.type === 'update') reloadUser(); });
+    const unsub = base44.entities.User.subscribe(e => {
+      if (e.type === 'update') reloadUser();
+    });
     return () => { clearInterval(interval); unsub(); };
   }, []);
 
   useEffect(() => { setMobileOpen(false); }, [currentPageName]);
 
+  // ── When ProfileSettings calls onSaved, merge updated fields immediately ──
+  // No waiting for the next poll — the sidebar updates instantly.
+  const handleProfileSaved = (updatedUser) => {
+    if (!updatedUser) { reloadUser(); return; }
+    const merged = { ...userRef.current, ...updatedUser };
+    userRef.current = merged;
+    setUser(merged);
+  };
+
   const xpProgress = user ? ((user.xp || 0) % 500) / 5 : 0;
   const level      = user?.level || 1;
+  const displayName = getDisplayName(user);
   const sidebarW   = sidebarCollapsed ? 60 : 210;
+
+  // ── User card shared between desktop sidebar + mobile drawer ──────────────
+  const UserCard = ({ compact = false }) => (
+    <div style={{
+      margin: '0 10px 12px', padding: compact ? '8px 10px' : '10px 12px', borderRadius: 12,
+      background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.1)',
+    }}>
+      <div style={{ display:'flex', alignItems:'center', gap: compact ? 7 : 9, marginBottom: 8 }}>
+        <StableAvatar
+          avatarUrl={user.avatar_url}
+          name={displayName}
+          size={compact ? 26 : 30}
+          fontSize={10}
+          onClick={() => { setProfileOpen(true); setMobileOpen(false); }}
+        />
+        <div style={{ flex: 1, overflow: 'hidden' }}>
+          {/* ← Shows username, not email */}
+          <div style={{
+            fontSize: 11, fontWeight: 800,
+            color: 'rgba(255,255,255,.8)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {displayName}
+          </div>
+          <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(192,132,252,.5)' }}>Level {level}</div>
+        </div>
+        <div style={{
+          padding: '2px 7px', borderRadius: 100, fontSize: 9, fontWeight: 800,
+          background: 'rgba(168,85,247,.15)', border: '1px solid rgba(168,85,247,.3)',
+          color: '#c084fc',
+        }}>Lv{level}</div>
+      </div>
+      <div style={{ height: 3, background: 'rgba(255,255,255,.06)', borderRadius: 99, overflow: 'hidden' }}>
+        <div className="xp-bar" style={{ height: '100%', width: `${xpProgress}%`, borderRadius: 99, transition: 'width .5s' }} />
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+        <span style={{ fontSize: 8, fontWeight: 700, color: 'rgba(255,255,255,.2)' }}>XP Progress</span>
+        <span style={{ fontSize: 8, fontWeight: 700, color: 'rgba(192,132,252,.4)' }}>{Math.round(xpProgress)}%</span>
+      </div>
+    </div>
+  );
 
   const SidebarInner = ({ collapsed }) => (
     <div style={{ display:'flex', flexDirection:'column', height:'100%', position:'relative', overflow:'hidden' }}>
@@ -335,46 +401,14 @@ export default function Layout({ children, currentPageName }) {
       </nav>
 
       {/* User card */}
-      {user && !collapsed && (
-        <div style={{
-          margin: '0 10px 12px', padding: '10px 12px', borderRadius: 12,
-          background: 'rgba(168,85,247,.05)', border: '1px solid rgba(168,85,247,.1)',
-        }}>
-          <div style={{ display:'flex', alignItems:'center', gap:9, marginBottom:8 }}>
-            <StableAvatar
-              avatarUrl={user.avatar_url}
-              name={user.full_name || user.email}
-              size={30} fontSize={11}
-              onClick={() => setProfileOpen(true)}
-            />
-            <div style={{ flex:1, overflow:'hidden' }}>
-              <div style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,.8)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                {user.full_name || user.email?.split('@')[0] || 'Player'}
-              </div>
-              <div style={{ fontSize:9, fontWeight:700, color:'rgba(192,132,252,.5)' }}>Level {level}</div>
-            </div>
-            <div style={{
-              padding:'2px 7px', borderRadius:100, fontSize:9, fontWeight:800,
-              background:'rgba(168,85,247,.15)', border:'1px solid rgba(168,85,247,.3)',
-              color:'#c084fc',
-            }}>Lv{level}</div>
-          </div>
-          <div style={{ height:3, background:'rgba(255,255,255,.06)', borderRadius:99, overflow:'hidden' }}>
-            <div className="xp-bar" style={{ height:'100%', width:`${xpProgress}%`, borderRadius:99, transition:'width .5s' }} />
-          </div>
-          <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
-            <span style={{ fontSize:8, fontWeight:700, color:'rgba(255,255,255,.2)' }}>XP Progress</span>
-            <span style={{ fontSize:8, fontWeight:700, color:'rgba(192,132,252,.4)' }}>{Math.round(xpProgress)}%</span>
-          </div>
-        </div>
-      )}
+      {user && !collapsed && <UserCard />}
 
       {/* Collapsed avatar */}
       {user && collapsed && (
-        <div style={{ display:'flex', justifyContent:'center', paddingBottom:14 }}>
+        <div style={{ display:'flex', justifyContent:'center', paddingBottom: 14 }}>
           <StableAvatar
             avatarUrl={user.avatar_url}
-            name={user.full_name || user.email}
+            name={displayName}
             size={32} fontSize={11}
             onClick={() => setProfileOpen(true)}
           />
@@ -387,7 +421,7 @@ export default function Layout({ children, currentPageName }) {
     <div style={{ minHeight:'100vh', background:'#04000a', display:'flex', fontFamily:'Nunito,sans-serif' }}>
       <style>{CSS}</style>
 
-      {/* Desktop Sidebar */}
+      {/* ── Desktop Sidebar ────────────────────────────────────────── */}
       <aside style={{
         width: sidebarW, flexShrink: 0,
         position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 40,
@@ -411,7 +445,7 @@ export default function Layout({ children, currentPageName }) {
         </button>
       </aside>
 
-      {/* Desktop Top Header */}
+      {/* ── Desktop Top Header ─────────────────────────────────────── */}
       <header style={{
         display: 'none',
         position: 'fixed', top: 0, right: 0, zIndex: 30,
@@ -438,7 +472,6 @@ export default function Layout({ children, currentPageName }) {
               background:'linear-gradient(135deg,#a855f7,#7c3aed)',
               textDecoration:'none',
               boxShadow:'0 0 20px rgba(168,85,247,.35)',
-              transition:'transform .2s, box-shadow .2s',
             }}>
               <Wallet style={{ width:14, height:14, color:'#fff' }} />
               <span style={{ fontSize:12, fontWeight:900, color:'#fff', letterSpacing:'.04em' }}>Deposit</span>
@@ -459,13 +492,14 @@ export default function Layout({ children, currentPageName }) {
         )}
       </header>
 
-      {/* Mobile Header */}
+      {/* ── Mobile Header ──────────────────────────────────────────── */}
       <header style={{
         position:'fixed', top:0, left:0, right:0, zIndex:50, height:54,
         background:'linear-gradient(90deg,#08001a,#0a0015)',
         borderBottom:'1px solid rgba(168,85,247,.08)',
         display:'flex', alignItems:'center', padding:'0 14px', gap:10,
       }} className="lv-mobile-header">
+
         <button onClick={() => setMobileOpen(v => !v)} style={{
           width:32, height:32, borderRadius:9,
           background:'rgba(168,85,247,.08)', border:'1px solid rgba(168,85,247,.15)',
@@ -478,9 +512,7 @@ export default function Layout({ children, currentPageName }) {
         <Link to={createPageUrl('Home')} style={{ display:'flex', alignItems:'center', gap:8, textDecoration:'none' }}>
           <div style={{
             width:28, height:28, borderRadius:8, flexShrink:0,
-            overflow:'hidden',
-            boxShadow:'0 0 14px rgba(168,85,247,.5)',
-            background:'#0e0020',
+            overflow:'hidden', boxShadow:'0 0 14px rgba(168,85,247,.5)', background:'#0e0020',
           }}>
             <img src={LOGO_URL} alt="Amethyst.GG" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
           </div>
@@ -515,9 +547,27 @@ export default function Layout({ children, currentPageName }) {
             </span>
           </div>
         )}
+
+        {/* ── Mobile Chat Button (in header) ── */}
+        <button
+          onClick={() => setMobileChatOpen(v => !v)}
+          style={{
+            width:32, height:32, borderRadius:9, border:'none', cursor:'pointer',
+            background: mobileChatOpen ? 'rgba(168,85,247,.25)' : 'rgba(168,85,247,.08)',
+            borderWidth:1, borderStyle:'solid',
+            borderColor: mobileChatOpen ? 'rgba(168,85,247,.5)' : 'rgba(168,85,247,.15)',
+            display:'flex', alignItems:'center', justifyContent:'center',
+            color: mobileChatOpen ? '#c084fc' : 'rgba(192,132,252,.6)',
+            flexShrink: 0,
+          }}
+          className={!mobileChatOpen ? 'chat-btn-pulse' : ''}
+          title="Open Chat"
+        >
+          <MessageCircle style={{ width:15, height:15 }} />
+        </button>
       </header>
 
-      {/* Mobile Drawer */}
+      {/* ── Mobile Nav Drawer ─────────────────────────────────────── */}
       {mobileOpen && (
         <div style={{ position:'fixed', inset:0, zIndex:40 }}>
           <div style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.75)' }} onClick={() => setMobileOpen(false)} />
@@ -552,49 +602,88 @@ export default function Layout({ children, currentPageName }) {
               </nav>
             </div>
 
-            {/* Mobile bottom user strip */}
-            {user && (
-              <div style={{ margin:'0 10px 12px', padding:'10px 12px', borderRadius:12, background:'rgba(168,85,247,.05)', border:'1px solid rgba(168,85,247,.1)' }}>
-                <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:8 }}>
-                  <StableAvatar
-                    avatarUrl={user.avatar_url}
-                    name={user.full_name || user.email}
-                    size={28} fontSize={10}
-                    onClick={() => { setProfileOpen(true); setMobileOpen(false); }}
-                  />
-                  <div style={{ flex:1 }}>
-                    <div style={{ fontSize:11, fontWeight:800, color:'rgba(255,255,255,.7)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
-                      {user.full_name || user.email?.split('@')[0] || 'Player'}
-                    </div>
-                    <div style={{ fontSize:9, color:'rgba(192,132,252,.4)', fontWeight:700 }}>Level {level}</div>
-                  </div>
-                  <div style={{ padding:'2px 7px', borderRadius:100, fontSize:9, fontWeight:800, background:'rgba(168,85,247,.15)', border:'1px solid rgba(168,85,247,.3)', color:'#c084fc' }}>Lv{level}</div>
-                </div>
-                <div style={{ height:3, background:'rgba(255,255,255,.06)', borderRadius:99, overflow:'hidden' }}>
-                  <div className="xp-bar" style={{ height:'100%', width:`${xpProgress}%`, borderRadius:99 }} />
-                </div>
-                <div style={{ display:'flex', justifyContent:'space-between', marginTop:4 }}>
-                  <span style={{ fontSize:8, color:'rgba(255,255,255,.2)', fontWeight:700 }}>XP</span>
-                  <span style={{ fontSize:8, color:'rgba(192,132,252,.4)', fontWeight:700 }}>{Math.round(xpProgress)}%</span>
-                </div>
-              </div>
-            )}
+            {/* Mobile user card — shows username, not email */}
+            {user && <UserCard compact />}
           </aside>
         </div>
       )}
 
-      {/* Profile Modal */}
-      {profileOpen && user && <ProfileModal user={user} onClose={() => setProfileOpen(false)} />}
+      {/* ── Mobile Chat Sheet (bottom slide-up) ───────────────────── */}
+      {mobileChatOpen && (
+        <div style={{ position:'fixed', inset:0, zIndex:60 }} className="lv-mobile-chat-overlay">
+          {/* Dim backdrop — tap to close */}
+          <div
+            style={{ position:'absolute', inset:0, background:'rgba(0,0,0,.6)' }}
+            onClick={() => setMobileChatOpen(false)}
+          />
+          <div
+            className="mobile-chat-sheet"
+            style={{
+              position:'absolute', left:0, right:0, bottom:0,
+              height:'75vh',
+              background:'linear-gradient(180deg,#0d0020 0%,#08001a 100%)',
+              borderTop:'1px solid rgba(168,85,247,.15)',
+              borderRadius:'20px 20px 0 0',
+              display:'flex', flexDirection:'column',
+              overflow:'hidden',
+              boxShadow:'0 -8px 40px rgba(168,85,247,.15)',
+            }}
+          >
+            {/* Drag handle + header */}
+            <div style={{
+              display:'flex', alignItems:'center', justifyContent:'space-between',
+              padding:'12px 16px 10px',
+              borderBottom:'1px solid rgba(168,85,247,.08)',
+              flexShrink:0,
+            }}>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <MessageCircle style={{ width:14, height:14, color:'#c084fc' }} />
+                <span style={{ fontSize:12, fontWeight:800, color:'rgba(255,255,255,.7)', letterSpacing:'.06em' }}>LIVE CHAT</span>
+              </div>
+              <button
+                onClick={() => setMobileChatOpen(false)}
+                style={{
+                  width:28, height:28, borderRadius:8, border:'none', cursor:'pointer',
+                  background:'rgba(255,255,255,.05)',
+                  display:'flex', alignItems:'center', justifyContent:'center',
+                  color:'rgba(255,255,255,.4)',
+                }}
+              >
+                <X style={{ width:14, height:14 }} />
+              </button>
+            </div>
 
-      {/* Main */}
-      <div style={{ display:'flex', flex:1, minHeight:'100vh', paddingTop:54, marginLeft: sidebarW, transition:'margin-left .3s cubic-bezier(.4,0,.2,1)' }} className="lv-main">
+            {/* LiveChat fills the rest */}
+            <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'column' }}>
+              <LiveChat onClose={() => setMobileChatOpen(false)} />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Profile Modal ─────────────────────────────────────────── */}
+      {profileOpen && user && (
+        <ProfileModal
+          user={user}
+          onClose={() => setProfileOpen(false)}
+          onSaved={handleProfileSaved}  // ← instant local update, no poll wait
+        />
+      )}
+
+      {/* ── Main Content ──────────────────────────────────────────── */}
+      <div style={{
+        display:'flex', flex:1, minHeight:'100vh',
+        paddingTop:54,
+        marginLeft: sidebarW,
+        transition:'margin-left .3s cubic-bezier(.4,0,.2,1)',
+      }} className="lv-main">
         <main style={{ flex:1, minWidth:0, overflowY:'auto' }}>
           <div style={{ maxWidth:900, margin:'0 auto', padding:'20px 20px 40px' }}>
             {children}
           </div>
         </main>
 
-        {/* Chat panel */}
+        {/* Desktop Chat Panel */}
         <aside style={{
           display:'none', flexShrink:0,
           height:'calc(100vh - 54px)', position:'sticky', top:54,
@@ -606,6 +695,7 @@ export default function Layout({ children, currentPageName }) {
           <LiveChat onClose={() => setChatOpen(false)} />
         </aside>
 
+        {/* Desktop re-open chat button */}
         {!chatOpen && (
           <button onClick={() => setChatOpen(true)} style={{
             display:'none', position:'fixed', bottom:20, right:20, zIndex:50,
@@ -621,12 +711,12 @@ export default function Layout({ children, currentPageName }) {
 
       <style>{`
         @media (min-width: 1024px) {
-          .lv-sidebar       { display: flex !important; flex-direction: column; }
-          .lv-header        { display: flex !important; }
-          .lv-mobile-header { display: none !important; }
-          .lv-main          { margin-left: ${sidebarW}px !important; }
-          .lv-chat          { display: flex !important; flex-direction: column; }
-          .lv-chat-btn      { display: flex !important; }
+          .lv-sidebar           { display: flex !important; flex-direction: column; }
+          .lv-header            { display: flex !important; }
+          .lv-mobile-header     { display: none !important; }
+          .lv-main              { margin-left: ${sidebarW}px !important; }
+          .lv-chat              { display: flex !important; flex-direction: column; }
+          .lv-chat-btn          { display: flex !important; }
         }
         @media (max-width: 1023px) {
           .lv-main { margin-left: 0 !important; }
