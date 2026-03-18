@@ -108,11 +108,13 @@ function JoinSlotModal({ battle, user, balance, cases, onClose, onJoin }) {
   const players = battle.players || [];
   const maxPlayers = battle.max_players || 2;
 
-  // Build team structure
   const teamList = teams && teams.length > 0
     ? teams
     : [Array.from({length: Math.ceil(maxPlayers/2)}, (_,i)=>i),
        Array.from({length: Math.floor(maxPlayers/2)}, (_,i)=>i+Math.ceil(maxPlayers/2))];
+
+  // A slot is truly filled only if it has a real non-empty email
+  const isSlotFilled = (p) => p?.email && p.email !== '';
 
   const hasJoined = players.some(p => p?.email === user?.email && !p?.isBot);
   const canAfford = battle.entry_cost <= balance;
@@ -131,10 +133,8 @@ function JoinSlotModal({ battle, user, balance, cases, onClose, onJoin }) {
         exit={{opacity:0,scale:.93,y:20}}
         transition={{type:'spring',stiffness:300,damping:28}}>
 
-        {/* top accent */}
         <div style={{position:'absolute',top:0,left:0,right:0,height:2,background:'linear-gradient(90deg,transparent,#9d6fff,#f5c842,transparent)'}}/>
 
-        {/* close */}
         <button onClick={onClose} style={{position:'absolute',top:14,right:14,width:28,height:28,borderRadius:8,border:'1px solid rgba(255,255,255,.1)',background:'rgba(255,255,255,.04)',display:'flex',alignItems:'center',justifyContent:'center',cursor:'pointer',color:'rgba(255,255,255,.4)'}}>
           <X style={{width:14,height:14}}/>
         </button>
@@ -167,7 +167,8 @@ function JoinSlotModal({ battle, user, balance, cases, onClose, onJoin }) {
                 </div>
                 {memberIndices.map(slotIdx => {
                   const p = players[slotIdx];
-                  const isFilled = p?.email;
+                  // Use isSlotFilled so empty-object placeholders show as open slots
+                  const isFilled = isSlotFilled(p);
                   const isMe = p?.email === user?.email;
                   const isSelected = selectedSlot === slotIdx;
 
@@ -253,7 +254,8 @@ function BattleRow({ battle: b, user, balance, cases, onJoin, onWatch, onView, i
   const caseTemplate = cases.find(c => c.id === b.case_template_id);
   const isCreator = b.creator_email === user?.email;
   const isLive = b.status === 'in_progress';
-  const filledPlayers = (b.players || []).filter(p => p?.email);
+  // Only count slots with a real email as filled
+  const filledPlayers = (b.players || []).filter(p => p?.email && p.email !== '');
   const totalSlots = b.max_players || 2;
   const emptySlots = Math.max(0, totalSlots - filledPlayers.length);
 
@@ -298,35 +300,35 @@ function BattleRow({ battle: b, user, balance, cases, onJoin, onWatch, onView, i
           </div>
         </div>
 
-     {/* Case preview */}
-<div style={{display:'flex',alignItems:'center',gap:6,flex:1,minWidth:0}}>
-  {(() => {
-    const selectedCases = buildSelectedCasesFromBattle(b, cases);
-    const displayCases = selectedCases.length > 0
-      ? selectedCases.slice(0, 5)
-      : caseTemplate ? Array.from({length: Math.min(5, b.rounds||1)}, () => caseTemplate) : [];
+        {/* Case preview */}
+        <div style={{display:'flex',alignItems:'center',gap:6,flex:1,minWidth:0}}>
+          {(() => {
+            const selectedCases = buildSelectedCasesFromBattle(b, cases);
+            const displayCases = selectedCases.length > 0
+              ? selectedCases.slice(0, 5)
+              : caseTemplate ? Array.from({length: Math.min(5, b.rounds||1)}, () => caseTemplate) : [];
 
-    return displayCases.length > 0 ? (
-      <>
-        {displayCases.map((c, i) => {
-          const imgUrl = c?.image_url || c?.image || null;
-          const name = c?.name;
-          return (
-            <motion.div key={i} animate={{y:hov?-3:0}} transition={{delay:i*.04,type:'spring',stiffness:200,damping:16}}
-              style={{width:46,height:46,borderRadius:10,flexShrink:0,background:imgUrl?`url('${imgUrl}') center/cover`:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',boxShadow:hov?'0 4px 16px rgba(0,0,0,.6)':'0 2px 8px rgba(0,0,0,.5)',transition:'box-shadow .25s',display:'flex',alignItems:'center',justifyContent:'center'}}>
-              {!imgUrl&&<span style={{fontSize:10,color:'rgba(255,255,255,.25)',fontWeight:700,textAlign:'center',padding:'0 4px',lineHeight:1.2}}>{name?.[0]||'?'}</span>}
-            </motion.div>
-          );
-        })}
-        {b.rounds>5&&<span style={{fontSize:11,color:'rgba(255,255,255,.3)',fontWeight:800}}>+{b.rounds-5}</span>}
-      </>
-    ) : (
-      <div style={{padding:'6px 12px',borderRadius:10,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)'}}>
-        <span style={{fontSize:12,color:'rgba(255,255,255,.3)',fontWeight:700}}>{b.case_name||'Case'}</span>
-      </div>
-    );
-  })()}
-</div>
+            return displayCases.length > 0 ? (
+              <>
+                {displayCases.map((c, i) => {
+                  const imgUrl = c?.image_url || c?.image || null;
+                  const name = c?.name;
+                  return (
+                    <motion.div key={i} animate={{y:hov?-3:0}} transition={{delay:i*.04,type:'spring',stiffness:200,damping:16}}
+                      style={{width:46,height:46,borderRadius:10,flexShrink:0,background:imgUrl?`url('${imgUrl}') center/cover`:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',boxShadow:hov?'0 4px 16px rgba(0,0,0,.6)':'0 2px 8px rgba(0,0,0,.5)',transition:'box-shadow .25s',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                      {!imgUrl&&<span style={{fontSize:10,color:'rgba(255,255,255,.25)',fontWeight:700,textAlign:'center',padding:'0 4px',lineHeight:1.2}}>{name?.[0]||'?'}</span>}
+                    </motion.div>
+                  );
+                })}
+                {b.rounds>5&&<span style={{fontSize:11,color:'rgba(255,255,255,.3)',fontWeight:800}}>+{b.rounds-5}</span>}
+              </>
+            ) : (
+              <div style={{padding:'6px 12px',borderRadius:10,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)'}}>
+                <span style={{fontSize:12,color:'rgba(255,255,255,.3)',fontWeight:700}}>{b.case_name||'Case'}</span>
+              </div>
+            );
+          })()}
+        </div>
 
         {/* Cost + action */}
         <div style={{display:'flex',alignItems:'center',gap:14,marginLeft:'auto',flexShrink:0}}>
@@ -411,13 +413,13 @@ export default function Battles() {
     return {...(walletUser||{}), ...(freshUser||{})};
   }, [walletUser, freshUser]);
 
-  const [battles,  setBattles]  = useState([]);
-  const [cases,    setCases]    = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [view,     setView]     = useState('list');
-  const [arenaData,setArenaData]= useState(null);
-  const [sortBy,   setSortBy]   = useState('recent');
-  const [joinModal, setJoinModal] = useState(null); // battle being joined
+  const [battles,   setBattles]   = useState([]);
+  const [cases,     setCases]     = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [view,      setView]      = useState('list');
+  const [arenaData, setArenaData] = useState(null);
+  const [sortBy,    setSortBy]    = useState('recent');
+  const [joinModal, setJoinModal] = useState(null);
   const [, setTick] = useState(0);
 
   useEffect(()=>{
@@ -447,11 +449,12 @@ export default function Battles() {
     try { latestUser = await base44.auth.me() || user; } catch {}
 
     const filledPlayers = players.map(p => ({
-      email:      p.email,
-      name:       p.isBot ? p.name : (latestUser.username||latestUser.full_name||p.name),
-      avatar_url: p.isBot ? null : (latestUser.avatar_url||p.avatar_url||null),
-      isBot:      p.isBot,
-      total_value: 0, items_won: [],
+      email:       p.email,
+      name:        p.isBot ? p.name : (latestUser.username||latestUser.full_name||p.name),
+      avatar_url:  p.isBot ? null : (latestUser.avatar_url||p.avatar_url||null),
+      isBot:       p.isBot,
+      total_value: 0,
+      items_won:   [],
     }));
 
     const allFilled = filledPlayers.length >= totalPlayers && filledPlayers.every(p=>p.email);
@@ -484,7 +487,14 @@ export default function Battles() {
     loadBattles();
   };
 
-  // Called when user picks a specific slot from the modal
+  /* ── handleJoin ─────────────────────────────────────────────────
+     FIX: the API rejects null entries in the players array with
+     "Input should be a valid dictionary". Instead of padding with
+     null, we build the full array at maxPlayers length using empty
+     placeholder objects, then place the joiner at the chosen slot.
+     Empty placeholders have email:'' so they still show as open
+     slots in the lobby and are ignored in filled-count checks.
+  ────────────────────────────────────────────────────────────── */
   const handleJoin = async (battle, slotIndex) => {
     if (battle.entry_cost > balance) return;
     setJoinModal(null);
@@ -498,37 +508,52 @@ export default function Battles() {
     try { latestUser = await base44.auth.me() || user; } catch {}
 
     const joinerSlot = {
-      email:      latestUser.email,
-      name:       latestUser.username || latestUser.full_name || 'Player',
-      avatar_url: latestUser.avatar_url || null,
-      isBot:      false,
-      total_value: 0, items_won: [],
+      email:       latestUser.email,
+      name:        latestUser.username || latestUser.full_name || 'Player',
+      avatar_url:  latestUser.avatar_url || null,
+      isBot:       false,
+      total_value: 0,
+      items_won:   [],
     };
 
-    // Place joiner at the exact slot they picked
-    const updatedPlayers = [...(battle.players || [])];
-    // Ensure array is long enough
-    while (updatedPlayers.length <= slotIndex) updatedPlayers.push(null);
-    updatedPlayers[slotIndex] = joinerSlot;
+    // Empty placeholder — valid object the API accepts, treated as "no player" in logic
+    const emptySlot = { email: '', name: '', avatar_url: null, isBot: false, total_value: 0, items_won: [] };
+    const maxPlayers = battle.max_players || 2;
 
-    await base44.entities.CaseBattle.update(battle.id, { players: updatedPlayers });
+    // Build full-length array — existing real players stay, empty slots get placeholders
+    const playersToSave = Array.from({ length: maxPlayers }, (_, i) => {
+      const existing = (battle.players || [])[i];
+      // Keep slot if it has a real email (non-empty)
+      if (existing?.email && existing.email !== '') return existing;
+      return { ...emptySlot };
+    });
 
-    const allFilled = updatedPlayers.filter(p=>p?.email).length >= (battle.max_players||2);
+    // Place joiner at their chosen slot
+    playersToSave[slotIndex] = joinerSlot;
+
+    await base44.entities.CaseBattle.update(battle.id, { players: playersToSave });
+
+    // Count only real players (non-empty email) to determine if battle is full
+    const realPlayerCount = playersToSave.filter(p => p?.email && p.email !== '').length;
+    const allFilled = realPlayerCount >= maxPlayers;
+
     if (allFilled) {
+      // Only pass real players to the roll engine
+      const realPlayers = playersToSave.filter(p => p?.email && p.email !== '');
       await resolveAndCommitRolls(
-        { ...battle, players: updatedPlayers },
+        { ...battle, players: playersToSave },
         selectedCasesArr,
-        updatedPlayers,
+        realPlayers,
         battle.battle_modes || {}
       );
     }
 
     const teams = battle.teams_config
       ? JSON.parse(battle.teams_config)
-      : [updatedPlayers.map((_,i)=>i)];
+      : [playersToSave.map((_,i)=>i)];
 
     const joinArenaData = {
-      battle:        { ...battle, players: updatedPlayers },
+      battle:        { ...battle, players: playersToSave },
       selectedCases: selectedCasesArr,
       teams,
       modeLabel:     battle.mode_label || '1v1',
@@ -541,9 +566,11 @@ export default function Battles() {
   };
 
   const makeBot = () => ({
-    name:  BOT_NAMES[Math.floor(Math.random()*BOT_NAMES.length)],
-    email: `bot_${Date.now()}_${Math.random().toString(36).slice(2)}@system`,
-    isBot: true, total_value: 0, items_won: [],
+    name:        BOT_NAMES[Math.floor(Math.random()*BOT_NAMES.length)],
+    email:       `bot_${Date.now()}_${Math.random().toString(36).slice(2)}@system`,
+    isBot:       true,
+    total_value: 0,
+    items_won:   [],
   });
 
   const updateArena = (updatedBattle) => {
@@ -560,7 +587,7 @@ export default function Battles() {
     if (!current?.battle?.id) return;
     const battle     = current.battle;
     const maxPlayers = battle.max_players || 2;
-    const existing   = (battle.players || []).filter(p=>p?.email);
+    const existing   = (battle.players || []).filter(p => p?.email && p.email !== '');
     if (existing.length >= maxPlayers) return;
     const updatedPlayers = [...existing, makeBot()];
     const allFilled      = updatedPlayers.length >= maxPlayers;
@@ -581,7 +608,7 @@ export default function Battles() {
     if (!current?.battle?.id) return;
     const battle     = current.battle;
     const maxPlayers = battle.max_players || 2;
-    const existing   = (battle.players||[]).filter(p=>p?.email);
+    const existing   = (battle.players||[]).filter(p => p?.email && p.email !== '');
     const updatedPlayers = [...existing];
     while (updatedPlayers.length < maxPlayers) updatedPlayers.push(makeBot());
     const patch = { players: updatedPlayers, status: 'in_progress' };
@@ -599,7 +626,13 @@ export default function Battles() {
     const teams = updatedBattle.teams_config
       ? JSON.parse(updatedBattle.teams_config)
       : [(updatedBattle.players||[]).map((_,i)=>i)];
-    const newData = { battle:updatedBattle, selectedCases:selectedCasesArr, teams, modeLabel:updatedBattle.mode_label||'1v1', battleModes:updatedBattle.battle_modes||{} };
+    const newData = {
+      battle:        updatedBattle,
+      selectedCases: selectedCasesArr,
+      teams,
+      modeLabel:     updatedBattle.mode_label || '1v1',
+      battleModes:   updatedBattle.battle_modes || {},
+    };
     arenaDataRef.current = newData;
     setArenaData(newData);
     loadBattles();
@@ -609,14 +642,28 @@ export default function Battles() {
     const selectedCasesArr = buildSelectedCasesFromBattle(battle, cases);
     const players = battle.players || [];
     const teams   = battle.teams_config ? JSON.parse(battle.teams_config) : [players.map((_,i)=>i)];
-    setArenaData({ battle, selectedCases:selectedCasesArr, players, teams, modeLabel:battle.mode_label||'1v1', battleModes:battle.battle_modes||{}, spectate:true });
+    setArenaData({
+      battle,
+      selectedCases: selectedCasesArr,
+      players,
+      teams,
+      modeLabel:   battle.mode_label || '1v1',
+      battleModes: battle.battle_modes || {},
+      spectate:    true,
+    });
     setView('arena');
   };
 
   const handleViewOwnBattle = (b) => {
     const selectedCasesArr = buildSelectedCasesFromBattle(b, cases);
     const teams = b.teams_config ? JSON.parse(b.teams_config) : [b.players?.map((_,i)=>i)||[]];
-    const viewData = { battle:b, selectedCases:selectedCasesArr, teams, modeLabel:b.mode_label||'1v1', battleModes:b.battle_modes||{} };
+    const viewData = {
+      battle:        b,
+      selectedCases: selectedCasesArr,
+      teams,
+      modeLabel:     b.mode_label || '1v1',
+      battleModes:   b.battle_modes || {},
+    };
     arenaDataRef.current = viewData;
     setArenaData(viewData);
     setView('arena');
@@ -641,18 +688,25 @@ export default function Battles() {
 
   if (view === 'arena' && arenaData) {
     const arenaBattle  = arenaData.battle;
-    const arenaPlayers = arenaBattle?.players || [];
+    // Filter empty placeholder slots before passing to arena
+    const arenaPlayers = (arenaBattle?.players || []).filter(p => p?.email && p.email !== '');
     const arenaStatus  = arenaBattle?.status || 'waiting';
     return (
       <BattleArena
         key={`${arenaBattle?.id}-${arenaStatus}-${arenaPlayers.length}`}
-        battle={arenaBattle} selectedCases={arenaData.selectedCases}
-        players={arenaPlayers} teams={arenaData.teams}
-        modeLabel={arenaData.modeLabel} battleModes={arenaData.battleModes||{}}
-        userEmail={user?.email} balance={balance}
-        onClose={()=>setView('list')} onReward={handleArenaReward}
+        battle={arenaBattle}
+        selectedCases={arenaData.selectedCases}
+        players={arenaPlayers}
+        teams={arenaData.teams}
+        modeLabel={arenaData.modeLabel}
+        battleModes={arenaData.battleModes||{}}
+        userEmail={user?.email}
+        balance={balance}
+        onClose={()=>setView('list')}
+        onReward={handleArenaReward}
         onJoin={()=>arenaBattle&&setJoinModal(arenaBattle)}
-        onAddBot={handleAddBotToArena} onFillBots={handleFillBots}
+        onAddBot={handleAddBotToArena}
+        onFillBots={handleFillBots}
         onBattleUpdated={handleBattleUpdated}
       />
     );
