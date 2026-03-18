@@ -144,12 +144,24 @@ const CSS = `
 @keyframes spinr {to{transform:rotate(-360deg)}}
 ::-webkit-scrollbar{width:4px}
 ::-webkit-scrollbar-thumb{background:#120020;border-radius:4px}
+
+/* ══ GEM RESPONSIVE ══
+   Desktop (≥1100px): gems visible, hugging edges of a ~860px content column
+   Tablet (768–1099px): gems smaller, tucked tight to viewport edges
+   Mobile (<768px): gems hidden entirely — no room, no clipping issues
+*/
+.gem-col-wrap {
+  display: block;
+}
+@media (max-width: 767px) {
+  .gem-col-wrap {
+    display: none !important;
+  }
+}
 `;
 
 /* ══════════════════════════════════════════
    GEM SVG SHAPES
-   Each gem is self-contained with inline styles
-   No className for positioning — parent handles it
    ══════════════════════════════════════════ */
 function DiamondSVG({ id, c1, c2 }) {
   return (
@@ -255,14 +267,40 @@ function OvalSVG({ id, c1, c2 }) {
 
 const SHAPE_MAP = { diamond: DiamondSVG, hex: HexSVG, marquise: MarquiseSVG, oval: OvalSVG };
 
-/* Single fixed gem — each one individually fixed to viewport */
-function FixedGem({ shape, size, c1, c2, glow, top, leftVw, rightVw, offsetX, anim }) {
+/* ══════════════════════════════════════════
+   RESPONSIVE GEM POSITIONING HOOK
+   Returns current breakpoint: 'desktop' | 'tablet' | 'mobile'
+   ══════════════════════════════════════════ */
+function useBreakpoint() {
+  const [bp, setBp] = useState(() => {
+    if (typeof window === 'undefined') return 'desktop';
+    if (window.innerWidth < 768) return 'mobile';
+    if (window.innerWidth < 1100) return 'tablet';
+    return 'desktop';
+  });
+
+  useEffect(() => {
+    const handler = () => {
+      const w = window.innerWidth;
+      if (w < 768) setBp('mobile');
+      else if (w < 1100) setBp('tablet');
+      else setBp('desktop');
+    };
+    window.addEventListener('resize', handler);
+    return () => window.removeEventListener('resize', handler);
+  }, []);
+
+  return bp;
+}
+
+/* Single fixed gem */
+function FixedGem({ shape, size, c1, c2, glow, top, side, offsetPx, anim }) {
   const id = useRef(`g${Math.random().toString(36).slice(2,8)}`).current;
   const ShapeSVG = SHAPE_MAP[shape];
 
-  const posStyle = leftVw !== undefined
-    ? { left: `calc(${leftVw}vw + ${offsetX}px)` }
-    : { right: `calc(${rightVw}vw + ${offsetX}px)` };
+  const posStyle = side === 'left'
+    ? { left: offsetPx }
+    : { right: offsetPx };
 
   return (
     <div style={{
@@ -289,25 +327,55 @@ function FixedGem({ shape, size, c1, c2, glow, top, leftVw, rightVw, offsetX, an
   );
 }
 
-/* Left & right gem columns */
+/* Left & right gem columns — responsive */
 function GemColumns() {
-  // Content box left edge ≈ 19vw, right edge ≈ 78vw from left
-  // Each gem is centered on that edge: offset by half its size
+  const bp = useBreakpoint();
+
+  // Hide on mobile entirely (CSS also hides, this is belt+suspenders)
+  if (bp === 'mobile') return null;
+
+  /*
+    Desktop: content is ~860px centered, so left edge ≈ (vw-860)/2
+             Gems straddle that edge: half inside, half outside
+    Tablet:  content is full-width with ~16px padding
+             Gems are small (scaled down) and sit at the very screen edge
+  */
+  const getGemProps = (gem, side) => {
+    const scale = bp === 'tablet' ? 0.55 : 1;
+    const scaledSize = Math.round(gem.size * scale);
+
+    let offsetPx;
+    if (bp === 'desktop') {
+      // Left edge of content box assuming max-width ~860px centered
+      // Gem straddles the edge: positioned so its center is on the edge
+      // left edge from viewport = (100vw - 860px) / 2
+      // We use a CSS calc — but since we're in JS style, we use vw trick:
+      // Actually we just keep original vw approach, simplified:
+      // left gems: ~half gem width inside content
+      if (side === 'left') {
+        offsetPx = `calc((100vw - 860px) / 2 - ${Math.round(scaledSize * 0.5)}px)`;
+      } else {
+        offsetPx = `calc((100vw - 860px) / 2 - ${Math.round(scaledSize * 0.5)}px)`;
+      }
+    } else {
+      // Tablet: gems peek from the very edge, half off screen
+      offsetPx = `${-Math.round(scaledSize * 0.3)}px`;
+    }
+
+    return { ...gem, size: scaledSize, offsetPx };
+  };
+
   return (
-    <>
-      {GEM_LEFT.map((g, i) => (
-        <FixedGem key={`L${i}`} {...g}
-          leftVw={19}
-          offsetX={-Math.round(g.size / 2)}
-        />
-      ))}
-      {GEM_RIGHT.map((g, i) => (
-        <FixedGem key={`R${i}`} {...g}
-          rightVw={22}
-          offsetX={-Math.round(g.size / 2)}
-        />
-      ))}
-    </>
+    <div className="gem-col-wrap">
+      {GEM_LEFT.map((g, i) => {
+        const props = getGemProps(g, 'left');
+        return <FixedGem key={`L${i}`} {...props} side="left" />;
+      })}
+      {GEM_RIGHT.map((g, i) => {
+        const props = getGemProps(g, 'right');
+        return <FixedGem key={`R${i}`} {...props} side="right" />;
+      })}
+    </div>
   );
 }
 
@@ -551,7 +619,7 @@ export default function Home() {
     }}>
       <style>{CSS}</style>
 
-      {/* Gems rendered first, individually fixed — nothing can clip them */}
+      {/* Gems rendered first, individually fixed — responsive via hook + CSS */}
       <GemColumns/>
 
       <div style={{position:'relative',zIndex:1,display:'flex',flexDirection:'column',gap:32}}>
