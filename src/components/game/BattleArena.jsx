@@ -143,6 +143,12 @@ const VsDivider=()=>(<div style={{position:'relative',display:'flex',alignItems:
 const ModeBadge=({icon,color,label})=>(<span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:9,fontWeight:700,padding:'3px 9px',borderRadius:20,background:`${color}12`,color,border:`1px solid ${color}2e`,letterSpacing:'.1em',textTransform:'uppercase'}}>{icon} {label}</span>);
 const ModeNotice=({icon,color,children})=>(<div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 16px',borderRadius:12,background:`${color}0d`,border:`1px solid ${color}26`}}><span style={{fontSize:15,flexShrink:0}}>{icon}</span><p style={{fontSize:12,color:`${color}c0`,fontWeight:600}}>{children}</p></div>);
 
+/* ─── WaitingLobby ───────────────────────────────────────────────────────────
+   FIX: The "Join Battle" button now calls `onJoin(battle)` instead of
+   `onJoin()`. This passes the battle object to openJoinModal in Battles.jsx
+   so it can fetch fresh slot state and open the team-picker modal for ALL
+   players — not just the battle creator.
+──────────────────────────────────────────────────────────────────────────── */
 const WaitingLobby=({battle,players,teams,userEmail,onJoin,onAddBot,onFillBots,balance})=>{
   const maxPlayers=battle.max_players||2;
   const isCreator=battle.creator_email===userEmail;
@@ -183,7 +189,10 @@ const WaitingLobby=({battle,players,teams,userEmail,onJoin,onAddBot,onFillBots,b
                         {f?(
                           <><PlayerAvatar player={p} color={pal.color} size={48} iconSize={20}/><div style={{textAlign:'center'}}><p style={{fontSize:13,fontWeight:700,color:'#f0eaff'}}>{p.name}</p>{p.isBot&&<p style={{fontSize:9,fontWeight:700,color:pal.color,textTransform:'uppercase',letterSpacing:'.1em',marginTop:2}}>BOT</p>}</div><div style={{display:'flex',alignItems:'center',gap:5,padding:'4px 12px',borderRadius:20,background:'rgba(0,229,160,.09)',border:'1px solid rgba(0,229,160,.22)'}}><CheckCircle2 style={{width:11,height:11,color:'#00e5a0'}}/><span style={{fontSize:10,fontWeight:700,color:'#00e5a0'}}>Ready</span></div></>
                         ):(
-                          <><div style={{width:48,height:48,borderRadius:'50%',border:`2px dashed ${pal.border}`,display:'flex',alignItems:'center',justifyContent:'center'}}><Loader2 style={{width:18,height:18,color:pal.color,opacity:.4}} className="animate-spin"/></div><p style={{fontSize:11,color:'var(--text-dim)',fontWeight:500,textAlign:'center'}}>Waiting…</p>{canJoin&&<button onClick={onJoin} disabled={battle.entry_cost>balance} className="ba-btn-gold" style={{padding:'8px 20px',fontSize:12}}>Join Battle</button>}{isCreator&&(<div style={{display:'flex',flexDirection:'column',gap:6,width:'100%',padding:'0 4px'}}><button onClick={onAddBot} className="ba-btn-ghost" style={{padding:'7px 0',fontSize:11,fontWeight:700,gap:5,width:'100%'}}><Bot style={{width:11,height:11}}/> Add Bot</button><button onClick={onFillBots} className="ba-btn-ghost" style={{padding:'7px 0',fontSize:11,fontWeight:700,gap:5,width:'100%',color:'#f5c842',borderColor:'rgba(245,200,66,.22)'}}>Fill All</button></div>)}</>
+                          <><div style={{width:48,height:48,borderRadius:'50%',border:`2px dashed ${pal.border}`,display:'flex',alignItems:'center',justifyContent:'center'}}><Loader2 style={{width:18,height:18,color:pal.color,opacity:.4}} className="animate-spin"/></div><p style={{fontSize:11,color:'var(--text-dim)',fontWeight:500,textAlign:'center'}}>Waiting…</p>
+                          {/* ── FIX: pass battle to onJoin so the slot-picker modal opens correctly ── */}
+                          {canJoin&&<button onClick={()=>onJoin(battle)} disabled={battle.entry_cost>balance} className="ba-btn-gold" style={{padding:'8px 20px',fontSize:12}}>Join Battle</button>}
+                          {isCreator&&(<div style={{display:'flex',flexDirection:'column',gap:6,width:'100%',padding:'0 4px'}}><button onClick={onAddBot} className="ba-btn-ghost" style={{padding:'7px 0',fontSize:11,fontWeight:700,gap:5,width:'100%'}}><Bot style={{width:11,height:11}}/> Add Bot</button><button onClick={onFillBots} className="ba-btn-ghost" style={{padding:'7px 0',fontSize:11,fontWeight:700,gap:5,width:'100%',color:'#f5c842',borderColor:'rgba(245,200,66,.22)'}}>Fill All</button></div>)}</>
                         )}
                       </div>
                     );
@@ -208,19 +217,13 @@ export default function BattleArena({
   onClose, onReward, onJoin, onAddBot, onFillBots,
   onBattleUpdated, balance=0,
 }) {
-  // rawPlayers may contain empty-placeholder objects with email:''.
-  // We keep the full array for index-alignment with teams_config and allRolled,
-  // but derive a count of real players for spin-done tracking.
   const players = usePlayerAvatars(rawPlayers);
   const totalRounds = selectedCases.length;
 
-  // Count only real (non-empty) players — used for roundDone threshold
   const realPlayerCount = useMemo(()=>rawPlayers.filter(isRealPlayer).length, [rawPlayers]);
 
-  // teamList uses the raw teams prop so indices stay stable
   const teamList = useMemo(()=>{
     if (teams && teams.length > 0) return teams;
-    // Fallback: one team with only real player indices
     return [rawPlayers.map((_,i)=>i).filter(i=>isRealPlayer(rawPlayers[i]))];
   }, [teams, rawPlayers]);
 
@@ -255,7 +258,6 @@ export default function BattleArena({
   const [phase,setPhase]       = useState('countdown');
   const [countdown,setCd]      = useState(3);
   const [currentRound,setCR]   = useState(0);
-  // playerItems and pPhases are indexed by rawPlayers index (including empty slots)
   const [playerItems,setPI]    = useState(()=>Array.from({length:rawPlayers.length},()=>[]));
   const [done,setDone]         = useState(false);
   const [jackpot,setJackpot]   = useState(false);
@@ -288,7 +290,6 @@ export default function BattleArena({
     roundDone.current=0;
     crRef.current=r;
     setCR(r);
-    // Only set real players to 'spinning'; empty slots stay 'idle'
     setPP(prev=>prev.map((s,i)=>isRealPlayer(rawPlayers[i])?'spinning':s));
     playSpin(isFast);
   };
@@ -529,7 +530,6 @@ export default function BattleArena({
                   {teamList.length>1&&<div style={{textAlign:'center'}}><span className="ba-title" style={{fontSize:10,fontWeight:700,padding:'3px 14px',borderRadius:20,background:pal.bg,color:pal.color,border:`1px solid ${pal.border}`,textTransform:'uppercase',letterSpacing:'.12em'}}>Team {ti+1}{done?` · ${teamTotal.toLocaleString()}`:''}</span></div>}
                   <div style={{display:'flex',gap:8,alignItems:'stretch'}}>
                     {mi.map(pi=>{
-                      // Skip empty placeholder slots entirely — don't render a column for them
                       if(!isRealPlayer(rawPlayers[pi]))return null;
                       const r=crRef.current;
                       const rolled=allRolled.current?.[r]?.[pi];
