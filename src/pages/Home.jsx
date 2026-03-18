@@ -7,9 +7,27 @@ import { useWallet } from '../components/game/useWallet';
 import { motion, useMotionValue, useSpring } from 'framer-motion';
 import { Trophy, ChevronRight, Swords, Box, RotateCcw, Zap, Star, Gift } from 'lucide-react';
 
+/* ══════════ HERO BANNER IMAGES (used in HeroBanner floating cases) ══════════ */
+// ═══════════════════════════════════════════════════
+// HERO BANNER IMAGES (shown in the welcome section)
+// ═══════════════════════════════════════════════════
 const vtechImg = 'https://i.imgur.com/doYHRMp.png';
 const roseImg  = 'https://i.imgur.com/WVoUpzN.png';
 const irishImg = 'https://i.imgur.com/7KIsUqY.png';
+
+// ═══════════════════════════════════════════════════
+// GAMEMODE IMAGES — replace each URL with your own
+// ═══════════════════════════════════════════════════
+const battlesImg  = 'https://placehold.co/200x200/1a0040/c084fc?text=Battles';   // ← replace with your Battles image URL
+const casesImg    = 'https://placehold.co/200x200/1e1200/fbbf24?text=Cases';     // ← replace with your Cases image URL
+const coinflipImg = 'https://placehold.co/200x200/10002c/a855f7?text=Coinflip'; // ← replace with your Coinflip image URL
+const crashImg    = 'https://placehold.co/200x200/100020/e879f9?text=Crash';    // ← replace with your Crash image URL
+
+/* ══════════ GAMEMODE IMAGES — swap each URL with your own image ══════════ */
+const battlesImg  = 'https://i.imgur.com/doYHRMp.png'; // 🔁 Replace with your Battles image URL
+const casesImg    = 'https://i.imgur.com/WVoUpzN.png'; // 🔁 Replace with your Cases image URL
+const coinflipImg = 'https://i.imgur.com/7KIsUqY.png'; // 🔁 Replace with your Coinflip image URL
+const crashImg    = 'https://i.imgur.com/doYHRMp.png'; // 🔁 Replace with your Crash image URL
 
 /* ══════════ CSS ══════════ */
 const CSS = `
@@ -285,7 +303,7 @@ function HeroBanner() {
         <Particles accent="#fbbf24" count={10}/>
         <Particles accent="#a855f7" count={8}/>
       </div>
-      {/* floating case images */}
+      {/* floating case images — these intentionally use vtechImg / roseImg / irishImg */}
       <img src={vtechImg} alt="" className="hfa" style={{position:'absolute',right:'28%',top:'5%',width:130,pointerEvents:'none',
         filter:'drop-shadow(0 0 28px rgba(168,85,247,.9)) drop-shadow(0 14px 40px rgba(0,0,0,.95))'}}/>
       <img src={roseImg} alt="" className="hfb" style={{position:'absolute',right:'8%',top:'11%',width:148,pointerEvents:'none',
@@ -359,7 +377,7 @@ const GAMES = [
     name:'Battles',page:'Battles',icon:Swords,size:'lg',
     bg:'linear-gradient(145deg,#08001a 0%,#150040 45%,#0a0020 100%)',
     accent:'#c084fc', glowColor:'rgba(192,132,252,.3)',
-    caseImg:vtechImg,
+    caseImg: battlesImg,  // 🔁 swap battlesImg at the top of this file
     caseGlow:'drop-shadow(0 0 30px rgba(192,132,252,.88)) drop-shadow(0 14px 44px rgba(0,0,0,.95))',
     bs:'0 0 0 1px rgba(192,132,252,.13),0 20px 60px rgba(0,0,0,.8)',
     bsh:'0 0 0 1px rgba(192,132,252,.32),0 20px 60px rgba(0,0,0,.8),0 0 70px rgba(192,132,252,.18)',
@@ -369,7 +387,7 @@ const GAMES = [
     name:'Cases',page:'Cases',icon:Box,size:'lg',
     bg:'linear-gradient(145deg,#0d0800 0%,#1e1200 45%,#0d0600 100%)',
     accent:'#fbbf24', glowColor:'rgba(251,191,36,.3)',
-    caseImg:roseImg,
+    caseImg: casesImg,    // 🔁 swap casesImg at the top of this file
     caseGlow:'drop-shadow(0 0 30px rgba(251,191,36,.92)) drop-shadow(0 14px 44px rgba(0,0,0,.95))',
     bs:'0 0 0 1px rgba(251,191,36,.12),0 20px 60px rgba(0,0,0,.8)',
     bsh:'0 0 0 1px rgba(251,191,36,.3),0 20px 60px rgba(0,0,0,.8),0 0 70px rgba(251,191,36,.17)',
@@ -379,7 +397,7 @@ const GAMES = [
     name:'Coinflip',page:'Coinflip',icon:RotateCcw,size:'sm',
     bg:'linear-gradient(145deg,#060010 0%,#10002c 55%,#04000c 100%)',
     accent:'#fbbf24', glowColor:'rgba(251,191,36,.24)',
-    caseImg:irishImg,
+    caseImg: coinflipImg, // 🔁 swap coinflipImg at the top of this file
     caseGlow:'drop-shadow(0 0 22px rgba(251,191,36,.88)) drop-shadow(0 10px 32px rgba(0,0,0,.95))',
     bs:'0 0 0 1px rgba(251,191,36,.1),0 14px 44px rgba(0,0,0,.8)',
     bsh:'0 0 0 1px rgba(251,191,36,.26),0 14px 44px rgba(0,0,0,.8),0 0 55px rgba(251,191,36,.14)',
@@ -388,7 +406,7 @@ const GAMES = [
     name:'Crash',page:'Crash',icon:Zap,size:'sm',
     bg:'linear-gradient(145deg,#060008 0%,#100020 55%,#030008 100%)',
     accent:'#a855f7', glowColor:'rgba(168,85,247,.26)',
-    caseImg:roseImg,
+    caseImg: crashImg,    // 🔁 swap crashImg at the top of this file
     caseGlow:'drop-shadow(0 0 22px rgba(168,85,247,.88)) drop-shadow(0 10px 32px rgba(0,0,0,.95))',
     bs:'0 0 0 1px rgba(168,85,247,.1),0 14px 44px rgba(0,0,0,.8)',
     bsh:'0 0 0 1px rgba(168,85,247,.26),0 14px 44px rgba(0,0,0,.8),0 0 55px rgba(168,85,247,.15)',
