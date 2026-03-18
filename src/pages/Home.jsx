@@ -1,5 +1,5 @@
 import { useRequireAuth } from '@/components/useRequireAuth';
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { useWallet } from '../components/game/useWallet';
@@ -11,13 +11,33 @@ const vtechImg = 'https://i.imgur.com/doYHRMp.png';
 const roseImg  = 'https://i.imgur.com/WVoUpzN.png';
 const irishImg = 'https://i.imgur.com/7KIsUqY.png';
 
-/* ══════════════════════════════════════
-   GAMEMODE IMAGES — replace each URL
-   ══════════════════════════════════════ */
+/* ══ GAMEMODE IMAGES ══ */
 const battlesImg  = 'https://i.imgur.com/vHp8zbU.png';
 const casesImg    = 'https://i.imgur.com/WXw330m.png';
 const coinflipImg = 'https://i.imgur.com/3AUD8Vu.png';
 const crashImg    = 'https://i.imgur.com/53dgn4r.png';
+
+/* ══════════════════════════════════════════════════
+   GEM DATA — absolute positions on left & right edge
+   Using position:fixed on each gem individually so
+   nothing can clip or contain them
+   ══════════════════════════════════════════════════ */
+const GEM_LEFT = [
+  { shape:'diamond', size:52, c1:'#e9d5ff', c2:'#5b21b6', glow:'rgba(167,139,250,.95)', top:'8vh',  anim:'gfA 7.2s ease-in-out infinite' },
+  { shape:'hex',     size:40, c1:'#fde68a', c2:'#b45309', glow:'rgba(251,191,36,.9)',   top:'22vh', anim:'gfB 8.8s ease-in-out infinite 1.3s' },
+  { shape:'marquise',size:46, c1:'#f9a8d4', c2:'#9d174d', glow:'rgba(236,72,153,.88)', top:'37vh', anim:'gfC 6.9s ease-in-out infinite 2.6s' },
+  { shape:'oval',    size:36, c1:'#a78bfa', c2:'#4c1d95', glow:'rgba(139,92,246,.9)',   top:'53vh', anim:'gfD 9.1s ease-in-out infinite 0.8s' },
+  { shape:'diamond', size:44, c1:'#fbbf24', c2:'#92400e', glow:'rgba(251,191,36,.88)', top:'68vh', anim:'gfE 7.7s ease-in-out infinite 2.0s' },
+  { shape:'hex',     size:32, c1:'#c084fc', c2:'#6d28d9', glow:'rgba(192,132,252,.92)', top:'83vh', anim:'gfF 10.2s ease-in-out infinite 3.4s' },
+];
+const GEM_RIGHT = [
+  { shape:'hex',      size:56, c1:'#fbbf24', c2:'#92400e', glow:'rgba(251,191,36,.95)',  top:'6vh',  anim:'gfB 8.4s ease-in-out infinite 0.4s' },
+  { shape:'marquise', size:38, c1:'#c084fc', c2:'#4c1d95', glow:'rgba(192,132,252,.9)',  top:'20vh', anim:'gfD 9.4s ease-in-out infinite 1.8s' },
+  { shape:'diamond',  size:48, c1:'#fde68a', c2:'#a16207', glow:'rgba(251,191,36,.9)',   top:'35vh', anim:'gfF 7.5s ease-in-out infinite 3.6s' },
+  { shape:'oval',     size:34, c1:'#e879f9', c2:'#7e22ce', glow:'rgba(232,121,249,.86)', top:'51vh', anim:'gfA 8.0s ease-in-out infinite 0.6s' },
+  { shape:'marquise', size:44, c1:'#bfdbfe', c2:'#1d4ed8', glow:'rgba(96,165,250,.84)',  top:'66vh', anim:'gfC 7.1s ease-in-out infinite 2.2s' },
+  { shape:'diamond',  size:36, c1:'#bbf7d0', c2:'#15803d', glow:'rgba(74,222,128,.82)',  top:'81vh', anim:'gfE 9.8s ease-in-out infinite 1.1s' },
+];
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
@@ -32,6 +52,18 @@ const CSS = `
 .hfb{animation:hf2 8s ease-in-out infinite .9s}
 .hfc{animation:hf3 7s ease-in-out infinite 1.5s}
 
+/* ── gem floats ── */
+@keyframes gfA{0%,100%{transform:translateY(0) rotate(0deg)}40%{transform:translateY(-16px) rotate(9deg) scale(1.04)}72%{transform:translateY(-6px) rotate(-5deg)}}
+@keyframes gfB{0%,100%{transform:translateY(0) rotate(0deg)}36%{transform:translateY(-20px) rotate(-11deg) scale(1.05)}68%{transform:translateY(-8px) rotate(6deg)}}
+@keyframes gfC{0%,100%{transform:translateY(0) rotate(0deg) scale(1)}50%{transform:translateY(-18px) rotate(7deg) scale(1.04)}}
+@keyframes gfD{0%,100%{transform:translateY(0) rotate(0deg)}46%{transform:translateY(-13px) rotate(-7deg) scale(1.03)}}
+@keyframes gfE{0%,100%{transform:translateY(0) rotate(0deg) scale(1)}40%{transform:translateY(-15px) rotate(12deg) scale(1.05)}}
+@keyframes gfF{0%,100%{transform:translateY(0) rotate(0deg)}52%{transform:translateY(-22px) rotate(-9deg) scale(1.03)}}
+
+/* gem inner shimmer */
+@keyframes gem-shimmer{0%,100%{opacity:.28;transform:rotate(0deg) scale(.82)}50%{opacity:.72;transform:rotate(180deg) scale(1.08)}}
+.gs{animation:gem-shimmer 3.2s ease-in-out infinite}
+
 /* ── particles ── */
 @keyframes ptcl{0%{transform:translateY(0) translateX(0);opacity:0}8%{opacity:1}88%{opacity:.5}100%{transform:translateY(var(--py)) translateX(var(--px));opacity:0}}
 .pt{position:absolute;border-radius:50%;pointer-events:none;animation:ptcl var(--pd) ease-out infinite var(--pdl)}
@@ -40,19 +72,19 @@ const CSS = `
 @keyframes live-pulse{0%{transform:scale(1);opacity:.7}100%{transform:scale(3.5);opacity:0}}
 .live-ring{animation:live-pulse 1.8s ease-out infinite}
 
-/* ── scan ── */
-@keyframes scan{0%{top:-1px;opacity:0}4%{opacity:.5}92%{opacity:.25}100%{top:100%;opacity:0}}
+/* ── hero scan ── */
+@keyframes scan{0%{top:-1px;opacity:0}4%{opacity:.45}92%{opacity:.2}100%{top:100%;opacity:0}}
 .scan{position:absolute;left:0;right:0;height:1px;pointer-events:none;z-index:4;
-  background:linear-gradient(90deg,transparent,rgba(251,191,36,.15),rgba(200,140,255,.12),transparent);
+  background:linear-gradient(90deg,transparent,rgba(251,191,36,.14),rgba(200,140,255,.1),transparent);
   animation:scan 10s linear infinite}
 
-/* ── grid ── */
+/* ── ambient grid ── */
 .ambi-grid{position:absolute;inset:0;pointer-events:none;
-  background-image:linear-gradient(rgba(251,191,36,.025) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(251,191,36,.025) 1px,transparent 1px);
+  background-image:linear-gradient(rgba(251,191,36,.024) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(251,191,36,.024) 1px,transparent 1px);
   background-size:44px 44px}
 
-/* ── title ── */
+/* ── hero title ── */
 @keyframes grad-shift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
 .title-grad{
   background:linear-gradient(90deg,#fbbf24,#f59e0b,#e879f9,#c084fc,#818cf8,#fbbf24);
@@ -62,70 +94,33 @@ const CSS = `
   filter:drop-shadow(0 0 20px rgba(251,191,36,.28));
 }
 
-/* ══ GEM COLUMN SYSTEM ══
-   Two fixed vertical strips, left and right edge of viewport.
-   Each strip is a flex column with evenly spaced gems.
-*/
-.gem-strip {
-  position: fixed;
-  top: 0; bottom: 0;
-  width: 72px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: space-evenly;
-  pointer-events: none;
-  z-index: 0;
-  padding: 60px 0;
-}
-.gem-strip.left  { left: 0; }
-.gem-strip.right { right: 0; }
-
-/* individual gem float animations */
-@keyframes gfA{0%,100%{transform:translateY(0) rotate(0deg)}40%{transform:translateY(-18px) rotate(10deg)}75%{transform:translateY(-7px) rotate(-6deg)}}
-@keyframes gfB{0%,100%{transform:translateY(0) rotate(0deg)}35%{transform:translateY(-14px) rotate(-12deg)}70%{transform:translateY(-5px) rotate(7deg)}}
-@keyframes gfC{0%,100%{transform:translateY(0) rotate(0deg) scale(1)}50%{transform:translateY(-20px) rotate(8deg) scale(1.04)}}
-@keyframes gfD{0%,100%{transform:translateY(0) rotate(0deg)}44%{transform:translateY(-12px) rotate(-8deg)}}
-@keyframes gfE{0%,100%{transform:translateY(0) rotate(0deg) scale(1)}38%{transform:translateY(-16px) rotate(14deg) scale(1.05)}}
-@keyframes gfF{0%,100%{transform:translateY(0) rotate(0deg)}55%{transform:translateY(-22px) rotate(-10deg)}}
-.gA{animation:gfA 7s   ease-in-out infinite}
-.gB{animation:gfB 8.5s ease-in-out infinite 1.2s}
-.gC{animation:gfC 6.8s ease-in-out infinite 2.4s}
-.gD{animation:gfD 9s   ease-in-out infinite 0.7s}
-.gE{animation:gfE 7.5s ease-in-out infinite 1.9s}
-.gF{animation:gfF 10s  ease-in-out infinite 3.1s}
-
-@keyframes gem-shimmer{0%,100%{opacity:.3;transform:rotate(0deg) scale(.8)}50%{opacity:.75;transform:rotate(180deg) scale(1.1)}}
-.gs{animation:gem-shimmer 3.2s ease-in-out infinite}
-
 /* ══ GAME CARD ══ */
-.gc-img {
-  position:absolute; inset:0; width:100%; height:100%;
-  object-fit:cover; object-position:center; border-radius:inherit;
-  /* Purple-dark tint by default */
-  filter: grayscale(1) brightness(.32) sepia(.5) hue-rotate(228deg);
-  transform: scale(1.03);
-  transition: filter .55s cubic-bezier(.4,0,.2,1), transform .6s cubic-bezier(.4,0,.2,1);
-  will-change: filter, transform;
+.gc-img{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:cover;object-position:center;border-radius:inherit;
+  filter:grayscale(1) brightness(.3) sepia(.5) hue-rotate(228deg);
+  transform:scale(1.03);
+  transition:filter .55s cubic-bezier(.4,0,.2,1), transform .6s cubic-bezier(.4,0,.2,1);
+  will-change:filter,transform;
 }
-.gc-card:hover .gc-img {
-  filter: grayscale(0) brightness(.9) saturate(1.15) contrast(1.04);
-  transform: scale(1.1);
+.gc-card:hover .gc-img{
+  filter:grayscale(0) brightness(.88) saturate(1.15) contrast(1.04);
+  transform:scale(1.1);
 }
-.gc-vignette {
-  position:absolute; inset:0; z-index:2; border-radius:inherit; pointer-events:none;
-  background: linear-gradient(to top,rgba(2,0,14,.96) 0%,rgba(5,0,20,.65) 32%,rgba(8,0,28,.2) 62%,transparent 100%);
+.gc-vignette{
+  position:absolute;inset:0;z-index:2;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(to top,rgba(2,0,14,.97) 0%,rgba(5,0,20,.62) 32%,rgba(8,0,28,.18) 62%,transparent 100%);
 }
-.gc-overlay {
-  position:absolute; inset:0; z-index:3; border-radius:inherit; pointer-events:none;
-  opacity:0; transition:opacity .5s ease;
+.gc-overlay{
+  position:absolute;inset:0;z-index:3;border-radius:inherit;pointer-events:none;
+  opacity:0;transition:opacity .5s ease;
 }
-.gc-card:hover .gc-overlay { opacity:1; }
+.gc-card:hover .gc-overlay{opacity:1}
 
 @keyframes sheen{0%{transform:translateX(-130%) skewX(-20deg)}100%{transform:translateX(320%) skewX(-20deg)}}
 .gc-sheen{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden;border-radius:inherit}
 .gc-sheen::after{content:'';position:absolute;top:0;bottom:0;width:32%;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.06) 40%,rgba(255,255,255,.11) 50%,rgba(255,255,255,.06) 60%,transparent);
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.055) 40%,rgba(255,255,255,.1) 50%,rgba(255,255,255,.055) 60%,transparent);
   transform:translateX(-130%) skewX(-20deg);opacity:0;transition:opacity .08s}
 .gc-card:hover .gc-sheen::after{opacity:1;animation:sheen .8s ease forwards}
 
@@ -133,14 +128,12 @@ const CSS = `
   position:absolute;top:0;left:0;right:0;height:2px;z-index:9;
   transform:scaleX(0);opacity:0;transform-origin:left;
   transition:transform .42s cubic-bezier(.4,0,.2,1), opacity .28s ease;
-  border-radius:inherit;
 }
 .gc-card:hover .gc-bar{transform:scaleX(1);opacity:1}
 
 .gc-card{
   position:relative;overflow:hidden;border-radius:20px;cursor:pointer;
   transition:box-shadow .4s ease, transform .3s cubic-bezier(.4,0,.2,1);
-  will-change:transform,box-shadow;
 }
 .gc-card:hover{transform:translateY(-8px) scale(1.016)}
 
@@ -153,156 +146,155 @@ const CSS = `
 ::-webkit-scrollbar-thumb{background:#120020;border-radius:4px}
 `;
 
-/* ══ CLEAN GEM SVGs ══ */
-function DiamondGem({ size, c1, c2, glow, cls }) {
-  const id = useRef(`d${Math.random().toString(36).slice(2,7)}`).current;
+/* ══════════════════════════════════════════
+   GEM SVG SHAPES
+   Each gem is self-contained with inline styles
+   No className for positioning — parent handles it
+   ══════════════════════════════════════════ */
+function DiamondSVG({ id, c1, c2 }) {
   return (
-    <div className={cls} style={{width:size,height:size,
-      filter:`drop-shadow(0 0 ${size*.3}px ${glow}) drop-shadow(0 6px 18px rgba(0,0,0,.7))`}}>
-      <svg viewBox="0 0 100 100" style={{width:'100%',height:'100%'}}>
-        <defs>
-          <linearGradient id={`${id}a`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor={c1}/>
-            <stop offset="55%" stopColor={c2} stopOpacity=".85"/>
-            <stop offset="100%" stopColor={c1} stopOpacity=".65"/>
-          </linearGradient>
-          <linearGradient id={`${id}b`} x1="12%" y1="0%" x2="62%" y2="78%">
-            <stop offset="0%" stopColor="rgba(255,255,255,.68)"/>
-            <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
-          </linearGradient>
-          <radialGradient id={`${id}c`} cx="35%" cy="26%" r="46%">
-            <stop offset="0%" stopColor="rgba(255,255,255,.5)"/>
-            <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
-          </radialGradient>
-        </defs>
-        <polygon points="50,4 96,38 76,96 24,96 4,38" fill={`url(#${id}a)`}/>
-        <polygon points="50,4 96,38 50,46" fill={`url(#${id}b)`} opacity=".52"/>
-        <polygon points="50,4 4,38 50,46" fill="rgba(255,255,255,.07)"/>
-        <polygon points="96,38 76,96 50,66 50,46" fill="rgba(0,0,0,.18)"/>
-        <polygon points="4,38 24,96 50,66 50,46" fill="rgba(255,255,255,.05)"/>
-        <polygon points="50,46 50,66 76,96 24,96" fill="rgba(0,0,0,.1)"/>
-        <ellipse cx="37" cy="25" rx="11" ry="7" fill={`url(#${id}c)`} className="gs"/>
-        <circle cx="50" cy="4" r="2.4" fill="rgba(255,255,255,.9)"/>
-      </svg>
+    <svg viewBox="0 0 100 100" style={{width:'100%',height:'100%',overflow:'visible'}}>
+      <defs>
+        <linearGradient id={`${id}a`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={c1}/>
+          <stop offset="52%" stopColor={c2} stopOpacity=".88"/>
+          <stop offset="100%" stopColor={c1} stopOpacity=".68"/>
+        </linearGradient>
+        <linearGradient id={`${id}b`} x1="12%" y1="0%" x2="60%" y2="76%">
+          <stop offset="0%" stopColor="rgba(255,255,255,.7)"/>
+          <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
+        </linearGradient>
+        <radialGradient id={`${id}c`} cx="34%" cy="25%" r="46%">
+          <stop offset="0%" stopColor="rgba(255,255,255,.52)"/>
+          <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
+        </radialGradient>
+      </defs>
+      <polygon points="50,4 96,38 76,96 24,96 4,38" fill={`url(#${id}a)`}/>
+      <polygon points="50,4 96,38 50,46" fill={`url(#${id}b)`} opacity=".52"/>
+      <polygon points="50,4 4,38 50,46" fill="rgba(255,255,255,.07)"/>
+      <polygon points="96,38 76,96 50,66 50,46" fill="rgba(0,0,0,.2)"/>
+      <polygon points="4,38 24,96 50,66 50,46" fill="rgba(255,255,255,.05)"/>
+      <polygon points="50,46 50,66 76,96 24,96" fill="rgba(0,0,0,.11)"/>
+      <ellipse cx="36" cy="24" rx="11" ry="7" fill={`url(#${id}c)`} className="gs"/>
+      <circle cx="50" cy="4" r="2.4" fill="rgba(255,255,255,.92)"/>
+      <circle cx="86" cy="26" r="1.2" fill="rgba(255,255,255,.48)"/>
+    </svg>
+  );
+}
+
+function HexSVG({ id, c1, c2 }) {
+  return (
+    <svg viewBox="0 0 100 100" style={{width:'100%',height:'100%',overflow:'visible'}}>
+      <defs>
+        <linearGradient id={`${id}a`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={c1}/><stop offset="100%" stopColor={c2}/>
+        </linearGradient>
+        <radialGradient id={`${id}b`} cx="32%" cy="26%" r="44%">
+          <stop offset="0%" stopColor="rgba(255,255,255,.58)"/>
+          <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
+        </radialGradient>
+      </defs>
+      <polygon points="50,4 82,18 96,50 82,82 50,96 18,82 4,50 18,18" fill={`url(#${id}a)`}/>
+      <polygon points="50,4 82,18 50,34 18,18" fill="rgba(255,255,255,.14)"/>
+      <polygon points="82,18 96,50 66,50 50,34" fill="rgba(255,255,255,.06)"/>
+      <polygon points="4,50 18,18 50,34 50,66" fill="rgba(255,255,255,.04)"/>
+      <polygon points="50,34 66,50 82,82 18,82 34,50" fill="rgba(0,0,0,.14)"/>
+      <ellipse cx="34" cy="27" rx="12" ry="7" fill={`url(#${id}b)`} className="gs"/>
+      <circle cx="50" cy="4" r="2" fill="rgba(255,255,255,.9)"/>
+      <circle cx="96" cy="50" r="1.3" fill="rgba(255,255,255,.44)"/>
+    </svg>
+  );
+}
+
+function MarquiseSVG({ id, c1, c2 }) {
+  return (
+    <svg viewBox="0 0 100 100" style={{width:'100%',height:'100%',overflow:'visible'}}>
+      <defs>
+        <linearGradient id={`${id}a`} x1="14%" y1="0%" x2="86%" y2="100%">
+          <stop offset="0%" stopColor={c1}/><stop offset="100%" stopColor={c2}/>
+        </linearGradient>
+        <radialGradient id={`${id}b`} cx="35%" cy="26%" r="42%">
+          <stop offset="0%" stopColor="rgba(255,255,255,.62)"/>
+          <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
+        </radialGradient>
+      </defs>
+      <path d="M50,5 Q95,50 50,95 Q5,50 50,5 Z" fill={`url(#${id}a)`}/>
+      <path d="M50,5 Q95,50 50,50 Q26,30 50,5 Z" fill="rgba(255,255,255,.1)"/>
+      <path d="M50,50 Q95,50 50,95 Q26,72 50,50 Z" fill="rgba(0,0,0,.15)"/>
+      <ellipse cx="35" cy="29" rx="12" ry="7" fill={`url(#${id}b)`} className="gs"/>
+      <circle cx="50" cy="5" r="2.2" fill="rgba(255,255,255,.9)"/>
+      <circle cx="50" cy="95" r="2.2" fill="rgba(255,255,255,.5)"/>
+    </svg>
+  );
+}
+
+function OvalSVG({ id, c1, c2 }) {
+  return (
+    <svg viewBox="0 0 100 100" style={{width:'100%',height:'100%',overflow:'visible'}}>
+      <defs>
+        <radialGradient id={`${id}a`} cx="38%" cy="33%" r="54%">
+          <stop offset="0%" stopColor={c1}/><stop offset="100%" stopColor={c2}/>
+        </radialGradient>
+        <radialGradient id={`${id}b`} cx="30%" cy="24%" r="37%">
+          <stop offset="0%" stopColor="rgba(255,255,255,.66)"/>
+          <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
+        </radialGradient>
+      </defs>
+      <circle cx="50" cy="50" r="46" fill={`url(#${id}a)`}/>
+      {[0,60,120,180,240,300].map(a=>{
+        const r=a*Math.PI/180;
+        return <line key={a} x1="50" y1="50" x2={50+46*Math.cos(r)} y2={50+46*Math.sin(r)} stroke="rgba(255,255,255,.04)" strokeWidth="1"/>;
+      })}
+      <circle cx="50" cy="50" r="28" fill="none" stroke="rgba(255,255,255,.04)" strokeWidth="1"/>
+      <circle cx="50" cy="50" r="46" fill={`url(#${id}b)`}/>
+      <circle cx="32" cy="25" r="6" fill="rgba(255,255,255,.38)"/>
+      <circle cx="62" cy="60" r="2.8" fill="rgba(255,255,255,.18)"/>
+    </svg>
+  );
+}
+
+const SHAPE_MAP = { diamond: DiamondSVG, hex: HexSVG, marquise: MarquiseSVG, oval: OvalSVG };
+
+/* Single fixed gem — each one individually fixed to viewport */
+function FixedGem({ shape, size, c1, c2, glow, top, left, right, anim }) {
+  const id = useRef(`g${Math.random().toString(36).slice(2,8)}`).current;
+  const ShapeSVG = SHAPE_MAP[shape];
+  const pad = 14; // breathing room for glow bleed
+
+  return (
+    <div style={{
+      position: 'fixed',
+      top, left, right,
+      width:  size + pad*2,
+      height: size + pad*2,
+      padding: pad,
+      pointerEvents: 'none',
+      zIndex: 9999,
+      animation: anim,
+      willChange: 'transform',
+      overflow: 'visible',
+    }}>
+      <div style={{
+        width: size, height: size,
+        filter: `drop-shadow(0 0 ${Math.round(size*.32)}px ${glow}) drop-shadow(0 ${Math.round(size*.08)}px ${Math.round(size*.22)}px rgba(0,0,0,.65))`,
+        overflow: 'visible',
+      }}>
+        <ShapeSVG id={id} c1={c1} c2={c2}/>
+      </div>
     </div>
   );
 }
 
-function HexGem({ size, c1, c2, glow, cls }) {
-  const id = useRef(`h${Math.random().toString(36).slice(2,7)}`).current;
-  return (
-    <div className={cls} style={{width:size,height:size,
-      filter:`drop-shadow(0 0 ${size*.28}px ${glow}) drop-shadow(0 5px 16px rgba(0,0,0,.65))`}}>
-      <svg viewBox="0 0 100 100" style={{width:'100%',height:'100%'}}>
-        <defs>
-          <linearGradient id={`${id}a`} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor={c1}/><stop offset="100%" stopColor={c2}/>
-          </linearGradient>
-          <radialGradient id={`${id}b`} cx="33%" cy="27%" r="44%">
-            <stop offset="0%" stopColor="rgba(255,255,255,.55)"/>
-            <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
-          </radialGradient>
-        </defs>
-        <polygon points="50,4 82,18 96,50 82,82 50,96 18,82 4,50 18,18" fill={`url(#${id}a)`}/>
-        <polygon points="50,4 82,18 50,34 18,18" fill="rgba(255,255,255,.13)"/>
-        <polygon points="82,18 96,50 66,50 50,34" fill="rgba(255,255,255,.06)"/>
-        <polygon points="50,34 66,50 82,82 18,82 34,50" fill="rgba(0,0,0,.13)"/>
-        <ellipse cx="35" cy="28" rx="12" ry="7" fill={`url(#${id}b)`} className="gs"/>
-        <circle cx="50" cy="4" r="2" fill="rgba(255,255,255,.88)"/>
-        <circle cx="96" cy="50" r="1.4" fill="rgba(255,255,255,.45)"/>
-      </svg>
-    </div>
-  );
-}
-
-function OvalGem({ size, c1, c2, glow, cls }) {
-  const id = useRef(`v${Math.random().toString(36).slice(2,7)}`).current;
-  return (
-    <div className={cls} style={{width:size,height:size,
-      filter:`drop-shadow(0 0 ${size*.32}px ${glow}) drop-shadow(0 5px 16px rgba(0,0,0,.65))`}}>
-      <svg viewBox="0 0 100 100" style={{width:'100%',height:'100%'}}>
-        <defs>
-          <radialGradient id={`${id}a`} cx="38%" cy="33%" r="54%">
-            <stop offset="0%" stopColor={c1}/><stop offset="100%" stopColor={c2}/>
-          </radialGradient>
-          <radialGradient id={`${id}b`} cx="30%" cy="24%" r="38%">
-            <stop offset="0%" stopColor="rgba(255,255,255,.65)"/>
-            <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
-          </radialGradient>
-        </defs>
-        <ellipse cx="50" cy="50" rx="46" ry="46" fill={`url(#${id}a)`}/>
-        {[0,72,144,216,288].map(a=>{const r=a*Math.PI/180;return(
-          <line key={a} x1="50" y1="50" x2={50+46*Math.cos(r)} y2={50+46*Math.sin(r)}
-            stroke="rgba(255,255,255,.05)" strokeWidth="1"/>
-        )})}
-        <ellipse cx="50" cy="50" rx="46" ry="46" fill={`url(#${id}b)`}/>
-        <circle cx="32" cy="25" r="6" fill="rgba(255,255,255,.4)"/>
-        <circle cx="63" cy="62" r="3" fill="rgba(255,255,255,.18)"/>
-      </svg>
-    </div>
-  );
-}
-
-function MarquiseGem({ size, c1, c2, glow, cls }) {
-  const id = useRef(`m${Math.random().toString(36).slice(2,7)}`).current;
-  return (
-    <div className={cls} style={{width:size,height:size,
-      filter:`drop-shadow(0 0 ${size*.3}px ${glow}) drop-shadow(0 5px 16px rgba(0,0,0,.6))`}}>
-      <svg viewBox="0 0 100 100" style={{width:'100%',height:'100%'}}>
-        <defs>
-          <linearGradient id={`${id}a`} x1="14%" y1="0%" x2="86%" y2="100%">
-            <stop offset="0%" stopColor={c1}/><stop offset="100%" stopColor={c2}/>
-          </linearGradient>
-          <radialGradient id={`${id}b`} cx="36%" cy="27%" r="42%">
-            <stop offset="0%" stopColor="rgba(255,255,255,.6)"/>
-            <stop offset="100%" stopColor="rgba(255,255,255,0)"/>
-          </radialGradient>
-        </defs>
-        {/* marquise / eye shape */}
-        <path d="M50,5 Q95,50 50,95 Q5,50 50,5 Z" fill={`url(#${id}a)`}/>
-        <path d="M50,5 Q95,50 50,50 Q25,30 50,5 Z" fill="rgba(255,255,255,.1)"/>
-        <path d="M50,50 Q95,50 50,95 Q25,70 50,50 Z" fill="rgba(0,0,0,.14)"/>
-        <ellipse cx="36" cy="30" rx="12" ry="7" fill={`url(#${id}b)`} className="gs"/>
-        <circle cx="50" cy="5" r="2.2" fill="rgba(255,255,255,.88)"/>
-        <circle cx="50" cy="95" r="2.2" fill="rgba(255,255,255,.5)"/>
-      </svg>
-    </div>
-  );
-}
-
-/* ══ GEM STRIPS ══ */
-function GemStrips() {
-  const leftGems = [
-    { C: DiamondGem,  size:58, c1:'#e9d5ff', c2:'#5b21b6', glow:'rgba(167,139,250,.82)', cls:'gA' },
-    { C: HexGem,      size:44, c1:'#fde68a', c2:'#b45309', glow:'rgba(251,191,36,.78)',  cls:'gB' },
-    { C: MarquiseGem, size:50, c1:'#f9a8d4', c2:'#9d174d', glow:'rgba(236,72,153,.72)', cls:'gC' },
-    { C: OvalGem,     size:38, c1:'#a78bfa', c2:'#4c1d95', glow:'rgba(139,92,246,.75)', cls:'gD' },
-    { C: DiamondGem,  size:46, c1:'#fbbf24', c2:'#92400e', glow:'rgba(251,191,36,.75)', cls:'gE' },
-    { C: HexGem,      size:34, c1:'#c084fc', c2:'#6d28d9', glow:'rgba(192,132,252,.8)', cls:'gF' },
-  ];
-  const rightGems = [
-    { C: HexGem,      size:62, c1:'#fbbf24', c2:'#92400e', glow:'rgba(251,191,36,.85)', cls:'gB' },
-    { C: MarquiseGem, size:42, c1:'#c084fc', c2:'#4c1d95', glow:'rgba(192,132,252,.78)',cls:'gD' },
-    { C: DiamondGem,  size:52, c1:'#fde68a', c2:'#a16207', glow:'rgba(251,191,36,.78)', cls:'gF' },
-    { C: OvalGem,     size:36, c1:'#e879f9', c2:'#7e22ce', glow:'rgba(232,121,249,.72)',cls:'gA' },
-    { C: MarquiseGem, size:48, c1:'#bfdbfe', c2:'#1d4ed8', glow:'rgba(96,165,250,.72)', cls:'gC' },
-    { C: DiamondGem,  size:40, c1:'#bbf7d0', c2:'#15803d', glow:'rgba(74,222,128,.68)', cls:'gE' },
-  ];
-
+/* Left & right gem columns */
+function GemColumns() {
   return (
     <>
-      {/* LEFT strip */}
-      <div className="gem-strip left">
-        {leftGems.map((g, i) => (
-          <g.C key={i} size={g.size} c1={g.c1} c2={g.c2} glow={g.glow} cls={g.cls}/>
-        ))}
-      </div>
-      {/* RIGHT strip */}
-      <div className="gem-strip right">
-        {rightGems.map((g, i) => (
-          <g.C key={i} size={g.size} c1={g.c1} c2={g.c2} glow={g.glow} cls={g.cls}/>
-        ))}
-      </div>
+      {GEM_LEFT.map((g, i) => (
+        <FixedGem key={`L${i}`} {...g} left={0}/>
+      ))}
+      {GEM_RIGHT.map((g, i) => (
+        <FixedGem key={`R${i}`} {...g} right={0}/>
+      ))}
     </>
   );
 }
@@ -336,7 +328,7 @@ function HeroBanner() {
       style={{position:'relative',overflow:'hidden',borderRadius:22,
         background:'linear-gradient(130deg,#040010 0%,#0b001e 35%,#170035 65%,#060014 100%)',
         minHeight:260,
-        boxShadow:'0 0 0 1px rgba(251,191,36,.09),0 28px 88px rgba(0,0,0,.96),inset 0 1px 0 rgba(255,255,255,.035)'}}>
+        boxShadow:'0 0 0 1px rgba(251,191,36,.09),0 28px 88px rgba(0,0,0,.96),inset 0 1px 0 rgba(255,255,255,.03)'}}>
       <div className="ambi-grid"/>
       <div className="scan"/>
       <div style={{position:'absolute',inset:0,pointerEvents:'none',
@@ -409,12 +401,11 @@ function HeroBanner() {
   );
 }
 
-/* ══ GAME DATA — 4 cards in a 2×2 grid ══ */
+/* ══ GAME DATA ══ */
 const GAMES = [
   {
     name:'Battles', page:'Battles', icon:Swords,
-    img: battlesImg,
-    accent:'#c084fc',
+    img: battlesImg, accent:'#c084fc',
     overlay:'linear-gradient(150deg,rgba(192,132,252,.22) 0%,rgba(251,191,36,.11) 55%,rgba(76,29,149,.2) 100%)',
     barGrad:'linear-gradient(90deg,transparent,#c084fc 18%,#fbbf24 50%,#c084fc 82%,transparent)',
     sd:'0 0 0 1px rgba(255,255,255,.055), 0 14px 44px rgba(0,0,0,.92)',
@@ -423,8 +414,7 @@ const GAMES = [
   },
   {
     name:'Cases', page:'Cases', icon:Box,
-    img: casesImg,
-    accent:'#fbbf24',
+    img: casesImg, accent:'#fbbf24',
     overlay:'linear-gradient(150deg,rgba(251,191,36,.2) 0%,rgba(192,132,252,.1) 55%,rgba(120,50,0,.2) 100%)',
     barGrad:'linear-gradient(90deg,transparent,#fbbf24 18%,#c084fc 50%,#fbbf24 82%,transparent)',
     sd:'0 0 0 1px rgba(255,255,255,.055), 0 14px 44px rgba(0,0,0,.92)',
@@ -433,8 +423,7 @@ const GAMES = [
   },
   {
     name:'Coinflip', page:'Coinflip', icon:RotateCcw,
-    img: coinflipImg,
-    accent:'#fbbf24',
+    img: coinflipImg, accent:'#fbbf24',
     overlay:'linear-gradient(150deg,rgba(251,191,36,.2) 0%,rgba(124,58,237,.13) 55%,rgba(76,29,149,.18) 100%)',
     barGrad:'linear-gradient(90deg,transparent,#fbbf24 18%,#a855f7 50%,#fbbf24 82%,transparent)',
     sd:'0 0 0 1px rgba(255,255,255,.055), 0 14px 44px rgba(0,0,0,.92)',
@@ -442,8 +431,7 @@ const GAMES = [
   },
   {
     name:'Crash', page:'Crash', icon:Zap,
-    img: crashImg,
-    accent:'#a855f7',
+    img: crashImg, accent:'#a855f7',
     overlay:'linear-gradient(150deg,rgba(168,85,247,.24) 0%,rgba(251,191,36,.11) 55%,rgba(76,29,149,.22) 100%)',
     barGrad:'linear-gradient(90deg,transparent,#a855f7 18%,#fbbf24 50%,#a855f7 82%,transparent)',
     sd:'0 0 0 1px rgba(255,255,255,.055), 0 14px 44px rgba(0,0,0,.92)',
@@ -465,16 +453,13 @@ function GameCard({ g, i, height }) {
           onMouseEnter={()=>setHov(true)}
           onMouseLeave={()=>setHov(false)}
           style={{height, boxShadow:hov?g.sh:g.sd}}>
-
           <img src={g.img} alt={g.name} className="gc-img"/>
           <div className="gc-vignette"/>
           <div className="gc-overlay" style={{background:g.overlay}}/>
           <div className="gc-sheen"/>
           <div className="gc-bar" style={{background:g.barGrad}}/>
-
-          {/* label */}
           <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:10,
-            padding: height > 200 ? '32px 22px 20px' : '24px 20px 16px'}}>
+            padding:height>200?'32px 22px 20px':'24px 20px 16px'}}>
             <div style={{display:'flex',alignItems:'center',gap:9}}>
               <div style={{
                 display:'flex',alignItems:'center',justifyContent:'center',
@@ -499,8 +484,6 @@ function GameCard({ g, i, height }) {
               )}
             </div>
           </div>
-
-          {/* corner dot */}
           <div style={{
             position:'absolute',top:14,right:16,zIndex:9,
             width:5,height:5,borderRadius:'50%',
@@ -556,15 +539,13 @@ export default function Home() {
     }}>
       <style>{CSS}</style>
 
-      {/* Fixed gem strips — left & right edges */}
-      <GemStrips/>
+      {/* Gems rendered first, individually fixed — nothing can clip them */}
+      <GemColumns/>
 
       <div style={{position:'relative',zIndex:1,display:'flex',flexDirection:'column',gap:32}}>
         <HeroBanner/>
-
         <section>
           <SectionHead/>
-          {/* Clean 2×2 equal grid — all 4 gamemodes same size */}
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
             {GAMES.map((g,i)=>(
               <GameCard key={g.name} g={g} i={i} height={210}/>
