@@ -6,7 +6,6 @@ import { usePlayerAvatars, safeAvatarUrl } from './usePlayerAvatars';
 import { useProvablyFairArena } from './useprovablyfair';
 import ProvablyFairVerifier from './Provablyfairverifier';
 
-/* ─── CSS ─────────────────────────────────────────────────────────── */
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 :root {
@@ -61,6 +60,9 @@ const RARITY = {
 };
 const rr = r => RARITY[r] || RARITY.common;
 
+// A slot is real if it has a non-empty email
+const isRealPlayer = (p) => p?.email && p.email !== '';
+
 const TEAM_PALETTE = [
   {color:'#f5c842',glow:'rgba(245,200,66,.35)',bg:'rgba(245,200,66,.07)',border:'rgba(245,200,66,.22)'},
   {color:'#c084fc',glow:'rgba(192,132,252,.35)',bg:'rgba(192,132,252,.07)',border:'rgba(192,132,252,.22)'},
@@ -70,7 +72,7 @@ const TEAM_PALETTE = [
 const PLAYER_COLORS = ['#f5c842','#c084fc','#60a5fa','#34d399','#f472b6','#fb923c','#22d3ee','#a3e635'];
 
 /* ─── Audio ──────────────────────────────────────────────────────── */
-let _ctx=null, _keepaliveStarted=false;
+let _ctx=null,_keepaliveStarted=false;
 const getCtx=()=>{try{const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;if(!_ctx)_ctx=new AC();return _ctx;}catch{return null;}};
 const startKeepalive=(c)=>{if(_keepaliveStarted)return;_keepaliveStarted=true;try{const osc=c.createOscillator(),gain=c.createGain();gain.gain.value=0;osc.connect(gain);gain.connect(c.destination);osc.start();}catch{}};
 const unlockAudio=()=>{const c=getCtx();if(!c)return;if(c.state==='suspended')c.resume();try{const b=c.createBuffer(1,1,c.sampleRate),s=c.createBufferSource();s.buffer=b;s.connect(c.destination);s.start(0);}catch{}startKeepalive(c);};
@@ -80,24 +82,16 @@ const stopSpin=()=>{if(_tick){clearTimeout(_tick);_tick=null;}};
 const playSpin=(fast)=>{stopSpin();const dur=fast?1500:3100,t0=Date.now();const tick=()=>{const c=getCtx();if(c&&c.state==='running'){try{const n=c.currentTime,o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='triangle';o.frequency.setValueAtTime(260+Math.random()*120,n);g.gain.setValueAtTime(0.028,n);g.gain.exponentialRampToValueAtTime(0.001,n+.065);o.start(n);o.stop(n+.065);}catch{}}const el=Date.now()-t0;if(el<dur){const p=el/dur;_tick=setTimeout(tick,35+p*290);}};const c=getCtx();if(c&&c.state==='suspended'){c.resume().then(tick).catch(tick);}else tick();};
 const playReward=()=>{const c=getCtx();if(!c)return;const run=()=>{try{const n=c.currentTime;[[523.25,0],[659.25,.11],[783.99,.22],[1046.5,.34]].forEach(([freq,dt])=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='sine';o.frequency.setValueAtTime(freq,n+dt);g.gain.setValueAtTime(0,n+dt);g.gain.linearRampToValueAtTime(0.16,n+dt+.04);g.gain.exponentialRampToValueAtTime(0.001,n+dt+.48);o.start(n+dt);o.stop(n+dt+.5);});[523.25,659.25,783.99].forEach(freq=>{const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);o.type='triangle';o.frequency.setValueAtTime(freq,n+.34);g.gain.setValueAtTime(0,n+.34);g.gain.linearRampToValueAtTime(0.055,n+.46);g.gain.exponentialRampToValueAtTime(0.001,n+1.4);o.start(n+.34);o.stop(n+1.4);});}catch{}};if(c.state==='suspended'){c.resume().then(run).catch(run);}else run();};
 
-/* ─── Particles ──────────────────────────────────────────────────── */
 const Particles=React.memo(({accent='#f5c842',count=10})=>{const pts=useRef(Array.from({length:count},(_,i)=>({id:i,left:`${6+Math.random()*88}%`,bottom:`${Math.random()*14}%`,size:1.2+Math.random()*2.2,d:`${3+Math.random()*5}s`,delay:`${-Math.random()*7}s`,dx:`${(Math.random()-.5)*34}px`}))).current;return <div style={{position:'absolute',inset:0,pointerEvents:'none',overflow:'hidden'}}>{pts.map(p=><div key={p.id} className="ba-pt" style={{left:p.left,bottom:p.bottom,width:p.size,height:p.size,background:accent,boxShadow:`0 0 ${p.size*3}px ${accent}`,'--d':p.d,'--delay':p.delay,'--dx':p.dx}}/>)}</div>;});
-
-/* ─── Confetti ───────────────────────────────────────────────────── */
 const ConfettiEffect=({active})=>{const ref=useRef(null);useEffect(()=>{if(!active)return;const cv=ref.current;if(!cv)return;const ctx=cv.getContext('2d');cv.width=window.innerWidth;cv.height=window.innerHeight;const ps=Array.from({length:180},()=>({x:Math.random()*cv.width,y:-20,r:3+Math.random()*7,color:['#f5c842','#c084fc','#60a5fa','#34d399','#f472b6','#00e5ff'][Math.floor(Math.random()*6)],vx:(Math.random()-.5)*5,vy:2+Math.random()*4,a:Math.random()*360,va:(Math.random()-.5)*8}));let fr;const draw=()=>{ctx.clearRect(0,0,cv.width,cv.height);ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.a+=p.va;if(p.y>cv.height){p.y=-20;p.x=Math.random()*cv.width;}ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.a*Math.PI/180);ctx.fillStyle=p.color;ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r);ctx.restore();});fr=requestAnimationFrame(draw);};draw();const t=setTimeout(()=>cancelAnimationFrame(fr),5500);return()=>{cancelAnimationFrame(fr);clearTimeout(t);};},[active]);if(!active)return null;return <canvas ref={ref} style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:9999}}/>;};
-
-/* ─── Player Avatar ──────────────────────────────────────────────── */
 const PlayerAvatar=React.memo(({player,color,size=38,iconSize=15})=>{const url=safeAvatarUrl(player?.avatar_url);const[loaded,setLoaded]=useState(false);const[err,setErr]=useState(false);const urlRef=useRef(url);useEffect(()=>{if(urlRef.current!==url){urlRef.current=url;setLoaded(false);setErr(false);}},[url]);const showImg=url&&!err;return(<div style={{width:size,height:size,borderRadius:'50%',overflow:'hidden',background:`${color}1e`,border:`2px solid ${color}50`,display:'flex',alignItems:'center',justifyContent:'center',position:'relative',flexShrink:0,boxShadow:`0 0 10px ${color}2a`}}>{showImg&&<img src={url} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',opacity:loaded?1:0,transition:'opacity .22s'}} onLoad={()=>setLoaded(true)} onError={()=>setErr(true)}/>}<div style={{opacity:showImg&&loaded?0:1,transition:'opacity .22s',display:'flex',alignItems:'center',justifyContent:'center',width:'100%',height:'100%'}}>{player?.isBot?<Bot style={{width:iconSize,height:iconSize,color}}/>:<User style={{width:iconSize,height:iconSize,color}}/>}</div></div>);});
 
-/* ─── Vertical Spinner ───────────────────────────────────────────── */
 const VerticalSpinner=({items,winnerItem,onDone,fast})=>{const H=84,WIN=28,TOTAL=36,VH=252,dur=fast?1.35:2.9,spinMs=fast?1450:3050;useEffect(()=>{const t=setTimeout(onDone,spinMs);return()=>clearTimeout(t);},[]);const strip=useRef(Array.from({length:TOTAL},(_,i)=>i===WIN?winnerItem:items[Math.floor(Math.random()*items.length)])).current;const targetY=-(WIN*H-VH/2+H/2);const rc=rr(winnerItem?.rarity);return(<><div style={{position:'absolute',inset:'0 0',top:'50%',transform:'translateY(-50%)',height:H,zIndex:10,pointerEvents:'none',background:`linear-gradient(180deg,transparent 0%,${rc.bg} 30%,${rc.bg} 70%,transparent 100%)`,borderTop:`1.5px solid ${rc.border}`,borderBottom:`1.5px solid ${rc.color}44`}}/><div style={{position:'absolute',top:0,left:0,right:0,height:78,zIndex:20,pointerEvents:'none',background:'linear-gradient(to bottom,#04010e 0%,transparent 100%)'}}/><div style={{position:'absolute',bottom:0,left:0,right:0,height:78,zIndex:20,pointerEvents:'none',background:'linear-gradient(to top,#04010e 0%,transparent 100%)'}}/><motion.div style={{position:'absolute',left:0,right:0,top:0,display:'flex',flexDirection:'column'}} initial={{y:0}} animate={{y:targetY}} transition={{duration:dur,ease:[0.03,0.78,0.14,1]}}>{strip.map((item,i)=>{const rc2=rr(item?.rarity);return(<div key={i} style={{height:H,display:'flex',alignItems:'center',gap:10,padding:'0 12px',flexShrink:0}}><div style={{width:52,height:52,borderRadius:12,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:rc2.bg,border:`1px solid ${rc2.border}`}}>{item?.image||item?.image_url?<img src={item.image||item.image_url} alt={item?.name} style={{width:40,height:40,objectFit:'contain',filter:rc2.glow}}/>:<span style={{fontSize:22}}>📦</span>}</div><div style={{flex:1,minWidth:0}}><p style={{fontSize:11,color:'rgba(240,234,255,.65)',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:3}}>{item?.name||'---'}</p><span style={{fontSize:13,color:rc2.color,fontWeight:800}}>{item?.value?.toLocaleString()||0}</span></div></div>);})}</motion.div></>);};
 
-/* ─── Item Chip ──────────────────────────────────────────────────── */
 const ItemChip=React.memo(({item,index=0})=>{const rc=rr(item?.rarity);return(<div className="ba-item-in" style={{display:'flex',alignItems:'center',gap:8,padding:'6px 10px',borderRadius:10,background:rc.bg,border:`1px solid ${rc.border}`,animationDelay:`${index*0.033}s`,borderLeft:`3px solid ${rc.color}`}}><div style={{width:30,height:30,borderRadius:8,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,.25)'}}>{item?.image||item?.image_url?<img src={item.image||item.image_url} alt={item?.name} style={{width:24,height:24,objectFit:'contain',filter:rc.glow}}/>:<span style={{fontSize:13}}>📦</span>}</div><div style={{flex:1,minWidth:0}}><p style={{fontSize:10,color:'rgba(240,234,255,.55)',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:1}}>{item?.name}</p><p style={{fontSize:11,color:rc.color,fontWeight:800}}>{item?.value?.toLocaleString()}</p></div></div>);});
 
-/* ─── Player Column ──────────────────────────────────────────────── */
 const PlayerColumn=({player,playerColor:pc,isWinner,wonItems,spinPhase,caseItems,spinnerKey,spinnerItem,magicItem,onSpinDone,onMagicSpinDone,fast,showPct,pct})=>{
-  if(!player)return null;
+  if(!player||!isRealPlayer(player))return null;
   const total=wonItems.reduce((s,it)=>s+(it?.value||0),0);
   const topItems=caseItems.filter(it=>['epic','legendary'].includes(it.rarity));
   const magicPool=topItems.length>0?topItems:caseItems;
@@ -149,12 +143,11 @@ const VsDivider=()=>(<div style={{position:'relative',display:'flex',alignItems:
 const ModeBadge=({icon,color,label})=>(<span style={{display:'inline-flex',alignItems:'center',gap:4,fontSize:9,fontWeight:700,padding:'3px 9px',borderRadius:20,background:`${color}12`,color,border:`1px solid ${color}2e`,letterSpacing:'.1em',textTransform:'uppercase'}}>{icon} {label}</span>);
 const ModeNotice=({icon,color,children})=>(<div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 16px',borderRadius:12,background:`${color}0d`,border:`1px solid ${color}26`}}><span style={{fontSize:15,flexShrink:0}}>{icon}</span><p style={{fontSize:12,color:`${color}c0`,fontWeight:600}}>{children}</p></div>);
 
-/* ─── Waiting Lobby ──────────────────────────────────────────────── */
 const WaitingLobby=({battle,players,teams,userEmail,onJoin,onAddBot,onFillBots,balance})=>{
   const maxPlayers=battle.max_players||2;
   const isCreator=battle.creator_email===userEmail;
   const hasJoined=players.some(p=>p&&p.email===userEmail&&!p.isBot);
-  const filled=players.filter(p=>p&&p.email).length;
+  const filled=players.filter(isRealPlayer).length;
   const wl=teams&&teams.length>0?teams:[Array.from({length:Math.ceil(maxPlayers/2)},(_,i)=>i),Array.from({length:Math.floor(maxPlayers/2)},(_,i)=>i+Math.ceil(maxPlayers/2))];
   return(
     <div style={{position:'relative',overflow:'hidden',borderRadius:20,background:'linear-gradient(145deg,#07041a,#0d0822,#04010f)',border:'1px solid rgba(157,111,255,.16)',padding:'24px 20px',boxShadow:'0 0 80px rgba(157,111,255,.07)'}}>
@@ -182,7 +175,9 @@ const WaitingLobby=({battle,players,teams,userEmail,onJoin,onAddBot,onFillBots,b
                 {wl.length>1&&<div style={{textAlign:'center'}}><span className="ba-title" style={{fontSize:11,fontWeight:700,padding:'3px 14px',borderRadius:20,background:pal.bg,color:pal.color,border:`1px solid ${pal.border}`,textTransform:'uppercase',letterSpacing:'.1em'}}>Team {ti+1}</span></div>}
                 <div style={{display:'flex',gap:10}}>
                   {memberIndices.map(gi=>{
-                    const p=players[gi],f=p&&p.email,canJoin=!f&&!hasJoined&&!isCreator;
+                    const p=players[gi];
+                    const f=isRealPlayer(p);
+                    const canJoin=!f&&!hasJoined&&!isCreator;
                     return(
                       <div key={gi} style={{flex:1,minWidth:110,borderRadius:16,background:f?pal.bg:'rgba(255,255,255,.02)',border:`1px solid ${f?pal.border:'rgba(255,255,255,.06)'}`,minHeight:190,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,padding:'18px 12px',transition:'border-color .3s,background .3s'}}>
                         {f?(
@@ -213,13 +208,20 @@ export default function BattleArena({
   onClose, onReward, onJoin, onAddBot, onFillBots,
   onBattleUpdated, balance=0,
 }) {
-  const players    = usePlayerAvatars(rawPlayers);
-  const totalRounds= selectedCases.length;
+  // rawPlayers may contain empty-placeholder objects with email:''.
+  // We keep the full array for index-alignment with teams_config and allRolled,
+  // but derive a count of real players for spin-done tracking.
+  const players = usePlayerAvatars(rawPlayers);
+  const totalRounds = selectedCases.length;
 
-  // FIX: stable teamList — don't use players.length as dep, use raw teams prop
+  // Count only real (non-empty) players — used for roundDone threshold
+  const realPlayerCount = useMemo(()=>rawPlayers.filter(isRealPlayer).length, [rawPlayers]);
+
+  // teamList uses the raw teams prop so indices stay stable
   const teamList = useMemo(()=>{
     if (teams && teams.length > 0) return teams;
-    return [rawPlayers.map((_,i)=>i)];
+    // Fallback: one team with only real player indices
+    return [rawPlayers.map((_,i)=>i).filter(i=>isRealPlayer(rawPlayers[i]))];
   }, [teams, rawPlayers]);
 
   const isWaiting = battle?.status==='waiting';
@@ -228,11 +230,10 @@ export default function BattleArena({
     useProvablyFairArena(battle, selectedCases, players, battleModes);
 
   const [showVerifier, setShowVerifier] = useState(false);
-
   const cbRef=useRef(onBattleUpdated);
   useEffect(()=>{cbRef.current=onBattleUpdated;},[onBattleUpdated]);
 
-  const lastFilled=useRef(-1), lastStatus=useRef('');
+  const lastFilled=useRef(-1),lastStatus=useRef('');
   useEffect(()=>{
     if(!isWaiting||!battle?.id)return;
     const poll=async()=>{
@@ -240,7 +241,7 @@ export default function BattleArena({
         const {base44}=await import('@/api/base44Client');
         const res=await base44.entities.CaseBattle.filter({id:battle.id});
         const u=res?.[0];if(!u)return;
-        const fc=(u.players||[]).filter(p=>p&&p.email).length,mp=u.max_players||2;
+        const fc=(u.players||[]).filter(isRealPlayer).length,mp=u.max_players||2;
         if(fc!==lastFilled.current||u.status!==lastStatus.current){lastFilled.current=fc;lastStatus.current=u.status;if(cbRef.current)cbRef.current(u);}
         if(fc>=mp&&u.status==='waiting')await base44.entities.CaseBattle.update(u.id,{status:'in_progress'});
       }catch{}
@@ -251,36 +252,31 @@ export default function BattleArena({
   const m=battleModes&&typeof battleModes==='object'?battleModes:{};
   const isCrazy=m.crazy,isTerminal=m.terminal,isGroup=m.group,isMagicSpin=m.magic_spin,isFast=m.fast_mode,isJackpot=m.jackpot;
 
-  const [phase,    setPhase]  = useState('countdown');
-  const [countdown,setCd]     = useState(3);
-  const [currentRound,setCR]  = useState(0);
+  const [phase,setPhase]       = useState('countdown');
+  const [countdown,setCd]      = useState(3);
+  const [currentRound,setCR]   = useState(0);
+  // playerItems and pPhases are indexed by rawPlayers index (including empty slots)
+  const [playerItems,setPI]    = useState(()=>Array.from({length:rawPlayers.length},()=>[]));
+  const [done,setDone]         = useState(false);
+  const [jackpot,setJackpot]   = useState(false);
+  const [winnerTeam,setWT]     = useState(null);
+  const [confetti,setConf]     = useState(false);
+  const [pPhases,setPP]        = useState(()=>Array.from({length:rawPlayers.length},()=>'idle'));
 
-  // FIX: initialize playerItems with correct length based on rawPlayers, not processed players
-  const [playerItems, setPI]  = useState(()=>Array.from({length:rawPlayers.length},()=>[]));
-  const [done,     setDone]   = useState(false);
-  const [jackpot,  setJackpot]= useState(false);
-  const [winnerTeam,setWT]    = useState(null);
-  const [confetti, setConf]   = useState(false);
-  const [pPhases,  setPP]     = useState(()=>Array.from({length:rawPlayers.length},()=>'idle'));
-
-  // FIX: sync playerItems and pPhases length if players count changes
   useEffect(()=>{
-    setPI(prev => {
-      if (prev.length === rawPlayers.length) return prev;
-      const next = Array.from({length:rawPlayers.length},(_,i)=>prev[i]||[]);
-      return next;
+    setPI(prev=>{
+      if(prev.length===rawPlayers.length)return prev;
+      return Array.from({length:rawPlayers.length},(_,i)=>prev[i]||[]);
     });
-    setPP(prev => {
-      if (prev.length === rawPlayers.length) return prev;
+    setPP(prev=>{
+      if(prev.length===rawPlayers.length)return prev;
       return Array.from({length:rawPlayers.length},(_,i)=>prev[i]||'idle');
     });
-  }, [rawPlayers.length]);
+  },[rawPlayers.length]);
 
-  const allRolled=useRef(null), roundDone=useRef(0), crRef=useRef(0), rewardGiven=useRef(false);
+  const allRolled=useRef(null),roundDone=useRef(0),crRef=useRef(0),rewardGiven=useRef(false);
 
-  useEffect(()=>{
-    if(fairRolls) allRolled.current=fairRolls;
-  },[fairRolls]);
+  useEffect(()=>{if(fairRolls)allRolled.current=fairRolls;},[fairRolls]);
 
   useEffect(()=>{
     if(isWaiting||phase!=='countdown'||fairStatus!=='ready')return;
@@ -292,8 +288,8 @@ export default function BattleArena({
     roundDone.current=0;
     crRef.current=r;
     setCR(r);
-    // FIX: set all players to spinning, not just players.length
-    setPP(Array.from({length:rawPlayers.length},()=>'spinning'));
+    // Only set real players to 'spinning'; empty slots stay 'idle'
+    setPP(prev=>prev.map((s,i)=>isRealPlayer(rawPlayers[i])?'spinning':s));
     playSpin(isFast);
   };
 
@@ -302,10 +298,7 @@ export default function BattleArena({
     const r=crRef.current;
     if(!allRolled.current?.[r]?.[pi]){
       roundDone.current+=1;
-      if(roundDone.current>=rawPlayers.length){
-        if(r+1>=totalRounds)setTimeout(()=>isJackpot?setJackpot(true):finishBattle(),isFast?1100:2400);
-        else setTimeout(()=>launchRound(r+1),isFast?1400:4000);
-      }
+      checkRoundComplete(r);
       return;
     }
     const rolled=allRolled.current[r];
@@ -318,23 +311,26 @@ export default function BattleArena({
 
   const handleMagicDone=(pi)=>{
     stopSpin();
-    if(!allRolled.current?.[crRef.current]){roundDone.current+=1;return;}
+    if(!allRolled.current?.[crRef.current]){roundDone.current+=1;checkRoundComplete(crRef.current);return;}
     markDone(pi,crRef.current);
   };
 
-  const markDone=(pi,r)=>{
-    if(!allRolled.current?.[r]?.[pi]){roundDone.current+=1;return;}
-    const rolled=allRolled.current[r];
-    setPI(prev=>{const n=[...prev];n[pi]=[...(n[pi]||[]),rolled[pi].item];return n;});
-    setPP(prev=>{const n=[...prev];n[pi]='idle';return n;});
-    roundDone.current+=1;
-    if(roundDone.current>=rawPlayers.length){
+  const checkRoundComplete=(r)=>{
+    if(roundDone.current>=realPlayerCount){
       if(r+1>=totalRounds)setTimeout(()=>isJackpot?setJackpot(true):finishBattle(),isFast?1100:2400);
       else setTimeout(()=>launchRound(r+1),isFast?1400:4000);
     }
   };
 
-  // FIX: getTotal reads from allRolled (the source of truth) not playerItems state
+  const markDone=(pi,r)=>{
+    if(!allRolled.current?.[r]?.[pi]){roundDone.current+=1;checkRoundComplete(r);return;}
+    const rolled=allRolled.current[r];
+    setPI(prev=>{const n=[...prev];n[pi]=[...(n[pi]||[]),rolled[pi].item];return n;});
+    setPP(prev=>{const n=[...prev];n[pi]='idle';return n;});
+    roundDone.current+=1;
+    checkRoundComplete(r);
+  };
+
   const getTotal=(pi)=>{
     if(!allRolled.current)return 0;
     if(isTerminal)return allRolled.current[totalRounds-1]?.[pi]?.item?.value||0;
@@ -346,7 +342,6 @@ export default function BattleArena({
     if(forced!==null)wi=forced;
     else if(isGroup)wi=-1;
     else{
-      // FIX: use getTotal (reads from allRolled) for correct values
       const v=teamList.map(mi=>mi.reduce((s,pi)=>s+getTotal(pi),0)/mi.length);
       wi=isCrazy?v.indexOf(Math.min(...v)):v.indexOf(Math.max(...v));
     }
@@ -356,14 +351,13 @@ export default function BattleArena({
       rewardGiven.current=true;
       const tv=allRolled.current.reduce((a,rnd)=>a+rnd.reduce((b,r)=>b+(r?.item?.value||0),0),0);
       const upi=rawPlayers.findIndex(p=>p.email===userEmail);
-      if(isGroup){setConf(true);setTimeout(()=>setConf(false),5500);onReward&&onReward(Math.floor(tv/rawPlayers.length));}
+      if(isGroup){setConf(true);setTimeout(()=>setConf(false),5500);onReward&&onReward(Math.floor(tv/realPlayerCount));}
       else if(wi>=0&&teamList[wi]?.includes(upi)){setConf(true);setTimeout(()=>setConf(false),5500);onReward&&onReward(Math.floor(tv/(teamList[wi]?.length||1)));}
-
       import('@/api/base44Client').then(({base44:b44})=>{
         allRolled.current.forEach((rnd,roundIdx)=>{
           rnd.forEach((rolled,pi)=>{
             const p=rawPlayers[pi];
-            if(!p?.email||p.isBot)return;
+            if(!isRealPlayer(p)||p.isBot)return;
             const item=rolled?.item;if(!item)return;
             b44.entities.UserInventory.create({user_email:p.email,item_name:item.name,item_image_url:item.image||item.image_url||null,rarity:item.rarity,value:item.value,source:'battle_win',source_case:selectedCases[roundIdx]?.name||'',status:'owned'}).catch(()=>{});
           });
@@ -372,21 +366,19 @@ export default function BattleArena({
     }
   };
 
-  // FIX: use playerItems for display totals (animated scores) and allRolled for winner calc
-  const pTotals  = playerItems.map(its=>its.reduce((s,it)=>s+(it?.value||0),0));
-  const tTotals  = teamList.map(mi=>mi.reduce((s,pi)=>s+(pTotals[pi]||0),0));
-  const grandPot = (battle?.max_players||rawPlayers.length)*(battle?.entry_cost||0);
-  const allPIs   = teamList.flat();
-  const colMap   = {};
+  const pTotals = playerItems.map(its=>its.reduce((s,it)=>s+(it?.value||0),0));
+  const tTotals = teamList.map(mi=>mi.reduce((s,pi)=>s+(pTotals[pi]||0),0));
+  const grandPot = (battle?.max_players||realPlayerCount)*(battle?.entry_cost||0);
+  const allPIs  = teamList.flat().filter(pi=>isRealPlayer(rawPlayers[pi]));
+  const colMap  = {};
   allPIs.forEach((pi,i)=>{colMap[pi]=PLAYER_COLORS[i%PLAYER_COLORS.length];});
   const grandTotal    = pTotals.reduce((s,v)=>s+v,0);
   const totalItemsVal = allRolled.current
-    ? allRolled.current.reduce((a,rnd)=>a+rnd.reduce((b,r)=>b+(r?.item?.value||0),0),0)
-    : 0;
+    ? allRolled.current.reduce((a,rnd)=>a+rnd.reduce((b,r)=>b+(r?.item?.value||0),0),0) : 0;
 
   let payoutLabel='';
   if(done){
-    if(isGroup)payoutLabel=`Split: ${Math.floor(totalItemsVal/rawPlayers.length).toLocaleString()} coins each`;
+    if(isGroup)payoutLabel=`Split: ${Math.floor(totalItemsVal/realPlayerCount).toLocaleString()} coins each`;
     else if(winnerTeam>=0){const wc=teamList[winnerTeam]?.length||1;payoutLabel=wc===1?`Winner takes ${totalItemsVal.toLocaleString()} coins`:`${Math.floor(totalItemsVal/wc).toLocaleString()} coins each`;}
   }
 
@@ -399,9 +391,7 @@ export default function BattleArena({
     isJackpot&&{icon:'👑',color:'#f5c842',label:'Jackpot'},
   ].filter(Boolean);
 
-  const getCaseItems=useCallback((roundIndex)=>{
-    return selectedCases[roundIndex]?.items||[];
-  },[selectedCases]);
+  const getCaseItems=useCallback((roundIndex)=>selectedCases[roundIndex]?.items||[],[selectedCases]);
 
   if(isWaiting)return(
     <div className="ba" style={{background:'var(--bg-deep)',minHeight:'100vh',padding:'20px 0 80px'}}>
@@ -429,9 +419,8 @@ export default function BattleArena({
       <style>{CSS}</style>
       <ConfettiEffect active={confetti}/>
       {showVerifier&&(<ProvablyFairVerifier battle={{...battle,eos_block_hash:blockHash,eos_block_num:blockNum}} selectedCases={selectedCases} players={players} battleModes={battleModes} onClose={()=>setShowVerifier(false)}/>)}
-
       <div style={{maxWidth:900,margin:'0 auto',display:'flex',flexDirection:'column',gap:14,padding:'0 16px'}}>
-        {/* header */}
+
         <div style={{position:'relative',overflow:'hidden',borderRadius:16,background:'linear-gradient(120deg,#07041a 0%,#0d0822 50%,#060110 100%)',border:'1px solid rgba(157,111,255,.14)',padding:'14px 18px'}}>
           <div className="ba-scan"/><div className="ba-noise"/>
           <div style={{position:'absolute',right:0,top:0,bottom:0,width:'35%',background:'radial-gradient(ellipse 80% 100% at 100% 50%,rgba(157,111,255,.09) 0%,transparent 70%)',pointerEvents:'none'}}/>
@@ -481,14 +470,13 @@ export default function BattleArena({
               <div style={{display:'flex',alignItems:'center',justifyContent:'center',gap:26,overflowX:'auto',flexWrap:'wrap'}}>
                 {teamList.map((mi,ti)=>{
                   const isW=isGroup||ti===winnerTeam,pal=TEAM_PALETTE[ti%TEAM_PALETTE.length];
-                  // Use getTotal (from allRolled) for final display — correct values
                   const teamTotal=mi.reduce((s,pi)=>s+getTotal(pi),0);
                   return(
                     <React.Fragment key={ti}>
                       <motion.div initial={{opacity:0,y:14}} animate={{opacity:1,y:0}} transition={{delay:ti*.14}} style={{opacity:isW?1:.22,display:'flex',flexDirection:'column',alignItems:'center',gap:11}}>
                         {teamList.length>1&&<span className="ba-title" style={{fontSize:11,fontWeight:700,color:pal.color,textTransform:'uppercase',letterSpacing:'.12em'}}>Team {ti+1} · {teamTotal.toLocaleString()}</span>}
                         <div style={{display:'flex',gap:16,justifyContent:'center'}}>
-                          {mi.map(pi=>(
+                          {mi.filter(pi=>isRealPlayer(rawPlayers[pi])).map(pi=>(
                             <div key={pi} style={{display:'flex',flexDirection:'column',alignItems:'center',gap:7,width:66}}>
                               {isW&&<span style={{fontSize:17,marginBottom:1}}>{isGroup?'🎁':'👑'}</span>}
                               <PlayerAvatar player={players[pi]} color={pal.color} size={50} iconSize={21}/>
@@ -508,7 +496,6 @@ export default function BattleArena({
           </div>
         )}
 
-        {/* countdown */}
         <AnimatePresence>
           {phase==='countdown'&&(
             <motion.div key="cd" initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0,transition:{duration:.3}}} style={{position:'fixed',inset:0,zIndex:9000,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',background:'rgba(3,0,13,.94)',gap:34,backdropFilter:'blur(8px)'}}>
@@ -532,16 +519,18 @@ export default function BattleArena({
           )}
         </AnimatePresence>
 
-        {/* player columns */}
         <div style={{display:'flex',gap:8,alignItems:'stretch',width:'100%'}}>
           {teamList.map((mi,ti)=>{
             const pal=TEAM_PALETTE[ti%TEAM_PALETTE.length];
+            const teamTotal=done?mi.reduce((s,pi)=>s+getTotal(pi),0):0;
             return(
               <React.Fragment key={ti}>
                 <div style={{flex:1,display:'flex',flexDirection:'column',gap:8,minWidth:0}}>
-                  {teamList.length>1&&<div style={{textAlign:'center'}}><span className="ba-title" style={{fontSize:10,fontWeight:700,padding:'3px 14px',borderRadius:20,background:pal.bg,color:pal.color,border:`1px solid ${pal.border}`,textTransform:'uppercase',letterSpacing:'.12em'}}>Team {ti+1}{done?` · ${teamList[ti].reduce((s,pi)=>s+getTotal(pi),0).toLocaleString()}`:''}</span></div>}
+                  {teamList.length>1&&<div style={{textAlign:'center'}}><span className="ba-title" style={{fontSize:10,fontWeight:700,padding:'3px 14px',borderRadius:20,background:pal.bg,color:pal.color,border:`1px solid ${pal.border}`,textTransform:'uppercase',letterSpacing:'.12em'}}>Team {ti+1}{done?` · ${teamTotal.toLocaleString()}`:''}</span></div>}
                   <div style={{display:'flex',gap:8,alignItems:'stretch'}}>
                     {mi.map(pi=>{
+                      // Skip empty placeholder slots entirely — don't render a column for them
+                      if(!isRealPlayer(rawPlayers[pi]))return null;
                       const r=crRef.current;
                       const rolled=allRolled.current?.[r]?.[pi];
                       const caseItems=getCaseItems(r);
@@ -549,7 +538,7 @@ export default function BattleArena({
                         <PlayerColumn
                           key={pi}
                           player={players[pi]}
-                          playerColor={colMap[pi]}
+                          playerColor={colMap[pi]||PLAYER_COLORS[0]}
                           isWinner={done&&(isGroup||ti===winnerTeam)}
                           wonItems={playerItems[pi]||[]}
                           spinPhase={pPhases[pi]||'idle'}
