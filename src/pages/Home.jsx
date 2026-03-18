@@ -7,9 +7,9 @@ import { useWallet } from '../components/game/useWallet';
 import { motion, useMotionValue, useSpring } from 'framer-motion';
 import { Trophy, ChevronRight, Swords, Box, RotateCcw, Zap, Star, Gift } from 'lucide-react';
 
-const irishImg = new URL('../assets/Luck Of The Irish.png', import.meta.url).href;
-const roseImg  = new URL('../assets/Rose Love.png',        import.meta.url).href;
-const vtechImg = new URL('../assets/V-Tech.png',           import.meta.url).href;
+const vtechImg = 'https://i.imgur.com/doYHRMp.png';
+const roseImg  = 'https://i.imgur.com/WVoUpzN.png';
+const irishImg = 'https://i.imgur.com/7KIsUqY.png';
 
 /* ══════════ CSS ══════════ */
 const CSS = `
