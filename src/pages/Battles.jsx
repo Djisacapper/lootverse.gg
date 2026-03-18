@@ -298,23 +298,35 @@ function BattleRow({ battle: b, user, balance, cases, onJoin, onWatch, onView, i
           </div>
         </div>
 
-        {/* Case preview */}
-        <div style={{display:'flex',alignItems:'center',gap:6,flex:1,minWidth:0}}>
-          {caseTemplate ? Array.from({length:Math.min(5,b.rounds||1)}).map((_,i)=>{
-            const imgUrl=caseTemplate.image_url||caseTemplate.image||null;
-            return (
-              <motion.div key={i} animate={{y:hov?-3:0}} transition={{delay:i*.04,type:'spring',stiffness:200,damping:16}}
-                style={{width:46,height:46,borderRadius:10,flexShrink:0,background:imgUrl?`url('${imgUrl}') center/cover`:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',boxShadow:hov?'0 4px 16px rgba(0,0,0,.6)':'0 2px 8px rgba(0,0,0,.5)',transition:'box-shadow .25s',display:'flex',alignItems:'center',justifyContent:'center'}}>
-                {!imgUrl&&<span style={{fontSize:10,color:'rgba(255,255,255,.25)',fontWeight:700,textAlign:'center',padding:'0 4px',lineHeight:1.2}}>{caseTemplate.name?.[0]||'?'}</span>}
-              </motion.div>
-            );
-          }) : (
-            <div style={{padding:'6px 12px',borderRadius:10,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)'}}>
-              <span style={{fontSize:12,color:'rgba(255,255,255,.3)',fontWeight:700}}>{b.case_name||'Case'}</span>
-            </div>
-          )}
-          {b.rounds>5&&<span style={{fontSize:11,color:'rgba(255,255,255,.3)',fontWeight:800}}>+{b.rounds-5}</span>}
-        </div>
+     {/* Case preview */}
+<div style={{display:'flex',alignItems:'center',gap:6,flex:1,minWidth:0}}>
+  {(() => {
+    const selectedCases = buildSelectedCasesFromBattle(b, cases);
+    const displayCases = selectedCases.length > 0
+      ? selectedCases.slice(0, 5)
+      : caseTemplate ? Array.from({length: Math.min(5, b.rounds||1)}, () => caseTemplate) : [];
+
+    return displayCases.length > 0 ? (
+      <>
+        {displayCases.map((c, i) => {
+          const imgUrl = c?.image_url || c?.image || null;
+          const name = c?.name;
+          return (
+            <motion.div key={i} animate={{y:hov?-3:0}} transition={{delay:i*.04,type:'spring',stiffness:200,damping:16}}
+              style={{width:46,height:46,borderRadius:10,flexShrink:0,background:imgUrl?`url('${imgUrl}') center/cover`:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',boxShadow:hov?'0 4px 16px rgba(0,0,0,.6)':'0 2px 8px rgba(0,0,0,.5)',transition:'box-shadow .25s',display:'flex',alignItems:'center',justifyContent:'center'}}>
+              {!imgUrl&&<span style={{fontSize:10,color:'rgba(255,255,255,.25)',fontWeight:700,textAlign:'center',padding:'0 4px',lineHeight:1.2}}>{name?.[0]||'?'}</span>}
+            </motion.div>
+          );
+        })}
+        {b.rounds>5&&<span style={{fontSize:11,color:'rgba(255,255,255,.3)',fontWeight:800}}>+{b.rounds-5}</span>}
+      </>
+    ) : (
+      <div style={{padding:'6px 12px',borderRadius:10,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)'}}>
+        <span style={{fontSize:12,color:'rgba(255,255,255,.3)',fontWeight:700}}>{b.case_name||'Case'}</span>
+      </div>
+    );
+  })()}
+</div>
 
         {/* Cost + action */}
         <div style={{display:'flex',alignItems:'center',gap:14,marginLeft:'auto',flexShrink:0}}>
