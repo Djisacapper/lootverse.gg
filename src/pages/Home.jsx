@@ -16,18 +16,12 @@ const roseImg  = 'https://i.imgur.com/WVoUpzN.png';
 const irishImg = 'https://i.imgur.com/7KIsUqY.png';
 
 // ═══════════════════════════════════════════════════
-// GAMEMODE IMAGES — replace each URL with your own
-// ═══════════════════════════════════════════════════
-const battlesImg  = 'https://placehold.co/200x200/1a0040/c084fc?text=Battles';   // ← replace with your Battles image URL
-const casesImg    = 'https://placehold.co/200x200/1e1200/fbbf24?text=Cases';     // ← replace with your Cases image URL
-const coinflipImg = 'https://placehold.co/200x200/10002c/a855f7?text=Coinflip'; // ← replace with your Coinflip image URL
-const crashImg    = 'https://placehold.co/200x200/100020/e879f9?text=Crash';    // ← replace with your Crash image URL
 
 /* ══════════ GAMEMODE IMAGES — swap each URL with your own image ══════════ */
 const battlesImg  = 'https://i.imgur.com/doYHRMp.png'; // 🔁 Replace with your Battles image URL
 const casesImg    = 'https://i.imgur.com/WVoUpzN.png'; // 🔁 Replace with your Cases image URL
 const coinflipImg = 'https://i.imgur.com/7KIsUqY.png'; // 🔁 Replace with your Coinflip image URL
-const crashImg    = 'https://i.imgur.com/doYHRMp.png'; // 🔁 Replace with your Crash image URL
+const crashImg    = 'https://i.imgur.com/53dgn4r.png'; // 🔁 Replace with your Crash image URL
 
 /* ══════════ CSS ══════════ */
 const CSS = `
