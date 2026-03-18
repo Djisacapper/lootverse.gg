@@ -59,8 +59,6 @@ const RARITY = {
   common:{color:'rgba(255,255,255,.35)',bg:'rgba(255,255,255,.04)',border:'rgba(255,255,255,.1)',glow:'drop-shadow(0 0 5px rgba(161,161,170,.35))'},
 };
 const rr = r => RARITY[r] || RARITY.common;
-
-// A slot is real if it has a non-empty email
 const isRealPlayer = (p) => p?.email && p.email !== '';
 
 const TEAM_PALETTE = [
@@ -70,6 +68,17 @@ const TEAM_PALETTE = [
   {color:'#34d399',glow:'rgba(52,211,153,.35)',bg:'rgba(52,211,153,.07)',border:'rgba(52,211,153,.22)'},
 ];
 const PLAYER_COLORS = ['#f5c842','#c084fc','#60a5fa','#34d399','#f472b6','#fb923c','#22d3ee','#a3e635'];
+
+/* ── fetchFreshBattle — list() only, no filter() to avoid 405 ────── */
+async function fetchFreshBattle(battleId) {
+  try {
+    const { base44 } = await import('@/api/base44Client');
+    const all = await base44.entities.CaseBattle.list('-created_date', 50);
+    return all.find(b => b.id === battleId) || null;
+  } catch {
+    return null;
+  }
+}
 
 /* ─── Audio ──────────────────────────────────────────────────────── */
 let _ctx=null,_keepaliveStarted=false;
@@ -87,7 +96,6 @@ const ConfettiEffect=({active})=>{const ref=useRef(null);useEffect(()=>{if(!acti
 const PlayerAvatar=React.memo(({player,color,size=38,iconSize=15})=>{const url=safeAvatarUrl(player?.avatar_url);const[loaded,setLoaded]=useState(false);const[err,setErr]=useState(false);const urlRef=useRef(url);useEffect(()=>{if(urlRef.current!==url){urlRef.current=url;setLoaded(false);setErr(false);}},[url]);const showImg=url&&!err;return(<div style={{width:size,height:size,borderRadius:'50%',overflow:'hidden',background:`${color}1e`,border:`2px solid ${color}50`,display:'flex',alignItems:'center',justifyContent:'center',position:'relative',flexShrink:0,boxShadow:`0 0 10px ${color}2a`}}>{showImg&&<img src={url} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',opacity:loaded?1:0,transition:'opacity .22s'}} onLoad={()=>setLoaded(true)} onError={()=>setErr(true)}/>}<div style={{opacity:showImg&&loaded?0:1,transition:'opacity .22s',display:'flex',alignItems:'center',justifyContent:'center',width:'100%',height:'100%'}}>{player?.isBot?<Bot style={{width:iconSize,height:iconSize,color}}/>:<User style={{width:iconSize,height:iconSize,color}}/>}</div></div>);});
 
 const VerticalSpinner=({items,winnerItem,onDone,fast})=>{const H=84,WIN=28,TOTAL=36,VH=252,dur=fast?1.35:2.9,spinMs=fast?1450:3050;useEffect(()=>{const t=setTimeout(onDone,spinMs);return()=>clearTimeout(t);},[]);const strip=useRef(Array.from({length:TOTAL},(_,i)=>i===WIN?winnerItem:items[Math.floor(Math.random()*items.length)])).current;const targetY=-(WIN*H-VH/2+H/2);const rc=rr(winnerItem?.rarity);return(<><div style={{position:'absolute',inset:'0 0',top:'50%',transform:'translateY(-50%)',height:H,zIndex:10,pointerEvents:'none',background:`linear-gradient(180deg,transparent 0%,${rc.bg} 30%,${rc.bg} 70%,transparent 100%)`,borderTop:`1.5px solid ${rc.border}`,borderBottom:`1.5px solid ${rc.color}44`}}/><div style={{position:'absolute',top:0,left:0,right:0,height:78,zIndex:20,pointerEvents:'none',background:'linear-gradient(to bottom,#04010e 0%,transparent 100%)'}}/><div style={{position:'absolute',bottom:0,left:0,right:0,height:78,zIndex:20,pointerEvents:'none',background:'linear-gradient(to top,#04010e 0%,transparent 100%)'}}/><motion.div style={{position:'absolute',left:0,right:0,top:0,display:'flex',flexDirection:'column'}} initial={{y:0}} animate={{y:targetY}} transition={{duration:dur,ease:[0.03,0.78,0.14,1]}}>{strip.map((item,i)=>{const rc2=rr(item?.rarity);return(<div key={i} style={{height:H,display:'flex',alignItems:'center',gap:10,padding:'0 12px',flexShrink:0}}><div style={{width:52,height:52,borderRadius:12,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:rc2.bg,border:`1px solid ${rc2.border}`}}>{item?.image||item?.image_url?<img src={item.image||item.image_url} alt={item?.name} style={{width:40,height:40,objectFit:'contain',filter:rc2.glow}}/>:<span style={{fontSize:22}}>📦</span>}</div><div style={{flex:1,minWidth:0}}><p style={{fontSize:11,color:'rgba(240,234,255,.65)',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:3}}>{item?.name||'---'}</p><span style={{fontSize:13,color:rc2.color,fontWeight:800}}>{item?.value?.toLocaleString()||0}</span></div></div>);})}</motion.div></>);};
-
 const ItemChip=React.memo(({item,index=0})=>{const rc=rr(item?.rarity);return(<div className="ba-item-in" style={{display:'flex',alignItems:'center',gap:8,padding:'6px 10px',borderRadius:10,background:rc.bg,border:`1px solid ${rc.border}`,animationDelay:`${index*0.033}s`,borderLeft:`3px solid ${rc.color}`}}><div style={{width:30,height:30,borderRadius:8,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,.25)'}}>{item?.image||item?.image_url?<img src={item.image||item.image_url} alt={item?.name} style={{width:24,height:24,objectFit:'contain',filter:rc.glow}}/>:<span style={{fontSize:13}}>📦</span>}</div><div style={{flex:1,minWidth:0}}><p style={{fontSize:10,color:'rgba(240,234,255,.55)',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:1}}>{item?.name}</p><p style={{fontSize:11,color:rc.color,fontWeight:800}}>{item?.value?.toLocaleString()}</p></div></div>);});
 
 const PlayerColumn=({player,playerColor:pc,isWinner,wonItems,spinPhase,caseItems,spinnerKey,spinnerItem,magicItem,onSpinDone,onMagicSpinDone,fast,showPct,pct})=>{
@@ -144,10 +152,11 @@ const ModeBadge=({icon,color,label})=>(<span style={{display:'inline-flex',align
 const ModeNotice=({icon,color,children})=>(<div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 16px',borderRadius:12,background:`${color}0d`,border:`1px solid ${color}26`}}><span style={{fontSize:15,flexShrink:0}}>{icon}</span><p style={{fontSize:12,color:`${color}c0`,fontWeight:600}}>{children}</p></div>);
 
 /* ─── WaitingLobby ───────────────────────────────────────────────────────────
-   FIX: The "Join Battle" button now calls `onJoin(battle)` instead of
-   `onJoin()`. This passes the battle object to openJoinModal in Battles.jsx
-   so it can fetch fresh slot state and open the team-picker modal for ALL
-   players — not just the battle creator.
+   FIX 1: "Join Battle" calls onJoin(battle) — passes battle so Battles.jsx
+           can open the team-picker modal.
+   FIX 2: hasJoined is derived from the players prop which is kept current by
+           the polling loop in the main component — so the button disappears
+           immediately once the user joins.
 ──────────────────────────────────────────────────────────────────────────── */
 const WaitingLobby=({battle,players,teams,userEmail,onJoin,onAddBot,onFillBots,balance})=>{
   const maxPlayers=battle.max_players||2;
@@ -183,16 +192,25 @@ const WaitingLobby=({battle,players,teams,userEmail,onJoin,onAddBot,onFillBots,b
                   {memberIndices.map(gi=>{
                     const p=players[gi];
                     const f=isRealPlayer(p);
+                    // canJoin: slot empty AND this user hasn't joined anywhere AND not the creator
                     const canJoin=!f&&!hasJoined&&!isCreator;
                     return(
                       <div key={gi} style={{flex:1,minWidth:110,borderRadius:16,background:f?pal.bg:'rgba(255,255,255,.02)',border:`1px solid ${f?pal.border:'rgba(255,255,255,.06)'}`,minHeight:190,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:12,padding:'18px 12px',transition:'border-color .3s,background .3s'}}>
                         {f?(
                           <><PlayerAvatar player={p} color={pal.color} size={48} iconSize={20}/><div style={{textAlign:'center'}}><p style={{fontSize:13,fontWeight:700,color:'#f0eaff'}}>{p.name}</p>{p.isBot&&<p style={{fontSize:9,fontWeight:700,color:pal.color,textTransform:'uppercase',letterSpacing:'.1em',marginTop:2}}>BOT</p>}</div><div style={{display:'flex',alignItems:'center',gap:5,padding:'4px 12px',borderRadius:20,background:'rgba(0,229,160,.09)',border:'1px solid rgba(0,229,160,.22)'}}><CheckCircle2 style={{width:11,height:11,color:'#00e5a0'}}/><span style={{fontSize:10,fontWeight:700,color:'#00e5a0'}}>Ready</span></div></>
                         ):(
-                          <><div style={{width:48,height:48,borderRadius:'50%',border:`2px dashed ${pal.border}`,display:'flex',alignItems:'center',justifyContent:'center'}}><Loader2 style={{width:18,height:18,color:pal.color,opacity:.4}} className="animate-spin"/></div><p style={{fontSize:11,color:'var(--text-dim)',fontWeight:500,textAlign:'center'}}>Waiting…</p>
-                          {/* ── FIX: pass battle to onJoin so the slot-picker modal opens correctly ── */}
-                          {canJoin&&<button onClick={()=>onJoin(battle)} disabled={battle.entry_cost>balance} className="ba-btn-gold" style={{padding:'8px 20px',fontSize:12}}>Join Battle</button>}
-                          {isCreator&&(<div style={{display:'flex',flexDirection:'column',gap:6,width:'100%',padding:'0 4px'}}><button onClick={onAddBot} className="ba-btn-ghost" style={{padding:'7px 0',fontSize:11,fontWeight:700,gap:5,width:'100%'}}><Bot style={{width:11,height:11}}/> Add Bot</button><button onClick={onFillBots} className="ba-btn-ghost" style={{padding:'7px 0',fontSize:11,fontWeight:700,gap:5,width:'100%',color:'#f5c842',borderColor:'rgba(245,200,66,.22)'}}>Fill All</button></div>)}</>
+                          <>
+                            <div style={{width:48,height:48,borderRadius:'50%',border:`2px dashed ${pal.border}`,display:'flex',alignItems:'center',justifyContent:'center'}}><Loader2 style={{width:18,height:18,color:pal.color,opacity:.4}} className="animate-spin"/></div>
+                            <p style={{fontSize:11,color:'var(--text-dim)',fontWeight:500,textAlign:'center'}}>Waiting…</p>
+                            {/* FIX: pass battle to onJoin — opens team-picker modal in Battles.jsx */}
+                            {canJoin&&<button onClick={()=>onJoin(battle)} disabled={battle.entry_cost>balance} className="ba-btn-gold" style={{padding:'8px 20px',fontSize:12}}>Join Battle</button>}
+                            {isCreator&&(
+                              <div style={{display:'flex',flexDirection:'column',gap:6,width:'100%',padding:'0 4px'}}>
+                                <button onClick={onAddBot} className="ba-btn-ghost" style={{padding:'7px 0',fontSize:11,fontWeight:700,gap:5,width:'100%'}}><Bot style={{width:11,height:11}}/> Add Bot</button>
+                                <button onClick={onFillBots} className="ba-btn-ghost" style={{padding:'7px 0',fontSize:11,fontWeight:700,gap:5,width:'100%',color:'#f5c842',borderColor:'rgba(245,200,66,.22)'}}>Fill All</button>
+                              </div>
+                            )}
+                          </>
                         )}
                       </div>
                     );
@@ -219,19 +237,14 @@ export default function BattleArena({
 }) {
   const players = usePlayerAvatars(rawPlayers);
   const totalRounds = selectedCases.length;
-
   const realPlayerCount = useMemo(()=>rawPlayers.filter(isRealPlayer).length, [rawPlayers]);
-
   const teamList = useMemo(()=>{
     if (teams && teams.length > 0) return teams;
     return [rawPlayers.map((_,i)=>i).filter(i=>isRealPlayer(rawPlayers[i]))];
   }, [teams, rawPlayers]);
 
   const isWaiting = battle?.status==='waiting';
-
-  const { rolls:fairRolls, blockHash, blockNum, status:fairStatus } =
-    useProvablyFairArena(battle, selectedCases, players, battleModes);
-
+  const { rolls:fairRolls, blockHash, blockNum, status:fairStatus } = useProvablyFairArena(battle, selectedCases, players, battleModes);
   const [showVerifier, setShowVerifier] = useState(false);
   const cbRef=useRef(onBattleUpdated);
   useEffect(()=>{cbRef.current=onBattleUpdated;},[onBattleUpdated]);
@@ -241,12 +254,18 @@ export default function BattleArena({
     if(!isWaiting||!battle?.id)return;
     const poll=async()=>{
       try{
-        const {base44}=await import('@/api/base44Client');
-        const res=await base44.entities.CaseBattle.filter({id:battle.id});
-        const u=res?.[0];if(!u)return;
-        const fc=(u.players||[]).filter(isRealPlayer).length,mp=u.max_players||2;
-        if(fc!==lastFilled.current||u.status!==lastStatus.current){lastFilled.current=fc;lastStatus.current=u.status;if(cbRef.current)cbRef.current(u);}
-        if(fc>=mp&&u.status==='waiting')await base44.entities.CaseBattle.update(u.id,{status:'in_progress'});
+        // FIX: use list() not filter() — filter() returns 405
+        const fb = await fetchFreshBattle(battle.id);
+        if(!fb)return;
+        const fc=(fb.players||[]).filter(isRealPlayer).length,mp=fb.max_players||2;
+        if(fc!==lastFilled.current||fb.status!==lastStatus.current){
+          lastFilled.current=fc;lastStatus.current=fb.status;
+          if(cbRef.current)cbRef.current(fb);
+        }
+        if(fc>=mp&&fb.status==='waiting'){
+          const {base44}=await import('@/api/base44Client');
+          await base44.entities.CaseBattle.update(fb.id,{status:'in_progress'});
+        }
       }catch{}
     };
     const id=setInterval(poll,2000);return()=>clearInterval(id);
@@ -255,29 +274,22 @@ export default function BattleArena({
   const m=battleModes&&typeof battleModes==='object'?battleModes:{};
   const isCrazy=m.crazy,isTerminal=m.terminal,isGroup=m.group,isMagicSpin=m.magic_spin,isFast=m.fast_mode,isJackpot=m.jackpot;
 
-  const [phase,setPhase]       = useState('countdown');
-  const [countdown,setCd]      = useState(3);
-  const [currentRound,setCR]   = useState(0);
-  const [playerItems,setPI]    = useState(()=>Array.from({length:rawPlayers.length},()=>[]));
-  const [done,setDone]         = useState(false);
-  const [jackpot,setJackpot]   = useState(false);
-  const [winnerTeam,setWT]     = useState(null);
-  const [confetti,setConf]     = useState(false);
-  const [pPhases,setPP]        = useState(()=>Array.from({length:rawPlayers.length},()=>'idle'));
+  const [phase,setPhase]    = useState('countdown');
+  const [countdown,setCd]   = useState(3);
+  const [currentRound,setCR]= useState(0);
+  const [playerItems,setPI] = useState(()=>Array.from({length:rawPlayers.length},()=>[]));
+  const [done,setDone]      = useState(false);
+  const [jackpot,setJackpot]= useState(false);
+  const [winnerTeam,setWT]  = useState(null);
+  const [confetti,setConf]  = useState(false);
+  const [pPhases,setPP]     = useState(()=>Array.from({length:rawPlayers.length},()=>'idle'));
 
   useEffect(()=>{
-    setPI(prev=>{
-      if(prev.length===rawPlayers.length)return prev;
-      return Array.from({length:rawPlayers.length},(_,i)=>prev[i]||[]);
-    });
-    setPP(prev=>{
-      if(prev.length===rawPlayers.length)return prev;
-      return Array.from({length:rawPlayers.length},(_,i)=>prev[i]||'idle');
-    });
+    setPI(prev=>{ if(prev.length===rawPlayers.length)return prev; return Array.from({length:rawPlayers.length},(_,i)=>prev[i]||[]); });
+    setPP(prev=>{ if(prev.length===rawPlayers.length)return prev; return Array.from({length:rawPlayers.length},(_,i)=>prev[i]||'idle'); });
   },[rawPlayers.length]);
 
   const allRolled=useRef(null),roundDone=useRef(0),crRef=useRef(0),rewardGiven=useRef(false);
-
   useEffect(()=>{if(fairRolls)allRolled.current=fairRolls;},[fairRolls]);
 
   useEffect(()=>{
@@ -287,9 +299,7 @@ export default function BattleArena({
   },[phase,countdown,isWaiting,fairStatus]);
 
   const launchRound=(r)=>{
-    roundDone.current=0;
-    crRef.current=r;
-    setCR(r);
+    roundDone.current=0;crRef.current=r;setCR(r);
     setPP(prev=>prev.map((s,i)=>isRealPlayer(rawPlayers[i])?'spinning':s));
     playSpin(isFast);
   };
@@ -297,57 +307,40 @@ export default function BattleArena({
   const handleSpinDone=(pi)=>{
     if(roundDone.current===0)stopSpin();
     const r=crRef.current;
-    if(!allRolled.current?.[r]?.[pi]){
-      roundDone.current+=1;
-      checkRoundComplete(r);
-      return;
-    }
+    if(!allRolled.current?.[r]?.[pi]){roundDone.current+=1;checkRoundComplete(r);return;}
     const rolled=allRolled.current[r];
-    if(rolled[pi]?.isMagic){
-      setPP(prev=>{const n=[...prev];n[pi]='magic_spin';return n;});
-    } else {
-      markDone(pi,r);
-    }
+    if(rolled[pi]?.isMagic){setPP(prev=>{const n=[...prev];n[pi]='magic_spin';return n;});}
+    else{markDone(pi,r);}
   };
-
   const handleMagicDone=(pi)=>{
     stopSpin();
     if(!allRolled.current?.[crRef.current]){roundDone.current+=1;checkRoundComplete(crRef.current);return;}
     markDone(pi,crRef.current);
   };
-
   const checkRoundComplete=(r)=>{
     if(roundDone.current>=realPlayerCount){
       if(r+1>=totalRounds)setTimeout(()=>isJackpot?setJackpot(true):finishBattle(),isFast?1100:2400);
       else setTimeout(()=>launchRound(r+1),isFast?1400:4000);
     }
   };
-
   const markDone=(pi,r)=>{
     if(!allRolled.current?.[r]?.[pi]){roundDone.current+=1;checkRoundComplete(r);return;}
     const rolled=allRolled.current[r];
     setPI(prev=>{const n=[...prev];n[pi]=[...(n[pi]||[]),rolled[pi].item];return n;});
     setPP(prev=>{const n=[...prev];n[pi]='idle';return n;});
-    roundDone.current+=1;
-    checkRoundComplete(r);
+    roundDone.current+=1;checkRoundComplete(r);
   };
-
   const getTotal=(pi)=>{
     if(!allRolled.current)return 0;
     if(isTerminal)return allRolled.current[totalRounds-1]?.[pi]?.item?.value||0;
     return allRolled.current.reduce((s,r)=>s+(r[pi]?.item?.value||0),0);
   };
-
   const finishBattle=(forced=null)=>{
     let wi;
     if(forced!==null)wi=forced;
     else if(isGroup)wi=-1;
-    else{
-      const v=teamList.map(mi=>mi.reduce((s,pi)=>s+getTotal(pi),0)/mi.length);
-      wi=isCrazy?v.indexOf(Math.min(...v)):v.indexOf(Math.max(...v));
-    }
-    setWT(wi);setDone(true);setJackpot(false);
-    playReward();
+    else{const v=teamList.map(mi=>mi.reduce((s,pi)=>s+getTotal(pi),0)/mi.length);wi=isCrazy?v.indexOf(Math.min(...v)):v.indexOf(Math.max(...v));}
+    setWT(wi);setDone(true);setJackpot(false);playReward();
     if(!rewardGiven.current){
       rewardGiven.current=true;
       const tv=allRolled.current.reduce((a,rnd)=>a+rnd.reduce((b,r)=>b+(r?.item?.value||0),0),0);
@@ -357,8 +350,7 @@ export default function BattleArena({
       import('@/api/base44Client').then(({base44:b44})=>{
         allRolled.current.forEach((rnd,roundIdx)=>{
           rnd.forEach((rolled,pi)=>{
-            const p=rawPlayers[pi];
-            if(!isRealPlayer(p)||p.isBot)return;
+            const p=rawPlayers[pi];if(!isRealPlayer(p)||p.isBot)return;
             const item=rolled?.item;if(!item)return;
             b44.entities.UserInventory.create({user_email:p.email,item_name:item.name,item_image_url:item.image||item.image_url||null,rarity:item.rarity,value:item.value,source:'battle_win',source_case:selectedCases[roundIdx]?.name||'',status:'owned'}).catch(()=>{});
           });
@@ -367,15 +359,12 @@ export default function BattleArena({
     }
   };
 
-  const pTotals = playerItems.map(its=>its.reduce((s,it)=>s+(it?.value||0),0));
-  const tTotals = teamList.map(mi=>mi.reduce((s,pi)=>s+(pTotals[pi]||0),0));
-  const grandPot = (battle?.max_players||realPlayerCount)*(battle?.entry_cost||0);
-  const allPIs  = teamList.flat().filter(pi=>isRealPlayer(rawPlayers[pi]));
-  const colMap  = {};
-  allPIs.forEach((pi,i)=>{colMap[pi]=PLAYER_COLORS[i%PLAYER_COLORS.length];});
-  const grandTotal    = pTotals.reduce((s,v)=>s+v,0);
-  const totalItemsVal = allRolled.current
-    ? allRolled.current.reduce((a,rnd)=>a+rnd.reduce((b,r)=>b+(r?.item?.value||0),0),0) : 0;
+  const pTotals=playerItems.map(its=>its.reduce((s,it)=>s+(it?.value||0),0));
+  const grandPot=(battle?.max_players||realPlayerCount)*(battle?.entry_cost||0);
+  const allPIs=teamList.flat().filter(pi=>isRealPlayer(rawPlayers[pi]));
+  const colMap={};allPIs.forEach((pi,i)=>{colMap[pi]=PLAYER_COLORS[i%PLAYER_COLORS.length];});
+  const grandTotal=pTotals.reduce((s,v)=>s+v,0);
+  const totalItemsVal=allRolled.current?allRolled.current.reduce((a,rnd)=>a+rnd.reduce((b,r)=>b+(r?.item?.value||0),0),0):0;
 
   let payoutLabel='';
   if(done){
@@ -421,7 +410,6 @@ export default function BattleArena({
       <ConfettiEffect active={confetti}/>
       {showVerifier&&(<ProvablyFairVerifier battle={{...battle,eos_block_hash:blockHash,eos_block_num:blockNum}} selectedCases={selectedCases} players={players} battleModes={battleModes} onClose={()=>setShowVerifier(false)}/>)}
       <div style={{maxWidth:900,margin:'0 auto',display:'flex',flexDirection:'column',gap:14,padding:'0 16px'}}>
-
         <div style={{position:'relative',overflow:'hidden',borderRadius:16,background:'linear-gradient(120deg,#07041a 0%,#0d0822 50%,#060110 100%)',border:'1px solid rgba(157,111,255,.14)',padding:'14px 18px'}}>
           <div className="ba-scan"/><div className="ba-noise"/>
           <div style={{position:'absolute',right:0,top:0,bottom:0,width:'35%',background:'radial-gradient(ellipse 80% 100% at 100% 50%,rgba(157,111,255,.09) 0%,transparent 70%)',pointerEvents:'none'}}/>
@@ -535,23 +523,13 @@ export default function BattleArena({
                       const rolled=allRolled.current?.[r]?.[pi];
                       const caseItems=getCaseItems(r);
                       return(
-                        <PlayerColumn
-                          key={pi}
-                          player={players[pi]}
-                          playerColor={colMap[pi]||PLAYER_COLORS[0]}
-                          isWinner={done&&(isGroup||ti===winnerTeam)}
-                          wonItems={playerItems[pi]||[]}
-                          spinPhase={pPhases[pi]||'idle'}
-                          caseItems={caseItems}
-                          spinnerKey={`${r}-${pi}`}
-                          spinnerItem={rolled?.item}
+                        <PlayerColumn key={pi} player={players[pi]} playerColor={colMap[pi]||PLAYER_COLORS[0]}
+                          isWinner={done&&(isGroup||ti===winnerTeam)} wonItems={playerItems[pi]||[]}
+                          spinPhase={pPhases[pi]||'idle'} caseItems={caseItems}
+                          spinnerKey={`${r}-${pi}`} spinnerItem={rolled?.item}
                           magicItem={rolled?.isMagic?rolled.item:null}
-                          onSpinDone={()=>handleSpinDone(pi)}
-                          onMagicSpinDone={()=>handleMagicDone(pi)}
-                          fast={isFast}
-                          pct={grandTotal>0?(pTotals[pi]||0)/grandTotal:0}
-                          showPct={isJackpot}
-                        />
+                          onSpinDone={()=>handleSpinDone(pi)} onMagicSpinDone={()=>handleMagicDone(pi)}
+                          fast={isFast} pct={grandTotal>0?(pTotals[pi]||0)/grandTotal:0} showPct={isJackpot}/>
                       );
                     })}
                   </div>
