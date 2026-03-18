@@ -20,6 +20,7 @@ import Inventory from './pages/Inventory';
 import Leaderboard from './pages/Leaderboard';
 import Referrals from './pages/Referrals';
 import Rewards from './pages/Rewards';
+import TermsOfService from './pages/TermsOfService';
 import Upgrade from './pages/Upgrade';
 import __Layout from './Layout.jsx';
 
@@ -37,6 +38,7 @@ export const PAGES = {
   "Leaderboard": Leaderboard,
   "Referrals": Referrals,
   "Rewards": Rewards,
+  "TermsOfService": TermsOfService,
   "Upgrade": Upgrade,
 }
 
