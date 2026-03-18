@@ -25,8 +25,7 @@ const crashImg    = 'https://i.imgur.com/53dgn4r.png'; // 🔁 Replace with your
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
 .lv { font-family: 'Nunito', sans-serif; }
-
-/* gem floats */
+ 
 @keyframes gf1 { 0%,100%{transform:translateY(0px) rotate(0deg) scale(1)} 30%{transform:translateY(-28px) rotate(12deg) scale(1.06)} 70%{transform:translateY(-10px) rotate(-8deg) scale(.97)} }
 @keyframes gf2 { 0%,100%{transform:translateY(0px) rotate(0deg)} 40%{transform:translateY(-34px) rotate(-14deg) scale(1.08)} 75%{transform:translateY(-12px) rotate(7deg)} }
 @keyframes gf3 { 0%,100%{transform:translateY(0px) rotate(0deg)} 35%{transform:translateY(-20px) rotate(18deg)} 70%{transform:translateY(-8px) rotate(-10deg)} }
@@ -43,39 +42,32 @@ const CSS = `
 .gfh { animation: gf2  8.2s ease-in-out infinite 4s; }
 .gfi { animation: gf3  9.5s ease-in-out infinite 2s; }
 .gfj { animation: gf4  6.8s ease-in-out infinite 1.5s; }
-
-/* gem inner shimmer */
+ 
 @keyframes gem-shimmer { 0%,100%{opacity:.35;transform:rotate(0deg) scale(.8)} 50%{opacity:.85;transform:rotate(180deg) scale(1.15)} }
 .gs { animation: gem-shimmer 3s ease-in-out infinite; }
-
-/* hero case floats */
+ 
 @keyframes hf1 { 0%,100%{transform:translateY(0) rotate(-4deg)} 50%{transform:translateY(-18px) rotate(-1deg)} }
 @keyframes hf2 { 0%,100%{transform:translateY(0) rotate(3deg)} 50%{transform:translateY(-24px) rotate(6deg)} }
 @keyframes hf3 { 0%,100%{transform:translateY(0) rotate(2deg)} 42%{transform:translateY(-14px) rotate(-3deg)} }
 .hfa { animation: hf1 6s ease-in-out infinite; }
 .hfb { animation: hf2 8s ease-in-out infinite .9s; }
 .hfc { animation: hf3 7s ease-in-out infinite 1.5s; }
-
-/* particles */
+ 
 @keyframes ptcl { 0%{transform:translateY(0) translateX(0);opacity:0} 8%{opacity:1} 88%{opacity:.5} 100%{transform:translateY(var(--py)) translateX(var(--px));opacity:0} }
 .pt { position:absolute; border-radius:50%; pointer-events:none; animation:ptcl var(--pd) ease-out infinite var(--pdl); }
-
-/* live dot */
+ 
 @keyframes live-pulse { 0%{transform:scale(1);opacity:.7} 100%{transform:scale(3.5);opacity:0} }
 .live-ring { animation:live-pulse 1.8s ease-out infinite; }
-
-/* scan line */
+ 
 @keyframes scan { 0%{top:-1px;opacity:0} 4%{opacity:.6} 92%{opacity:.3} 100%{top:100%;opacity:0} }
 .scan { position:absolute;left:0;right:0;height:1px;pointer-events:none;z-index:4;
   background:linear-gradient(90deg,transparent,rgba(251,191,36,.18),rgba(200,140,255,.15),transparent);
   animation:scan 9s linear infinite; }
-
-/* grid */
+ 
 .ambi-grid { position:absolute;inset:0;pointer-events:none;
   background-image:linear-gradient(rgba(251,191,36,.033) 1px,transparent 1px),linear-gradient(90deg,rgba(251,191,36,.033) 1px,transparent 1px);
   background-size:38px 38px; }
-
-/* hero gradient title */
+ 
 @keyframes grad-shift { 0%{background-position:0% 50%} 50%{background-position:100% 50%} 100%{background-position:0% 50%} }
 .title-grad {
   background:linear-gradient(90deg,#fbbf24,#f59e0b,#e879f9,#c084fc,#818cf8,#fbbf24);
@@ -84,44 +76,63 @@ const CSS = `
   animation:grad-shift 5s ease-in-out infinite;
   filter:drop-shadow(0 0 22px rgba(251,191,36,.3));
 }
-
-/* card shimmer */
-@keyframes shim-x { 0%{transform:translateX(-120%) skewX(-14deg)} 100%{transform:translateX(500%) skewX(-14deg)} }
-.cshim { position:relative; overflow:hidden; }
-.cshim::before { content:'';position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:20;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.045) 45%,rgba(255,255,255,.1) 50%,rgba(255,255,255,.045) 55%,transparent);
-  width:28%; animation:shim-x var(--sx,7s) ease-in-out infinite var(--sdl,0s); }
-
-/* glow border pulse */
-@keyframes bp { 0%,100%{box-shadow:var(--bs)} 50%{box-shadow:var(--bsh)} }
-.cbp { animation:bp 3.5s ease-in-out infinite; }
-
-/* hover gradient overlay — fades in on hover */
-.card-hov-grad {
-  position:absolute; inset:0; pointer-events:none; z-index:3;
-  opacity:0; transition:opacity .4s ease;
+ 
+/* ── GAME CARD IMAGE: greyscale default, colour on hover ── */
+.gc-img {
+  position:absolute; inset:0; width:100%; height:100%;
+  object-fit:cover; object-position:center;
+  filter: grayscale(1) brightness(.45);
+  transition: filter .5s ease, transform .5s ease;
+  border-radius:inherit;
+  transform: scale(1);
+}
+.gc-wrap:hover .gc-img {
+  filter: grayscale(0) brightness(.82) saturate(1.15);
+  transform: scale(1.06);
+}
+ 
+/* ── dark vignette always on top of image ── */
+.gc-vignette {
+  position:absolute; inset:0; z-index:2; border-radius:inherit; pointer-events:none;
+  background: linear-gradient(to top, rgba(0,0,0,.88) 0%, rgba(0,0,0,.4) 45%, rgba(0,0,0,.15) 100%);
+}
+ 
+/* ── coloured glow overlay — hidden by default, appears on hover ── */
+.gc-glow {
+  position:absolute; inset:0; z-index:3; border-radius:inherit; pointer-events:none;
+  opacity:0;
+  transition: opacity .45s ease;
+}
+.gc-wrap:hover .gc-glow { opacity:1; }
+ 
+/* ── top accent line ── */
+.gc-line {
+  position:absolute; top:0; left:0; right:0; height:2px; z-index:9;
+  transform:scaleX(.1); opacity:0;
+  transform-origin:center;
+  transition: transform .38s ease, opacity .38s ease;
   border-radius:inherit;
 }
-.card-wrap:hover .card-hov-grad { opacity:1; }
-
-/* spinner */
+.gc-wrap:hover .gc-line { transform:scaleX(1); opacity:1; }
+ 
+/* ── border glow on hover ── */
+.gc-wrap {
+  transition: box-shadow .4s ease, transform .25s ease;
+}
+ 
 @keyframes spin { to{transform:rotate(360deg)} }
 @keyframes spinr { to{transform:rotate(-360deg)} }
-
 ::-webkit-scrollbar { width:4px; }
 ::-webkit-scrollbar-thumb { background:#1a1200; border-radius:4px; }
 `;
-
-/* ══════════ GEM SVG COMPONENTS ══════════ */
-
+ 
+/* ══════════ GEM COMPONENTS ══════════ */
 function GemDiamond({ size, c1, c2, glow, style, className }) {
   const id = useRef(`d${Math.random().toString(36).slice(2,7)}`).current;
   return (
-    <div className={className} style={{
-      position:'fixed', width:size, height:size, pointerEvents:'none',
+    <div className={className} style={{position:'fixed',width:size,height:size,pointerEvents:'none',
       filter:`drop-shadow(0 0 ${size*.3}px ${glow}) drop-shadow(0 ${size*.12}px ${size*.36}px rgba(0,0,0,.7))`,
-      ...style, zIndex:0,
-    }}>
+      ...style,zIndex:0}}>
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style={{width:'100%',height:'100%'}}>
         <defs>
           <linearGradient id={`${id}a`} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -147,16 +158,12 @@ function GemDiamond({ size, c1, c2, glow, style, className }) {
     </div>
   );
 }
-
 function GemOctagon({ size, c1, c2, glow, style, className }) {
   const id = useRef(`o${Math.random().toString(36).slice(2,7)}`).current;
-  const pts = "50,4 82,18 96,50 82,82 50,96 18,82 4,50 18,18";
   return (
-    <div className={className} style={{
-      position:'fixed', width:size, height:size, pointerEvents:'none',
+    <div className={className} style={{position:'fixed',width:size,height:size,pointerEvents:'none',
       filter:`drop-shadow(0 0 ${size*.28}px ${glow}) drop-shadow(0 ${size*.1}px ${size*.3}px rgba(0,0,0,.75))`,
-      ...style, zIndex:0,
-    }}>
+      ...style,zIndex:0}}>
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style={{width:'100%',height:'100%'}}>
         <defs>
           <linearGradient id={`${id}a`} x1="0%" y1="0%" x2="100%" y2="100%">
@@ -166,7 +173,7 @@ function GemOctagon({ size, c1, c2, glow, style, className }) {
             <stop offset="0%" stopColor="rgba(255,255,255,.6)"/><stop offset="100%" stopColor="rgba(255,255,255,0)"/>
           </radialGradient>
         </defs>
-        <polygon points={pts} fill={`url(#${id}a)`}/>
+        <polygon points="50,4 82,18 96,50 82,82 50,96 18,82 4,50 18,18" fill={`url(#${id}a)`}/>
         <polygon points="50,4 82,18 50,34 18,18" fill="rgba(255,255,255,.14)"/>
         <polygon points="82,18 96,50 66,50 50,34" fill="rgba(255,255,255,.07)"/>
         <polygon points="4,50 18,18 50,34 50,66" fill="rgba(255,255,255,.05)"/>
@@ -178,15 +185,12 @@ function GemOctagon({ size, c1, c2, glow, style, className }) {
     </div>
   );
 }
-
 function GemTeardrop({ size, c1, c2, glow, style, className }) {
   const id = useRef(`t${Math.random().toString(36).slice(2,7)}`).current;
   return (
-    <div className={className} style={{
-      position:'fixed', width:size, height:size, pointerEvents:'none',
+    <div className={className} style={{position:'fixed',width:size,height:size,pointerEvents:'none',
       filter:`drop-shadow(0 0 ${size*.32}px ${glow}) drop-shadow(0 ${size*.1}px ${size*.28}px rgba(0,0,0,.7))`,
-      ...style, zIndex:0,
-    }}>
+      ...style,zIndex:0}}>
       <svg viewBox="0 0 100 110" xmlns="http://www.w3.org/2000/svg" style={{width:'100%',height:'100%'}}>
         <defs>
           <linearGradient id={`${id}a`} x1="15%" y1="0%" x2="85%" y2="100%">
@@ -205,15 +209,12 @@ function GemTeardrop({ size, c1, c2, glow, style, className }) {
     </div>
   );
 }
-
 function GemRound({ size, c1, c2, glow, style, className }) {
   const id = useRef(`r${Math.random().toString(36).slice(2,7)}`).current;
   return (
-    <div className={className} style={{
-      position:'fixed', width:size, height:size, pointerEvents:'none',
+    <div className={className} style={{position:'fixed',width:size,height:size,pointerEvents:'none',
       filter:`drop-shadow(0 0 ${size*.4}px ${glow}) drop-shadow(0 ${size*.1}px ${size*.3}px rgba(0,0,0,.7))`,
-      ...style, zIndex:0,
-    }}>
+      ...style,zIndex:0}}>
       <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" style={{width:'100%',height:'100%'}}>
         <defs>
           <radialGradient id={`${id}a`} cx="40%" cy="35%" r="55%">
@@ -234,30 +235,28 @@ function GemRound({ size, c1, c2, glow, style, className }) {
     </div>
   );
 }
-
-/* ══════════ PAGE GEMS ══════════ */
+ 
 function PageGems() {
   return (
     <>
-      <GemDiamond size={72}  c1="#e9d5ff" c2="#6d28d9" glow="rgba(167,139,250,.8)"  className="gfa" style={{left:'1%',   top:'8%'}}/>
-      <GemRound   size={44}  c1="#fde68a" c2="#d97706" glow="rgba(251,191,36,.75)"  className="gfc" style={{left:'2%',   top:'26%'}}/>
-      <GemTeardrop size={56} c1="#f9a8d4" c2="#9d174d" glow="rgba(236,72,153,.7)"   className="gfe" style={{left:'0%',   top:'50%'}}/>
-      <GemOctagon size={38}  c1="#bbf7d0" c2="#15803d" glow="rgba(74,222,128,.7)"   className="gfb" style={{left:'3%',   top:'72%'}}/>
-      <GemRound   size={28}  c1="#c084fc" c2="#7c3aed" glow="rgba(192,132,252,.7)"  className="gfd" style={{left:'1%',   top:'88%'}}/>
-      <GemOctagon size={68}  c1="#fbbf24" c2="#b45309" glow="rgba(251,191,36,.82)"  className="gfb" style={{right:'1%',  top:'6%'}}/>
-      <GemTeardrop size={48} c1="#a78bfa" c2="#4c1d95" glow="rgba(139,92,246,.78)"  className="gfd" style={{right:'2%',  top:'24%'}}/>
-      <GemDiamond size={60}  c1="#fde68a" c2="#a16207" glow="rgba(251,191,36,.78)"  className="gff" style={{right:'0%',  top:'48%'}}/>
-      <GemRound   size={36}  c1="#e879f9" c2="#7e22ce" glow="rgba(232,121,249,.72)" className="gfg" style={{right:'3%',  top:'68%'}}/>
-      <GemTeardrop size={50} c1="#bfdbfe" c2="#1d4ed8" glow="rgba(96,165,250,.72)"  className="gfh" style={{right:'1%',  top:'84%'}}/>
-      <GemRound   size={32}  c1="#fde68a" c2="#b45309" glow="rgba(251,191,36,.65)"  className="gfc" style={{left:'8%',   top:'2%'}}/>
-      <GemDiamond size={42}  c1="#c084fc" c2="#6d28d9" glow="rgba(192,132,252,.7)"  className="gfi" style={{left:'22%',  top:'-1%'}}/>
-      <GemOctagon size={30}  c1="#f9a8d4" c2="#9d174d" glow="rgba(236,72,153,.65)"  className="gfj" style={{right:'20%', top:'1%'}}/>
-      <GemRound   size={36}  c1="#bbf7d0" c2="#15803d" glow="rgba(74,222,128,.65)"  className="gfb" style={{right:'10%', top:'-2%'}}/>
+      <GemDiamond size={72}  c1="#e9d5ff" c2="#6d28d9" glow="rgba(167,139,250,.8)"  className="gfa" style={{left:'1%',top:'8%'}}/>
+      <GemRound   size={44}  c1="#fde68a" c2="#d97706" glow="rgba(251,191,36,.75)"  className="gfc" style={{left:'2%',top:'26%'}}/>
+      <GemTeardrop size={56} c1="#f9a8d4" c2="#9d174d" glow="rgba(236,72,153,.7)"   className="gfe" style={{left:'0%',top:'50%'}}/>
+      <GemOctagon size={38}  c1="#bbf7d0" c2="#15803d" glow="rgba(74,222,128,.7)"   className="gfb" style={{left:'3%',top:'72%'}}/>
+      <GemRound   size={28}  c1="#c084fc" c2="#7c3aed" glow="rgba(192,132,252,.7)"  className="gfd" style={{left:'1%',top:'88%'}}/>
+      <GemOctagon size={68}  c1="#fbbf24" c2="#b45309" glow="rgba(251,191,36,.82)"  className="gfb" style={{right:'1%',top:'6%'}}/>
+      <GemTeardrop size={48} c1="#a78bfa" c2="#4c1d95" glow="rgba(139,92,246,.78)"  className="gfd" style={{right:'2%',top:'24%'}}/>
+      <GemDiamond size={60}  c1="#fde68a" c2="#a16207" glow="rgba(251,191,36,.78)"  className="gff" style={{right:'0%',top:'48%'}}/>
+      <GemRound   size={36}  c1="#e879f9" c2="#7e22ce" glow="rgba(232,121,249,.72)" className="gfg" style={{right:'3%',top:'68%'}}/>
+      <GemTeardrop size={50} c1="#bfdbfe" c2="#1d4ed8" glow="rgba(96,165,250,.72)"  className="gfh" style={{right:'1%',top:'84%'}}/>
+      <GemRound   size={32}  c1="#fde68a" c2="#b45309" glow="rgba(251,191,36,.65)"  className="gfc" style={{left:'8%',top:'2%'}}/>
+      <GemDiamond size={42}  c1="#c084fc" c2="#6d28d9" glow="rgba(192,132,252,.7)"  className="gfi" style={{left:'22%',top:'-1%'}}/>
+      <GemOctagon size={30}  c1="#f9a8d4" c2="#9d174d" glow="rgba(236,72,153,.65)"  className="gfj" style={{right:'20%',top:'1%'}}/>
+      <GemRound   size={36}  c1="#bbf7d0" c2="#15803d" glow="rgba(74,222,128,.65)"  className="gfb" style={{right:'10%',top:'-2%'}}/>
     </>
   );
 }
-
-/* ══════════ PARTICLES ══════════ */
+ 
 function Particles({ accent, count = 12 }) {
   const pts = useRef(Array.from({ length: count }, (_, i) => ({
     id:i, left:`${5+Math.random()*90}%`, bottom:`${Math.random()*20}%`,
@@ -277,19 +276,16 @@ function Particles({ accent, count = 12 }) {
     </div>
   );
 }
-
+ 
 /* ══════════ HERO ══════════ */
 function HeroBanner() {
   return (
-    <motion.div
-      initial={{opacity:0,y:24}} animate={{opacity:1,y:0}}
+    <motion.div initial={{opacity:0,y:24}} animate={{opacity:1,y:0}}
       transition={{duration:.8,ease:[.22,1,.36,1]}}
-      style={{
-        position:'relative', overflow:'hidden', borderRadius:20,
+      style={{position:'relative',overflow:'hidden',borderRadius:20,
         background:'linear-gradient(125deg,#050010 0%,#0e0025 35%,#1a0040 65%,#08001a 100%)',
         minHeight:255,
-        boxShadow:'0 0 0 1px rgba(251,191,36,.12),0 24px 80px rgba(0,0,0,.9),0 0 100px rgba(120,40,200,.18)',
-      }}>
+        boxShadow:'0 0 0 1px rgba(251,191,36,.12),0 24px 80px rgba(0,0,0,.9),0 0 100px rgba(120,40,200,.18)'}}>
       <div className="ambi-grid"/>
       <div className="scan"/>
       <div style={{position:'absolute',inset:0,pointerEvents:'none',
@@ -359,237 +355,121 @@ function HeroBanner() {
     </motion.div>
   );
 }
-
+ 
 /* ══════════ GAME CARD DATA ══════════ */
 const GAMES = [
   {
-    name:'Battles',page:'Battles',icon:Swords,size:'lg',
-    bg:'linear-gradient(145deg,#08001a 0%,#150040 45%,#0a0020 100%)',
-    accent:'#c084fc', glowColor:'rgba(192,132,252,.3)',
-    caseImg: battlesImg,
-    caseGlow:'drop-shadow(0 0 30px rgba(192,132,252,.88)) drop-shadow(0 14px 44px rgba(0,0,0,.95))',
-    // sleek accent-tinted gradient that fades in on hover
-    hoverGradient:'radial-gradient(ellipse 80% 70% at 60% 40%, rgba(192,132,252,.28) 0%, rgba(109,40,217,.18) 55%, transparent 100%)',
-    bs:'0 0 0 1px rgba(192,132,252,.13),0 20px 60px rgba(0,0,0,.8)',
-    bsh:'0 0 0 1px rgba(192,132,252,.38),0 20px 60px rgba(0,0,0,.8),0 0 70px rgba(192,132,252,.22)',
-    tag:'HOT',tagBg:'linear-gradient(135deg,#fbbf24,#f59e0b)',tagColor:'#000',
+    name:'Battles', page:'Battles', icon:Swords, size:'lg',
+    img: battlesImg,
+    accent:'#c084fc',
+    // colour-tinted glow shown on hover (gold + purple)
+    glowOverlay:'linear-gradient(135deg, rgba(192,132,252,.32) 0%, rgba(251,191,36,.18) 50%, rgba(109,40,217,.28) 100%)',
+    borderDefault:'0 0 0 1px rgba(255,255,255,.07), 0 20px 60px rgba(0,0,0,.85)',
+    borderHover:  '0 0 0 1px rgba(192,132,252,.55), 0 20px 60px rgba(0,0,0,.85), 0 0 60px rgba(192,132,252,.28), 0 0 120px rgba(251,191,36,.1)',
+    lineGrad:'linear-gradient(90deg,transparent,#c084fc,#fbbf24,#c084fc,transparent)',
+    tag:'HOT', tagBg:'linear-gradient(135deg,#fbbf24,#f59e0b)', tagColor:'#000',
   },
   {
-    name:'Cases',page:'Cases',icon:Box,size:'lg',
-    bg:'linear-gradient(145deg,#0d0800 0%,#1e1200 45%,#0d0600 100%)',
-    accent:'#fbbf24', glowColor:'rgba(251,191,36,.3)',
-    caseImg: casesImg,
-    caseGlow:'drop-shadow(0 0 30px rgba(251,191,36,.92)) drop-shadow(0 14px 44px rgba(0,0,0,.95))',
-    hoverGradient:'radial-gradient(ellipse 80% 70% at 60% 40%, rgba(251,191,36,.22) 0%, rgba(180,83,9,.15) 55%, transparent 100%)',
-    bs:'0 0 0 1px rgba(251,191,36,.12),0 20px 60px rgba(0,0,0,.8)',
-    bsh:'0 0 0 1px rgba(251,191,36,.36),0 20px 60px rgba(0,0,0,.8),0 0 70px rgba(251,191,36,.2)',
-    tag:'NEW',tagBg:'#7c3aed',tagColor:'#fff',
+    name:'Cases', page:'Cases', icon:Box, size:'lg',
+    img: casesImg,
+    accent:'#fbbf24',
+    glowOverlay:'linear-gradient(135deg, rgba(251,191,36,.28) 0%, rgba(192,132,252,.16) 50%, rgba(180,83,9,.26) 100%)',
+    borderDefault:'0 0 0 1px rgba(255,255,255,.07), 0 20px 60px rgba(0,0,0,.85)',
+    borderHover:  '0 0 0 1px rgba(251,191,36,.55), 0 20px 60px rgba(0,0,0,.85), 0 0 60px rgba(251,191,36,.28), 0 0 120px rgba(192,132,252,.1)',
+    lineGrad:'linear-gradient(90deg,transparent,#fbbf24,#c084fc,#fbbf24,transparent)',
+    tag:'NEW', tagBg:'#7c3aed', tagColor:'#fff',
   },
   {
-    name:'Coinflip',page:'Coinflip',icon:RotateCcw,size:'sm',
-    bg:'linear-gradient(145deg,#060010 0%,#10002c 55%,#04000c 100%)',
-    accent:'#fbbf24', glowColor:'rgba(251,191,36,.24)',
-    caseImg: coinflipImg,
-    caseGlow:'drop-shadow(0 0 22px rgba(251,191,36,.88)) drop-shadow(0 10px 32px rgba(0,0,0,.95))',
-    hoverGradient:'radial-gradient(ellipse 80% 70% at 65% 40%, rgba(251,191,36,.2) 0%, rgba(124,58,237,.14) 55%, transparent 100%)',
-    bs:'0 0 0 1px rgba(251,191,36,.1),0 14px 44px rgba(0,0,0,.8)',
-    bsh:'0 0 0 1px rgba(251,191,36,.32),0 14px 44px rgba(0,0,0,.8),0 0 55px rgba(251,191,36,.18)',
+    name:'Coinflip', page:'Coinflip', icon:RotateCcw, size:'sm',
+    img: coinflipImg,
+    accent:'#fbbf24',
+    glowOverlay:'linear-gradient(135deg, rgba(251,191,36,.26) 0%, rgba(192,132,252,.18) 55%, rgba(109,40,217,.22) 100%)',
+    borderDefault:'0 0 0 1px rgba(255,255,255,.07), 0 14px 44px rgba(0,0,0,.85)',
+    borderHover:  '0 0 0 1px rgba(251,191,36,.5), 0 14px 44px rgba(0,0,0,.85), 0 0 50px rgba(251,191,36,.24), 0 0 90px rgba(192,132,252,.1)',
+    lineGrad:'linear-gradient(90deg,transparent,#fbbf24,#c084fc,#fbbf24,transparent)',
   },
   {
-    name:'Crash',page:'Crash',icon:Zap,size:'sm',
-    bg:'linear-gradient(145deg,#060008 0%,#100020 55%,#030008 100%)',
-    accent:'#a855f7', glowColor:'rgba(168,85,247,.26)',
-    caseImg: crashImg,
-    caseGlow:'drop-shadow(0 0 22px rgba(168,85,247,.88)) drop-shadow(0 10px 32px rgba(0,0,0,.95))',
-    hoverGradient:'radial-gradient(ellipse 80% 70% at 65% 40%, rgba(168,85,247,.26) 0%, rgba(109,40,217,.18) 55%, transparent 100%)',
-    bs:'0 0 0 1px rgba(168,85,247,.1),0 14px 44px rgba(0,0,0,.8)',
-    bsh:'0 0 0 1px rgba(168,85,247,.32),0 14px 44px rgba(0,0,0,.8),0 0 55px rgba(168,85,247,.2)',
-    tag:'LIVE',tagBg:'rgba(124,58,237,.85)',tagColor:'#fff',
+    name:'Crash', page:'Crash', icon:Zap, size:'sm',
+    img: crashImg,
+    accent:'#a855f7',
+    glowOverlay:'linear-gradient(135deg, rgba(168,85,247,.3) 0%, rgba(251,191,36,.16) 50%, rgba(109,40,217,.28) 100%)',
+    borderDefault:'0 0 0 1px rgba(255,255,255,.07), 0 14px 44px rgba(0,0,0,.85)',
+    borderHover:  '0 0 0 1px rgba(168,85,247,.55), 0 14px 44px rgba(0,0,0,.85), 0 0 50px rgba(168,85,247,.26), 0 0 90px rgba(251,191,36,.1)',
+    lineGrad:'linear-gradient(90deg,transparent,#a855f7,#fbbf24,#a855f7,transparent)',
+    tag:'LIVE', tagBg:'rgba(124,58,237,.85)', tagColor:'#fff',
   },
 ];
-
-/* ══════════ LARGE GAME CARD ══════════ */
-function LgGameCard({ g, i }) {
+ 
+/* ══════════ GAME CARD ══════════ */
+function GameCard({ g, i, height }) {
   const [hov, setHov] = useState(false);
-  const ref = useRef();
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const sx = useSpring(mx, {stiffness:160,damping:20});
-  const sy = useSpring(my, {stiffness:160,damping:20});
-
-  const handleMove = e => {
-    if(!ref.current) return;
-    const r = ref.current.getBoundingClientRect();
-    mx.set(((e.clientX-r.left)/r.width-.5)*22);
-    my.set(((e.clientY-r.top)/r.height-.5)*22);
-  };
-  const handleLeave = () => { mx.set(0); my.set(0); setHov(false); };
-
+ 
   return (
     <motion.div
-      initial={{opacity:0,y:28,scale:.96}}
+      initial={{opacity:0,y:26,scale:.96}}
       animate={{opacity:1,y:0,scale:1}}
-      transition={{delay:.12+i*.1,duration:.75,ease:[.22,1,.36,1]}}>
+      transition={{delay:.1+i*.09,duration:.7,ease:[.22,1,.36,1]}}>
       <Link to={createPageUrl(g.page)}>
-        <motion.div
-          ref={ref} className="cshim cbp card-wrap"
-          onMouseEnter={()=>setHov(true)} onMouseLeave={handleLeave} onMouseMove={handleMove}
-          whileHover={{y:-6,scale:1.015}}
-          transition={{type:'spring',stiffness:280,damping:22}}
+        <div
+          className="gc-wrap"
+          onMouseEnter={()=>setHov(true)}
+          onMouseLeave={()=>setHov(false)}
           style={{
-            position:'relative',overflow:'hidden',borderRadius:18,cursor:'pointer',height:218,
-            background:g.bg,
-            '--bs':g.bs,'--bsh':g.bsh,
-            '--sx':'6.5s','--sdl':`${i*.9}s`,
+            position:'relative', overflow:'hidden', borderRadius:18,
+            cursor:'pointer', height,
+            boxShadow: hov ? g.borderHover : g.borderDefault,
+            transform: hov ? 'translateY(-6px) scale(1.013)' : 'translateY(0) scale(1)',
           }}>
-
-          {/* inner grid */}
-          <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:1,
-            backgroundImage:`linear-gradient(${g.accent}06 1px,transparent 1px),linear-gradient(90deg,${g.accent}06 1px,transparent 1px)`,
-            backgroundSize:'32px 32px'}}/>
-
-          {/* sleek hover gradient — fades in smoothly, no jarring motion */}
-          <div className="card-hov-grad" style={{background: g.hoverGradient}}/>
-
-          {/* subtle radial that follows mouse */}
-          <motion.div
-            style={{
-              position:'absolute',inset:-60,pointerEvents:'none',zIndex:2,
-              background:`radial-gradient(ellipse 50% 50% at calc(50% + ${sx.get()}px) calc(50% + ${sy.get()}px), ${g.glowColor} 0%, transparent 65%)`,
-              x: sx, y: sy,
-            }}
-            animate={{opacity:hov?1:.3}} transition={{duration:.45}}/>
-
-          {/* case image */}
-          <motion.img src={g.caseImg} alt={g.name}
-            animate={{ scale: hov?1.1:1, y: hov?-12:0, rotate: hov?4:0 }}
-            transition={{type:'spring',stiffness:160,damping:16}}
-            style={{position:'absolute',right:14,top:'50%',marginTop:-78,width:156,
-              pointerEvents:'none',userSelect:'none',filter:g.caseGlow,zIndex:5}}/>
-
-          {/* bottom info bar */}
+ 
+          {/* ── FULL-COVER IMAGE: greyscale → colour on hover via CSS ── */}
+          <img src={g.img} alt={g.name} className="gc-img"/>
+ 
+          {/* ── dark vignette so text is always readable ── */}
+          <div className="gc-vignette"/>
+ 
+          {/* ── coloured glow that fades in on hover ── */}
+          <div className="gc-glow" style={{background: g.glowOverlay}}/>
+ 
+          {/* ── top accent line ── */}
+          <div className="gc-line" style={{background: g.lineGrad}}/>
+ 
+          {/* ── label bar ── */}
           <div style={{
-            position:'absolute',bottom:0,left:0,right:0,zIndex:8,
-            background:'linear-gradient(to top,rgba(0,0,0,.96) 0%,rgba(0,0,0,.6) 45%,transparent 100%)',
-            padding:'26px 20px 16px',
+            position:'absolute', bottom:0, left:0, right:0, zIndex:10,
+            padding: height > 200 ? '28px 20px 18px' : '20px 16px 14px',
           }}>
             <div style={{display:'flex',alignItems:'center',gap:8}}>
-              <motion.div animate={{rotate:hov?360:0}} transition={{duration:.5,ease:'easeInOut'}}
-                style={{display:'flex',alignItems:'center',justifyContent:'center',
-                  width:30,height:30,borderRadius:9,
-                  background:`linear-gradient(135deg,${g.accent}22,${g.accent}44)`,
-                  border:`1px solid ${g.accent}44`}}>
-                <g.icon style={{width:14,height:14,color:g.accent}}/>
-              </motion.div>
-              <span style={{fontSize:17,fontWeight:900,color:'#fff',letterSpacing:'.01em'}}>{g.name}</span>
+              <div style={{
+                display:'flex',alignItems:'center',justifyContent:'center',
+                width: height > 200 ? 30 : 26,
+                height: height > 200 ? 30 : 26,
+                borderRadius: height > 200 ? 9 : 7,
+                background:`linear-gradient(135deg,${g.accent}28,${g.accent}50)`,
+                border:`1px solid ${g.accent}55`,
+                transition:'transform .4s ease',
+                transform: hov ? 'rotate(360deg)' : 'rotate(0deg)',
+              }}>
+                <g.icon style={{width: height>200?14:12, height: height>200?14:12, color:g.accent}}/>
+              </div>
+              <span style={{fontSize: height>200?17:15, fontWeight:900, color:'#fff', letterSpacing:'.01em',
+                textShadow:'0 2px 12px rgba(0,0,0,.8)'}}>{g.name}</span>
               {g.tag && (
-                <span style={{fontSize:9,fontWeight:800,letterSpacing:'.16em',textTransform:'uppercase',
-                  color:g.tagColor,background:g.tagBg,borderRadius:6,padding:'2px 8px',
-                  boxShadow:g.tag==='HOT'?'0 0 14px rgba(251,191,36,.6)':undefined}}>{g.tag}</span>
+                <span style={{fontSize:9,fontWeight:800,letterSpacing:'.15em',textTransform:'uppercase',
+                  color:g.tagColor, background:g.tagBg, borderRadius:6, padding:'2px 8px',
+                  boxShadow: g.tag==='HOT' ? '0 0 14px rgba(251,191,36,.6)' :
+                              g.tag==='LIVE' ? '0 0 12px rgba(124,58,237,.6)' : 'none'}}>
+                  {g.tag}
+                </span>
               )}
             </div>
           </div>
-
-          {/* top accent line */}
-          <motion.div
-            animate={{scaleX:hov?1:.15,opacity:hov?1:0}}
-            transition={{duration:.35,ease:[.22,1,.36,1]}}
-            style={{position:'absolute',top:0,left:0,right:0,height:2,zIndex:9,transformOrigin:'center',
-              background:`linear-gradient(90deg,transparent,${g.accent},rgba(255,255,255,.6),${g.accent},transparent)`}}/>
-        </motion.div>
+ 
+        </div>
       </Link>
     </motion.div>
   );
 }
-
-/* ══════════ SMALL GAME CARD ══════════ */
-function SmGameCard({ g, i }) {
-  const [hov, setHov] = useState(false);
-  const ref = useRef();
-  const mx = useMotionValue(0);
-  const my = useMotionValue(0);
-  const sx = useSpring(mx,{stiffness:160,damping:20});
-  const sy = useSpring(my,{stiffness:160,damping:20});
-
-  const handleMove = e => {
-    if(!ref.current) return;
-    const r = ref.current.getBoundingClientRect();
-    mx.set(((e.clientX-r.left)/r.width-.5)*18);
-    my.set(((e.clientY-r.top)/r.height-.5)*18);
-  };
-  const handleLeave = () => { mx.set(0); my.set(0); setHov(false); };
-
-  return (
-    <motion.div
-      initial={{opacity:0,y:22,scale:.95}}
-      animate={{opacity:1,y:0,scale:1}}
-      transition={{delay:.28+i*.09,duration:.65,ease:[.22,1,.36,1]}}>
-      <Link to={createPageUrl(g.page)}>
-        <motion.div
-          ref={ref} className="cshim card-wrap"
-          onMouseEnter={()=>setHov(true)} onMouseLeave={handleLeave} onMouseMove={handleMove}
-          whileHover={{y:-6,scale:1.018}}
-          transition={{type:'spring',stiffness:280,damping:22}}
-          style={{
-            position:'relative',overflow:'hidden',borderRadius:18,cursor:'pointer',height:163,
-            background:g.bg,
-            boxShadow:hov?g.bsh:g.bs,
-            transition:'box-shadow .38s ease',
-            '--sx':'7.5s','--sdl':`${(i+2)*.8}s`,
-          }}>
-
-          <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:1,
-            backgroundImage:`linear-gradient(${g.accent}05 1px,transparent 1px),linear-gradient(90deg,${g.accent}05 1px,transparent 1px)`,
-            backgroundSize:'26px 26px'}}/>
-
-          {/* sleek hover gradient */}
-          <div className="card-hov-grad" style={{background: g.hoverGradient}}/>
-
-          <motion.div
-            style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:2,
-              background:`radial-gradient(ellipse 65% 65% at calc(70% + ${sx.get()}px) calc(38% + ${sy.get()}px), ${g.glowColor} 0%, transparent 60%)`,
-              x:sx,y:sy}}
-            animate={{opacity:hov?1:.3}} transition={{duration:.45}}/>
-
-          <motion.img src={g.caseImg} alt={g.name}
-            animate={{scale:hov?1.12:1,y:hov?-8:0,rotate:hov?5:0}}
-            transition={{type:'spring',stiffness:200,damping:18}}
-            style={{position:'absolute',right:9,top:5,width:116,
-              pointerEvents:'none',userSelect:'none',filter:g.caseGlow,zIndex:5}}/>
-
-          <div style={{
-            position:'absolute',bottom:0,left:0,right:0,zIndex:8,
-            background:'linear-gradient(to top,rgba(0,0,0,.96) 0%,rgba(0,0,0,.6) 48%,transparent 100%)',
-            padding:'18px 16px 13px',
-          }}>
-            <div style={{display:'flex',alignItems:'center',gap:7}}>
-              <motion.div animate={{rotate:hov?360:0}} transition={{duration:.5,ease:'easeInOut'}}
-                style={{display:'flex',alignItems:'center',justifyContent:'center',
-                  width:26,height:26,borderRadius:7,
-                  background:`linear-gradient(135deg,${g.accent}22,${g.accent}44)`,
-                  border:`1px solid ${g.accent}40`}}>
-                <g.icon style={{width:12,height:12,color:g.accent}}/>
-              </motion.div>
-              <span style={{fontSize:15,fontWeight:900,color:'#fff',letterSpacing:'.01em'}}>{g.name}</span>
-              {g.tag && (
-                <span style={{fontSize:9,fontWeight:800,letterSpacing:'.14em',textTransform:'uppercase',
-                  color:g.tagColor,background:g.tagBg,borderRadius:5,padding:'2px 7px',
-                  boxShadow:'0 0 10px rgba(124,58,237,.45)'}}>{g.tag}</span>
-              )}
-            </div>
-          </div>
-
-          <motion.div
-            animate={{scaleX:hov?1:.15,opacity:hov?1:0}}
-            transition={{duration:.32,ease:[.22,1,.36,1]}}
-            style={{position:'absolute',top:0,left:0,right:0,height:2,zIndex:9,transformOrigin:'center',
-              background:`linear-gradient(90deg,transparent,${g.accent},rgba(255,255,255,.5),${g.accent},transparent)`}}/>
-        </motion.div>
-      </Link>
-    </motion.div>
-  );
-}
-
+ 
 /* ══════════ FEATURED CASES SLOT ══════════ */
 function FeaturedSlot() {
   const [hov, setHov] = useState(false);
@@ -598,61 +478,70 @@ function FeaturedSlot() {
       initial={{opacity:0,y:22,scale:.95}} animate={{opacity:1,y:0,scale:1}}
       transition={{delay:.46,duration:.65,ease:[.22,1,.36,1]}}>
       <Link to={createPageUrl('Cases')}>
-        <motion.div className="cshim card-wrap"
-          onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-          whileHover={{y:-6,scale:1.018}}
-          transition={{type:'spring',stiffness:280,damping:22}}
+        <div
+          className="gc-wrap"
+          onMouseEnter={()=>setHov(true)}
+          onMouseLeave={()=>setHov(false)}
           style={{
-            position:'relative',overflow:'hidden',borderRadius:18,cursor:'pointer',height:163,
+            position:'relative', overflow:'hidden', borderRadius:18, cursor:'pointer', height:163,
             background:'linear-gradient(145deg,#07001a 0%,#120035 55%,#04000d 100%)',
-            boxShadow:hov
-              ?'0 0 0 1px rgba(251,191,36,.32),0 14px 44px rgba(0,0,0,.8),0 0 55px rgba(251,191,36,.18)'
-              :'0 0 0 1px rgba(251,191,36,.12),0 14px 44px rgba(0,0,0,.8)',
-            transition:'box-shadow .38s ease',
-            '--sx':'8s','--sdl':'1.4s',
+            boxShadow: hov
+              ? '0 0 0 1px rgba(251,191,36,.5), 0 14px 44px rgba(0,0,0,.85), 0 0 50px rgba(251,191,36,.24), 0 0 90px rgba(192,132,252,.12)'
+              : '0 0 0 1px rgba(255,255,255,.07), 0 14px 44px rgba(0,0,0,.85)',
+            transform: hov ? 'translateY(-6px) scale(1.013)' : 'translateY(0) scale(1)',
           }}>
-
+ 
           <div style={{position:'absolute',inset:0,pointerEvents:'none',zIndex:1,
-            background:'radial-gradient(ellipse 80% 70% at 78% 35%,rgba(251,191,36,.18) 0%,transparent 60%)'}}/>
-
-          {/* hover gradient */}
-          <div className="card-hov-grad" style={{
-            background:'radial-gradient(ellipse 80% 70% at 65% 40%, rgba(251,191,36,.22) 0%, rgba(168,85,247,.16) 55%, transparent 100%)'
+            background:'radial-gradient(ellipse 80% 70% at 78% 35%,rgba(251,191,36,.14) 0%,transparent 60%)'}}/>
+ 
+          {/* hover glow overlay */}
+          <div style={{
+            position:'absolute',inset:0,zIndex:3,borderRadius:18,pointerEvents:'none',
+            background:'linear-gradient(135deg,rgba(251,191,36,.24) 0%,rgba(192,132,252,.18) 55%,rgba(109,40,217,.22) 100%)',
+            opacity: hov ? 1 : 0,
+            transition:'opacity .45s ease',
           }}/>
-
+ 
+          {/* top line */}
+          <div style={{
+            position:'absolute',top:0,left:0,right:0,height:2,zIndex:9,borderRadius:18,
+            background:'linear-gradient(90deg,transparent,#fbbf24,#c084fc,#fbbf24,transparent)',
+            transform: hov ? 'scaleX(1)' : 'scaleX(.1)',
+            opacity: hov ? 1 : 0,
+            transformOrigin:'center',
+            transition:'transform .38s ease, opacity .38s ease',
+          }}/>
+ 
           <img src={vtechImg} alt="" className="hfa" style={{position:'absolute',right:4,top:-6,width:90,zIndex:5,
             filter:'drop-shadow(0 0 20px rgba(168,85,247,.8)) drop-shadow(0 8px 24px rgba(0,0,0,.95))'}}/>
           <img src={irishImg} alt="" className="hfc" style={{position:'absolute',right:55,top:40,width:62,zIndex:5,opacity:.9,
             filter:'drop-shadow(0 0 16px rgba(251,191,36,.75)) drop-shadow(0 6px 18px rgba(0,0,0,.95))'}}/>
-
+ 
           <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:8,
-            background:'linear-gradient(to top,rgba(0,0,0,.96) 0%,rgba(0,0,0,.6) 48%,transparent 100%)',
-            padding:'18px 16px 13px'}}>
+            background:'linear-gradient(to top,rgba(0,0,0,.92) 0%,rgba(0,0,0,.5) 48%,transparent 100%)',
+            padding:'20px 16px 14px'}}>
             <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
               <div style={{display:'flex',alignItems:'center',gap:7}}>
-                <motion.div animate={{rotate:hov?360:0}} transition={{duration:.5,ease:'easeInOut'}}
-                  style={{display:'flex',alignItems:'center',justifyContent:'center',
-                    width:26,height:26,borderRadius:7,
-                    background:'rgba(251,191,36,.18)',border:'1px solid rgba(251,191,36,.35)'}}>
+                <div style={{display:'flex',alignItems:'center',justifyContent:'center',
+                  width:26,height:26,borderRadius:7,
+                  background:'rgba(251,191,36,.18)',border:'1px solid rgba(251,191,36,.38)',
+                  transition:'transform .4s ease',
+                  transform: hov ? 'rotate(360deg)' : 'rotate(0deg)'}}>
                   <Star style={{width:12,height:12,color:'#fbbf24'}}/>
-                </motion.div>
-                <span style={{fontSize:15,fontWeight:900,color:'#fff',letterSpacing:'.01em'}}>Featured Cases</span>
+                </div>
+                <span style={{fontSize:15,fontWeight:900,color:'#fff',textShadow:'0 2px 10px rgba(0,0,0,.8)'}}>Featured Cases</span>
               </div>
-              <motion.div animate={{x:hov?3:0}} transition={{duration:.25}}>
-                <ChevronRight style={{width:14,height:14,color:'rgba(251,191,36,.6)'}}/>
-              </motion.div>
+              <div style={{transition:'transform .25s ease', transform: hov ? 'translateX(3px)' : 'translateX(0)'}}>
+                <ChevronRight style={{width:14,height:14,color:'rgba(251,191,36,.7)'}}/>
+              </div>
             </div>
           </div>
-
-          <motion.div animate={{scaleX:hov?1:.15,opacity:hov?1:0}} transition={{duration:.35,ease:[.22,1,.36,1]}}
-            style={{position:'absolute',top:0,left:0,right:0,height:2,zIndex:9,transformOrigin:'center',
-              background:'linear-gradient(90deg,transparent,#fbbf24,rgba(255,255,255,.5),#fbbf24,transparent)'}}/>
-        </motion.div>
+        </div>
       </Link>
     </motion.div>
   );
 }
-
+ 
 /* ══════════ SECTION HEADER ══════════ */
 function SectionHead({ label, icon: Icon, accent='#fbbf24' }) {
   return (
@@ -664,12 +553,12 @@ function SectionHead({ label, icon: Icon, accent='#fbbf24' }) {
     </motion.div>
   );
 }
-
+ 
 /* ══════════ MAIN ══════════ */
 export default function Home() {
   const { loading } = useWallet();
   useRequireAuth();
-
+ 
   if (loading) return (
     <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'60vh',background:'#04000a'}}>
       <div style={{position:'relative',width:52,height:52}}>
@@ -681,10 +570,10 @@ export default function Home() {
       </div>
     </div>
   );
-
+ 
   const lgGames = GAMES.filter(g=>g.size==='lg');
   const smGames = GAMES.filter(g=>g.size==='sm');
-
+ 
   return (
     <div className="lv" style={{
       background:'#04000a',
@@ -698,10 +587,10 @@ export default function Home() {
         <section>
           <SectionHead label="Magic Games" icon={Zap}/>
           <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:14,marginBottom:14}}>
-            {lgGames.map((g,i)=><LgGameCard key={g.name} g={g} i={i}/>)}
+            {lgGames.map((g,i)=><GameCard key={g.name} g={g} i={i} height={218}/>)}
           </div>
           <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:14}}>
-            {smGames.map((g,i)=><SmGameCard key={g.name} g={g} i={i}/>)}
+            {smGames.map((g,i)=><GameCard key={g.name} g={g} i={i+2} height={163}/>)}
             <FeaturedSlot/>
           </div>
         </section>
