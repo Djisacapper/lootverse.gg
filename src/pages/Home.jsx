@@ -22,21 +22,24 @@ const crashImg    = 'https://i.imgur.com/53dgn4r.png';
    Using position:fixed on each gem individually so
    nothing can clip or contain them
    ══════════════════════════════════════════════════ */
+/* topPct = percentage of the INITIAL window height, resolved to px once on mount.
+   This avoids iOS Safari's "dynamic viewport" jitter where vh units are
+   recalculated on every scroll event, making fixed elements bounce. */
 const GEM_LEFT = [
-  { shape:'diamond', size:46, c1:'#e9d5ff', c2:'#5b21b6', glow:'rgba(167,139,250,.95)', top:'8vh',  anim:'gfA 7.2s ease-in-out infinite' },
-  { shape:'hex',     size:36, c1:'#fde68a', c2:'#b45309', glow:'rgba(251,191,36,.9)',   top:'22vh', anim:'gfB 8.8s ease-in-out infinite 1.3s' },
-  { shape:'marquise',size:42, c1:'#f9a8d4', c2:'#9d174d', glow:'rgba(236,72,153,.88)', top:'37vh', anim:'gfC 6.9s ease-in-out infinite 2.6s' },
-  { shape:'oval',    size:32, c1:'#a78bfa', c2:'#4c1d95', glow:'rgba(139,92,246,.9)',   top:'53vh', anim:'gfD 9.1s ease-in-out infinite 0.8s' },
-  { shape:'diamond', size:40, c1:'#fbbf24', c2:'#92400e', glow:'rgba(251,191,36,.88)', top:'68vh', anim:'gfE 7.7s ease-in-out infinite 2.0s' },
-  { shape:'hex',     size:28, c1:'#c084fc', c2:'#6d28d9', glow:'rgba(192,132,252,.92)', top:'83vh', anim:'gfF 10.2s ease-in-out infinite 3.4s' },
+  { shape:'diamond', size:46, c1:'#e9d5ff', c2:'#5b21b6', glow:'rgba(167,139,250,.95)', topPct:8,  anim:'gfA 7.2s ease-in-out infinite' },
+  { shape:'hex',     size:36, c1:'#fde68a', c2:'#b45309', glow:'rgba(251,191,36,.9)',   topPct:22, anim:'gfB 8.8s ease-in-out infinite 1.3s' },
+  { shape:'marquise',size:42, c1:'#f9a8d4', c2:'#9d174d', glow:'rgba(236,72,153,.88)', topPct:37, anim:'gfC 6.9s ease-in-out infinite 2.6s' },
+  { shape:'oval',    size:32, c1:'#a78bfa', c2:'#4c1d95', glow:'rgba(139,92,246,.9)',   topPct:53, anim:'gfD 9.1s ease-in-out infinite 0.8s' },
+  { shape:'diamond', size:40, c1:'#fbbf24', c2:'#92400e', glow:'rgba(251,191,36,.88)', topPct:68, anim:'gfE 7.7s ease-in-out infinite 2.0s' },
+  { shape:'hex',     size:28, c1:'#c084fc', c2:'#6d28d9', glow:'rgba(192,132,252,.92)', topPct:83, anim:'gfF 10.2s ease-in-out infinite 3.4s' },
 ];
 const GEM_RIGHT = [
-  { shape:'hex',      size:50, c1:'#fbbf24', c2:'#92400e', glow:'rgba(251,191,36,.95)',  top:'6vh',  anim:'gfB 8.4s ease-in-out infinite 0.4s' },
-  { shape:'marquise', size:34, c1:'#c084fc', c2:'#4c1d95', glow:'rgba(192,132,252,.9)',  top:'20vh', anim:'gfD 9.4s ease-in-out infinite 1.8s' },
-  { shape:'diamond',  size:44, c1:'#fde68a', c2:'#a16207', glow:'rgba(251,191,36,.9)',   top:'35vh', anim:'gfF 7.5s ease-in-out infinite 3.6s' },
-  { shape:'oval',     size:30, c1:'#e879f9', c2:'#7e22ce', glow:'rgba(232,121,249,.86)', top:'51vh', anim:'gfA 8.0s ease-in-out infinite 0.6s' },
-  { shape:'marquise', size:40, c1:'#bfdbfe', c2:'#1d4ed8', glow:'rgba(96,165,250,.84)',  top:'66vh', anim:'gfC 7.1s ease-in-out infinite 2.2s' },
-  { shape:'diamond',  size:32, c1:'#bbf7d0', c2:'#15803d', glow:'rgba(74,222,128,.82)',  top:'81vh', anim:'gfE 9.8s ease-in-out infinite 1.1s' },
+  { shape:'hex',      size:50, c1:'#fbbf24', c2:'#92400e', glow:'rgba(251,191,36,.95)',  topPct:6,  anim:'gfB 8.4s ease-in-out infinite 0.4s' },
+  { shape:'marquise', size:34, c1:'#c084fc', c2:'#4c1d95', glow:'rgba(192,132,252,.9)',  topPct:20, anim:'gfD 9.4s ease-in-out infinite 1.8s' },
+  { shape:'diamond',  size:44, c1:'#fde68a', c2:'#a16207', glow:'rgba(251,191,36,.9)',   topPct:35, anim:'gfF 7.5s ease-in-out infinite 3.6s' },
+  { shape:'oval',     size:30, c1:'#e879f9', c2:'#7e22ce', glow:'rgba(232,121,249,.86)', topPct:51, anim:'gfA 8.0s ease-in-out infinite 0.6s' },
+  { shape:'marquise', size:40, c1:'#bfdbfe', c2:'#1d4ed8', glow:'rgba(96,165,250,.84)',  topPct:66, anim:'gfC 7.1s ease-in-out infinite 2.2s' },
+  { shape:'diamond',  size:32, c1:'#bbf7d0', c2:'#15803d', glow:'rgba(74,222,128,.82)',  topPct:81, anim:'gfE 9.8s ease-in-out infinite 1.1s' },
 ];
 
 const CSS = `
@@ -293,8 +296,9 @@ function useBreakpoint() {
   return bp;
 }
 
-/* Single fixed gem */
-function FixedGem({ shape, size, c1, c2, glow, top, side, offsetPx, anim }) {
+/* Single fixed gem — topPx is a resolved pixel number (never vh/%) so iOS
+   Safari's dynamic-viewport recalc during scroll can't make gems jump */
+function FixedGem({ shape, size, c1, c2, glow, topPx, side, offsetPx, anim }) {
   const id = useRef(`g${Math.random().toString(36).slice(2,8)}`).current;
   const ShapeSVG = SHAPE_MAP[shape];
 
@@ -305,7 +309,7 @@ function FixedGem({ shape, size, c1, c2, glow, top, side, offsetPx, anim }) {
   return (
     <div style={{
       position: 'fixed',
-      top,
+      top: topPx,
       ...posStyle,
       width:  size,
       height: size,
@@ -331,27 +335,25 @@ function FixedGem({ shape, size, c1, c2, glow, top, side, offsetPx, anim }) {
 function GemColumns() {
   const bp = useBreakpoint();
 
+  // Resolve vh percentages → px once on mount using the *initial* window height.
+  // We snapshot it immediately and never update it — this is intentional so that
+  // iOS Safari's shrinking/growing viewport bar during scroll has zero effect.
+  const vhPx = useRef(
+    typeof window !== 'undefined' ? window.innerHeight / 100 : 8
+  ).current;
+
   // Hide on mobile entirely (CSS also hides, this is belt+suspenders)
   if (bp === 'mobile') return null;
 
-  /*
-    Desktop: content is ~860px centered, so left edge ≈ (vw-860)/2
-             Gems straddle that edge: half inside, half outside
-    Tablet:  content is full-width with ~16px padding
-             Gems are small (scaled down) and sit at the very screen edge
-  */
   const getGemProps = (gem, side) => {
     const scale = bp === 'tablet' ? 0.55 : 1;
     const scaledSize = Math.round(gem.size * scale);
 
+    // Convert topPct → locked pixel value
+    const topPx = Math.round(gem.topPct * vhPx);
+
     let offsetPx;
     if (bp === 'desktop') {
-      // Left edge of content box assuming max-width ~860px centered
-      // Gem straddles the edge: positioned so its center is on the edge
-      // left edge from viewport = (100vw - 860px) / 2
-      // We use a CSS calc — but since we're in JS style, we use vw trick:
-      // Actually we just keep original vw approach, simplified:
-      // left gems: ~half gem width inside content
       if (side === 'left') {
         offsetPx = `calc((100vw - 860px) / 2 - ${Math.round(scaledSize * 0.5)}px)`;
       } else {
@@ -362,7 +364,7 @@ function GemColumns() {
       offsetPx = `${-Math.round(scaledSize * 0.3)}px`;
     }
 
-    return { ...gem, size: scaledSize, offsetPx };
+    return { ...gem, size: scaledSize, topPx, offsetPx };
   };
 
   return (
