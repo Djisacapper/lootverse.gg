@@ -256,16 +256,19 @@ function OvalSVG({ id, c1, c2 }) {
 const SHAPE_MAP = { diamond: DiamondSVG, hex: HexSVG, marquise: MarquiseSVG, oval: OvalSVG };
 
 /* Single fixed gem — each one individually fixed to viewport */
-function FixedGem({ shape, size, c1, c2, glow, top, left, right, anim }) {
+function FixedGem({ shape, size, c1, c2, glow, top, leftVw, rightVw, offsetX, anim }) {
   const id = useRef(`g${Math.random().toString(36).slice(2,8)}`).current;
   const ShapeSVG = SHAPE_MAP[shape];
+
+  const posStyle = leftVw !== undefined
+    ? { left: `calc(${leftVw}vw + ${offsetX}px)` }
+    : { right: `calc(${rightVw}vw + ${offsetX}px)` };
 
   return (
     <div style={{
       position: 'fixed',
       top,
-      ...(left !== undefined ? { left } : {}),
-      ...(right !== undefined ? { right } : {}),
+      ...posStyle,
       width:  size,
       height: size,
       pointerEvents: 'none',
@@ -288,17 +291,21 @@ function FixedGem({ shape, size, c1, c2, glow, top, left, right, anim }) {
 
 /* Left & right gem columns */
 function GemColumns() {
-  // Left gems: centered in the sidebar gap (~175px wide)
-  // We center each gem: left = (175 - size) / 2
-  // Right gems: centered in the chat panel gap (~185px wide)  
-  // We center each gem: right = (185 - size) / 2
+  // Content box left edge ≈ 19vw, right edge ≈ 78vw from left
+  // Each gem is centered on that edge: offset by half its size
   return (
     <>
       {GEM_LEFT.map((g, i) => (
-        <FixedGem key={`L${i}`} {...g} left={Math.round((175 - g.size) / 2)}/>
+        <FixedGem key={`L${i}`} {...g}
+          leftVw={19}
+          offsetX={-Math.round(g.size / 2)}
+        />
       ))}
       {GEM_RIGHT.map((g, i) => (
-        <FixedGem key={`R${i}`} {...g} right={Math.round((185 - g.size) / 2)}/>
+        <FixedGem key={`R${i}`} {...g}
+          rightVw={22}
+          offsetX={-Math.round(g.size / 2)}
+        />
       ))}
     </>
   );
