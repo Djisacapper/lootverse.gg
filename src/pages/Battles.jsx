@@ -37,7 +37,7 @@ const CSS = `
 .bt-slot-card.taken{cursor:default;opacity:.7;}
 @keyframes bt-toast-in{0%{transform:translateY(24px) scale(.95);opacity:0}100%{transform:translateY(0) scale(1);opacity:1}}
 @keyframes bt-toast-out{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(.95)}}
-.bt-toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;align-items:center;gap:10px;padding:13px 22px;border-radius:14px;background:linear-gradient(135deg,#1a0035,#0d001f);border:1px solid rgba(157,111,255,.35);box-shadow:0 8px 40px rgba(0,0,0,.7),0 0 30px rgba(157,111,255,.15);animation:bt-toast-in .32s cubic-bezier(.34,1.56,.64,1) forwards;}
+.bt-toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);z-index:99999;display:flex;align-items:center;gap:10px;padding:13px 22px;border-radius:14px;background:linear-gradient(135deg,#1a0035,#0d001f);border:1px solid rgba(157,111,255,.35);box-shadow:0 8px 40px rgba(0,0,0,.7),0 0 30px rgba(157,111,255,.15);animation:bt-toast-in .32s cubic-bezier(.34,1.56,.64,1) forwards;white-space:nowrap;}
 .bt-toast-exit{animation:bt-toast-out .22s ease-in forwards;}
 `;
 
@@ -49,6 +49,19 @@ const TEAM_PALETTE = [
   { color:'#4ade80', bg:'rgba(74,222,128,.1)',  border:'rgba(74,222,128,.28)', glow:'rgba(74,222,128,.2)' },
 ];
 const isRealPlayer = (p) => p?.email && p.email !== '';
+
+/* ── fetchFreshBattle — uses list() NOT filter() to avoid 405 ──────
+   list() is always supported; filter() returns 405 on this API.
+   We fetch recent battles and find our battle by id.
+────────────────────────────────────────────────────────────────── */
+async function fetchFreshBattle(battleId) {
+  try {
+    const all = await base44.entities.CaseBattle.list('-created_date', 50);
+    return all.find(b => b.id === battleId) || null;
+  } catch {
+    return null;
+  }
+}
 
 function buildSelectedCasesFromBattle(battle, cases) {
   if (battle.selected_cases_json) {
@@ -68,20 +81,20 @@ function buildSelectedCasesFromBattle(battle, cases) {
   return Array.from({ length: battle.rounds || 1 }, () => caseTemplate);
 }
 
-/* ─── Already-in Toast ─────────────────────────────────────────── */
-function AlreadyInToast({ onDone }) {
+/* ─── Toast ─────────────────────────────────────────────────────── */
+function Toast({ message, sub, onDone }) {
   const [exiting, setExiting] = React.useState(false);
   React.useEffect(() => {
     const t1 = setTimeout(() => setExiting(true), 2600);
-    const t2 = setTimeout(() => onDone(), 2900);
+    const t2 = setTimeout(() => onDone(), 2950);
     return () => { clearTimeout(t1); clearTimeout(t2); };
   }, []);
   return (
     <div className={`bt-toast${exiting ? ' bt-toast-exit' : ''}`}>
       <span style={{fontSize:18}}>⚔️</span>
       <div>
-        <p style={{fontSize:13,fontWeight:800,color:'#fff',margin:0}}>Already in this battle!</p>
-        <p style={{fontSize:11,color:'rgba(157,111,255,.7)',margin:0,marginTop:2}}>You already have a slot reserved.</p>
+        <p style={{fontSize:13,fontWeight:800,color:'#fff',margin:0}}>{message}</p>
+        {sub && <p style={{fontSize:11,color:'rgba(157,111,255,.7)',margin:0,marginTop:2}}>{sub}</p>}
       </div>
     </div>
   );
@@ -98,7 +111,7 @@ function Particles({ accent = '#fbbf24', count = 10 }) {
   ).current;
   return (
     <div style={{position:'absolute',inset:0,pointerEvents:'none',overflow:'hidden'}}>
-      {pts.map(p=>(
+      {pts.map(p => (
         <div key={p.id} className="bt-pt" style={{left:p.left,bottom:p.bottom,width:p.size,height:p.size,background:accent,boxShadow:`0 0 ${p.size*4}px ${accent}`,'--d':p.d,'--dl':p.dl,'--dx':p.dx}}/>
       ))}
     </div>
@@ -109,7 +122,7 @@ function AvatarCircle({ avatarUrl, name, size=32, bot=false, color='#a855f7' }) 
   const safe = safeAvatarUrl(avatarUrl);
   return (
     <div style={{width:size,height:size,borderRadius:'50%',flexShrink:0,overflow:'hidden',background:bot?'linear-gradient(135deg,#4c1d95,#7c3aed)':`linear-gradient(135deg,${color}44,${color}22)`,display:'flex',alignItems:'center',justifyContent:'center',fontSize:size*0.38,fontWeight:800,color,border:`2px solid ${color}44`,boxShadow:`0 0 10px ${color}28`}}>
-      {safe?<img src={safe} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/>:bot?'🤖':(name?.[0]?.toUpperCase()||'?')}
+      {safe ? <img src={safe} alt="" style={{width:'100%',height:'100%',objectFit:'cover'}}/> : bot ? '🤖' : (name?.[0]?.toUpperCase()||'?')}
     </div>
   );
 }
@@ -117,14 +130,12 @@ function ModeBadge({ label, color, bg, border }) {
   return <span style={{fontSize:9,fontWeight:800,letterSpacing:'.14em',textTransform:'uppercase',padding:'2px 8px',borderRadius:20,background:bg,color,border:`1px solid ${border}`}}>{label}</span>;
 }
 
-/* ─── Join Slot Modal ────────────────────────────────────────────────────────
-   Shown to ANY player joining from the battle list OR from inside the
-   BattleArena waiting lobby. The battle passed in is always pre-fetched
-   fresh by openJoinModal before this component mounts.
-──────────────────────────────────────────────────────────────────────────── */
+/* ─── Join Slot Modal ───────────────────────────────────────────── */
 function JoinSlotModal({ battle, user, balance, onClose, onJoin }) {
   const [selectedSlot, setSelectedSlot] = useState(null);
-  // ALWAYS derive teamList from teams_config — never from players array
+  const [joining, setJoining] = useState(false);
+
+  // Always derive teamList from teams_config — NEVER from players array
   const teamList = React.useMemo(() => {
     if (battle.teams_config) {
       try { return JSON.parse(battle.teams_config); } catch {}
@@ -141,8 +152,15 @@ function JoinSlotModal({ battle, user, balance, onClose, onJoin }) {
   const hasJoined = players.some(p => p?.email === user?.email && !p?.isBot);
   const canAfford = battle.entry_cost <= balance;
 
+  const handleConfirm = async () => {
+    if (selectedSlot === null || !canAfford || hasJoined || joining) return;
+    setJoining(true);
+    await onJoin(battle, selectedSlot);
+    setJoining(false);
+  };
+
   return (
-    <div className="bt-modal-overlay" onClick={e => e.target===e.currentTarget && onClose()}>
+    <div className="bt-modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
       <motion.div className="bt-modal"
         initial={{opacity:0,scale:.93,y:20}} animate={{opacity:1,scale:1,y:0}}
         exit={{opacity:0,scale:.93,y:20}} transition={{type:'spring',stiffness:300,damping:28}}>
@@ -186,12 +204,12 @@ function JoinSlotModal({ battle, user, balance, onClose, onJoin }) {
                   return (
                     <div key={slotIdx}
                       className={`bt-slot-card ${isFilled ? 'taken' : 'empty'}`}
-                      onClick={() => !isFilled && !hasJoined && setSelectedSlot(slotIdx)}
+                      onClick={() => !isFilled && !hasJoined && !joining && setSelectedSlot(slotIdx)}
                       style={{
                         borderColor: isSel ? pal.color : isFilled ? `${pal.color}44` : 'rgba(255,255,255,.1)',
                         background:  isSel ? pal.bg    : isFilled ? `${pal.color}0a` : 'rgba(255,255,255,.02)',
                         boxShadow:   isSel ? `0 0 20px ${pal.glow}` : 'none',
-                        cursor: isFilled || hasJoined ? 'default' : 'pointer',
+                        cursor: isFilled || hasJoined || joining ? 'default' : 'pointer',
                       }}>
                       {isFilled ? (
                         <>
@@ -223,22 +241,21 @@ function JoinSlotModal({ battle, user, balance, onClose, onJoin }) {
         </div>
 
         <div style={{marginTop:22,display:'flex',gap:10}}>
-          <button onClick={onClose} style={{flex:1,padding:'11px',borderRadius:11,border:'1px solid rgba(255,255,255,.1)',background:'rgba(255,255,255,.04)',color:'rgba(255,255,255,.5)',fontSize:13,fontWeight:700,fontFamily:'Nunito,sans-serif',cursor:'pointer'}}>
+          <button onClick={onClose} disabled={joining}
+            style={{flex:1,padding:'11px',borderRadius:11,border:'1px solid rgba(255,255,255,.1)',background:'rgba(255,255,255,.04)',color:'rgba(255,255,255,.5)',fontSize:13,fontWeight:700,fontFamily:'Nunito,sans-serif',cursor:joining?'not-allowed':'pointer'}}>
             Cancel
           </button>
-          <button
-            onClick={() => { if (selectedSlot!==null&&canAfford&&!hasJoined) onJoin(battle, selectedSlot); }}
-            disabled={selectedSlot===null||!canAfford||hasJoined}
+          <button onClick={handleConfirm}
+            disabled={selectedSlot===null||!canAfford||hasJoined||joining}
             style={{
               flex:2,padding:'11px',borderRadius:11,border:'none',
-              background: selectedSlot!==null&&canAfford&&!hasJoined?'linear-gradient(135deg,#fbbf24,#f59e0b)':'rgba(255,255,255,.05)',
-              color:      selectedSlot!==null&&canAfford&&!hasJoined?'#000':'rgba(255,255,255,.2)',
+              background: selectedSlot!==null&&canAfford&&!hasJoined&&!joining?'linear-gradient(135deg,#fbbf24,#f59e0b)':'rgba(255,255,255,.05)',
+              color:      selectedSlot!==null&&canAfford&&!hasJoined&&!joining?'#000':'rgba(255,255,255,.2)',
               fontSize:13,fontWeight:900,fontFamily:'Nunito,sans-serif',
-              cursor:     selectedSlot!==null&&canAfford&&!hasJoined?'pointer':'not-allowed',
-              boxShadow:  selectedSlot!==null&&canAfford&&!hasJoined?'0 0 24px rgba(251,191,36,.35)':'none',
+              cursor:     selectedSlot!==null&&canAfford&&!hasJoined&&!joining?'pointer':'not-allowed',
               transition:'all .2s',
             }}>
-            {hasJoined?'Already Joined':selectedSlot===null?'Select a slot':`Join Team ${teamList.findIndex(t=>t.includes(selectedSlot))+1}`}
+            {joining ? 'Joining…' : hasJoined ? 'Already Joined' : selectedSlot===null ? 'Select a slot' : `Join Team ${teamList.findIndex(t=>t.includes(selectedSlot))+1}`}
           </button>
         </div>
       </motion.div>
@@ -262,7 +279,7 @@ function BattleRow({ battle: b, user, balance, cases, onJoin, onWatch, onView, i
       onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)} className="bt-shim"
       style={{position:'relative',overflow:'hidden',borderRadius:16,background:'linear-gradient(145deg,#080012 0%,#10001e 60%,#040009 100%)',border:`1px solid ${hov?'rgba(251,191,36,.22)':'rgba(255,255,255,.07)'}`,boxShadow:hov?'0 0 0 1px rgba(251,191,36,.14),0 20px 60px rgba(0,0,0,.8),0 0 50px rgba(251,191,36,.1)':'0 8px 32px rgba(0,0,0,.65)',transition:'border-color .25s,box-shadow .3s'}}>
       <div className="bt-scan"/>
-      {hov&&<Particles accent="#fbbf24" count={7}/>}
+      {hov && <Particles accent="#fbbf24" count={7}/>}
       <div style={{height:2,background:isLive?'linear-gradient(90deg,transparent,#a855f7,#fbbf24,transparent)':hov?'linear-gradient(90deg,transparent,#fbbf24,#a855f7,transparent)':'linear-gradient(90deg,transparent,rgba(251,191,36,.2),rgba(168,85,247,.2),transparent)',transition:'background .3s'}}/>
       <div style={{padding:'16px 18px',display:'flex',alignItems:'center',gap:16,flexWrap:'wrap'}}>
         <div style={{display:'flex',flexDirection:'column',gap:8,minWidth:130}}>
@@ -289,7 +306,8 @@ function BattleRow({ battle: b, user, balance, cases, onJoin, onWatch, onView, i
             const sc = buildSelectedCasesFromBattle(b, cases);
             const dc = sc.length>0?sc.slice(0,5):caseTemplate?Array.from({length:Math.min(5,b.rounds||1)},()=>caseTemplate):[];
             return dc.length>0?(
-              <>{dc.map((c,i)=>{const img=c?.image_url||c?.image||null;return(<motion.div key={i} animate={{y:hov?-3:0}} transition={{delay:i*.04,type:'spring',stiffness:200,damping:16}} style={{width:46,height:46,borderRadius:10,flexShrink:0,background:img?`url('${img}') center/cover`:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',boxShadow:hov?'0 4px 16px rgba(0,0,0,.6)':'0 2px 8px rgba(0,0,0,.5)',transition:'box-shadow .25s',display:'flex',alignItems:'center',justifyContent:'center'}}>{!img&&<span style={{fontSize:10,color:'rgba(255,255,255,.25)',fontWeight:700,textAlign:'center',padding:'0 4px',lineHeight:1.2}}>{c?.name?.[0]||'?'}</span>}</motion.div>);})}{b.rounds>5&&<span style={{fontSize:11,color:'rgba(255,255,255,.3)',fontWeight:800}}>+{b.rounds-5}</span>}</>
+              <>{dc.map((c,i)=>{const img=c?.image_url||c?.image||null;return(<motion.div key={i} animate={{y:hov?-3:0}} transition={{delay:i*.04,type:'spring',stiffness:200,damping:16}} style={{width:46,height:46,borderRadius:10,flexShrink:0,background:img?`url('${img}') center/cover`:'rgba(255,255,255,.06)',border:'1px solid rgba(255,255,255,.1)',boxShadow:hov?'0 4px 16px rgba(0,0,0,.6)':'0 2px 8px rgba(0,0,0,.5)',transition:'box-shadow .25s',display:'flex',alignItems:'center',justifyContent:'center'}}>{!img&&<span style={{fontSize:10,color:'rgba(255,255,255,.25)',fontWeight:700,textAlign:'center',padding:'0 4px',lineHeight:1.2}}>{c?.name?.[0]||'?'}</span>}</motion.div>);})}
+              {b.rounds>5&&<span style={{fontSize:11,color:'rgba(255,255,255,.3)',fontWeight:800}}>+{b.rounds-5}</span>}</>
             ):(
               <div style={{padding:'6px 12px',borderRadius:10,background:'rgba(255,255,255,.04)',border:'1px solid rgba(255,255,255,.08)'}}><span style={{fontSize:12,color:'rgba(255,255,255,.3)',fontWeight:700}}>{b.case_name||'Case'}</span></div>
             );
@@ -343,7 +361,9 @@ export default function Battles() {
   useRequireAuth();
   const [freshUser, setFreshUser] = React.useState(null);
   const arenaDataRef = React.useRef(null);
-  const [alreadyInToast, setAlreadyInToast] = React.useState(false);
+  const joiningRef   = React.useRef(false); // global mutex — prevents any duplicate join
+
+  const [toast, setToast] = React.useState(null); // { message, sub }
 
   React.useEffect(() => {
     base44.auth.me().then(setFreshUser).catch(()=>{});
@@ -389,15 +409,12 @@ export default function Battles() {
     let latestUser = user;
     try { latestUser = await base44.auth.me() || user; } catch {}
     const filledPlayers = players.map(p => ({
-      email:       p.email,
-      name:        p.isBot ? p.name : (latestUser.username||latestUser.full_name||p.name),
-      avatar_url:  p.isBot ? null : (latestUser.avatar_url||p.avatar_url||null),
-      isBot:       p.isBot,
-      total_value: 0,
-      items_won:   [],
+      email:      p.email,
+      name:       p.isBot ? p.name : (latestUser.username||latestUser.full_name||p.name),
+      avatar_url: p.isBot ? null : (latestUser.avatar_url||p.avatar_url||null),
+      isBot:      p.isBot, total_value:0, items_won:[],
     }));
     const allFilled = filledPlayers.length >= totalPlayers && filledPlayers.every(p=>p.email);
-    const status    = allFilled ? 'in_progress' : 'waiting';
     const battle = await base44.entities.CaseBattle.create({
       creator_email:       user.email,
       case_template_id:    selectedCases[0].id,
@@ -405,7 +422,7 @@ export default function Battles() {
       rounds:              selectedCases.length,
       max_players:         totalPlayers,
       entry_cost:          totalCost,
-      status,
+      status:              allFilled ? 'in_progress' : 'waiting',
       battle_modes:        battleModes,
       mode_label:          modeLabel,
       teams_config:        JSON.stringify(teams),
@@ -420,94 +437,109 @@ export default function Battles() {
     loadBattles();
   };
 
-  /* ── openJoinModal ──────────────────────────────────────────────
-     Used by BOTH the battle list AND WaitingLobby inside BattleArena.
-     Always fetches fresh battle state so slots shown are accurate.
-     Shows toast if user is already in.
+  /* ── openJoinModal ─────────────────────────────────────────────
+     Uses fetchFreshBattle (list-based, no filter/405) to get the
+     latest slot state before showing the modal. If user is already
+     in, shows toast instead.
   ────────────────────────────────────────────────────────────── */
   const openJoinModal = React.useCallback(async (battle) => {
-    let freshBattle = battle;
-    try {
-      const res = await base44.entities.CaseBattle.filter({ id: battle.id });
-      if (res?.[0]) freshBattle = res[0];
-    } catch {}
-    const alreadyIn = (freshBattle.players || []).some(p => p?.email === user?.email && !p?.isBot);
-    if (alreadyIn) { setAlreadyInToast(true); return; }
-    setJoinModal(freshBattle);
-  }, [user]);
-
-  /* ── handleJoin ─────────────────────────────────────────────────
-     Called when the player confirms their chosen slot.
-
-     KEY FIX — team redirect:
-     teams are ALWAYS sourced from teams_config on the DB record.
-     They are set once here and then NEVER overwritten by bot
-     additions, polling updates, or handleBattleUpdated. This is
-     what keeps the user in their chosen team column permanently.
-  ────────────────────────────────────────────────────────────── */
-  const handleJoin = async (battle, slotIndex) => {
-    if (battle.entry_cost > balance) return;
-
-    // Re-fetch right before writing — race safety
-    let freshBattle = battle;
-    try {
-      const res = await base44.entities.CaseBattle.filter({ id: battle.id });
-      if (res?.[0]) freshBattle = res[0];
-    } catch {}
-
-    // Duplicate guard
-    const alreadyIn = (freshBattle.players || []).some(p => p?.email === user?.email && !p?.isBot);
-    if (alreadyIn) { setJoinModal(null); setAlreadyInToast(true); return; }
-
-    // Slot stolen guard — reopen modal if the slot was taken between open and confirm
-    if (isRealPlayer((freshBattle.players || [])[slotIndex])) {
-      setJoinModal(freshBattle);
+    const fresh = await fetchFreshBattle(battle.id);
+    const b = fresh || battle;
+    const alreadyIn = (b.players||[]).some(p => p?.email === user?.email && !p?.isBot);
+    if (alreadyIn) {
+      setToast({ message:'Already in this battle!', sub:'You already have a slot reserved.' });
       return;
     }
+    setJoinModal(b);
+  }, [user]);
 
-    setJoinModal(null);
-    const selectedCasesArr = buildSelectedCasesFromBattle(freshBattle, cases);
-    if (selectedCasesArr.length === 0) return;
+  /* ── handleJoin ────────────────────────────────────────────────
+     FIXES:
+     1. joiningRef mutex — hard blocks any concurrent/double call
+     2. fetchFreshBattle (list, no filter) — fresh server state
+     3. Duplicate check against live DB data, not stale local state
+     4. Slot-stolen guard — reopens modal if slot just got taken
+     5. teams LOCKED from teams_config — never re-derived from players
+        so the user stays in their chosen column even after bots fill
+  ────────────────────────────────────────────────────────────── */
+  const handleJoin = async (battle, slotIndex) => {
+    if (joiningRef.current) return; // mutex — block double-clicks
+    joiningRef.current = true;
 
-    await updateBalance(-freshBattle.entry_cost, 'battle_entry', `Joined battle: ${freshBattle.case_name}`);
-    let latestUser = user;
-    try { latestUser = await base44.auth.me() || user; } catch {}
+    try {
+      if (battle.entry_cost > balance) return;
 
-    const joinerSlot = { email:latestUser.email, name:latestUser.username||latestUser.full_name||'Player', avatar_url:latestUser.avatar_url||null, isBot:false, total_value:0, items_won:[] };
-    const emptySlot  = { email:'', name:'', avatar_url:null, isBot:false, total_value:0, items_won:[] };
-    const maxPlayers = freshBattle.max_players || 2;
+      // Always fetch from server before writing
+      const fresh = await fetchFreshBattle(battle.id);
+      const fb = fresh || battle;
 
-    const playersToSave = Array.from({ length: maxPlayers }, (_, i) => {
-      const ex = (freshBattle.players || [])[i];
-      return isRealPlayer(ex) ? ex : { ...emptySlot };
-    });
-    playersToSave[slotIndex] = joinerSlot;
+      // Duplicate guard — authoritative DB check
+      const alreadyIn = (fb.players||[]).some(p => p?.email === user?.email && !p?.isBot);
+      if (alreadyIn) {
+        setJoinModal(null);
+        setToast({ message:'Already in this battle!', sub:'You already have a slot reserved.' });
+        return;
+      }
 
-    const allFilled = playersToSave.filter(isRealPlayer).length >= maxPlayers;
-    await base44.entities.CaseBattle.update(freshBattle.id, { players: playersToSave, committed_rolls: null });
-    if (allFilled) {
-      await resolveAndCommitRolls(
-        { ...freshBattle, players: playersToSave, committed_rolls: null },
-        selectedCasesArr, playersToSave, freshBattle.battle_modes || {}
-      );
+      // Slot-stolen guard
+      if (isRealPlayer((fb.players||[])[slotIndex])) {
+        setJoinModal(fb); // reopen with fresh data so user can pick another slot
+        return;
+      }
+
+      setJoinModal(null);
+
+      const selectedCasesArr = buildSelectedCasesFromBattle(fb, cases);
+      if (selectedCasesArr.length === 0) return;
+
+      await updateBalance(-fb.entry_cost, 'battle_entry', `Joined battle: ${fb.case_name}`);
+
+      let latestUser = user;
+      try { latestUser = await base44.auth.me() || user; } catch {}
+
+      const joinerSlot = { email:latestUser.email, name:latestUser.username||latestUser.full_name||'Player', avatar_url:latestUser.avatar_url||null, isBot:false, total_value:0, items_won:[] };
+      const emptySlot  = { email:'', name:'', avatar_url:null, isBot:false, total_value:0, items_won:[] };
+      const maxPlayers = fb.max_players || 2;
+
+      const playersToSave = Array.from({ length: maxPlayers }, (_, i) => {
+        const ex = (fb.players||[])[i];
+        return isRealPlayer(ex) ? ex : { ...emptySlot };
+      });
+      playersToSave[slotIndex] = joinerSlot;
+
+      const allFilled = playersToSave.filter(isRealPlayer).length >= maxPlayers;
+      await base44.entities.CaseBattle.update(fb.id, { players: playersToSave, committed_rolls: null });
+      if (allFilled) {
+        await resolveAndCommitRolls(
+          { ...fb, players: playersToSave, committed_rolls: null },
+          selectedCasesArr, playersToSave, fb.battle_modes||{}
+        );
+      }
+
+      // LOCK teams from teams_config — NEVER re-derive from players array
+      // Re-deriving is what caused the slot redirect bug
+      const teams = fb.teams_config
+        ? JSON.parse(fb.teams_config)
+        : [
+            Array.from({length:Math.ceil(maxPlayers/2)}, (_,i) => i),
+            Array.from({length:Math.floor(maxPlayers/2)}, (_,i) => i + Math.ceil(maxPlayers/2)),
+          ];
+
+      const joinArenaData = {
+        battle:        { ...fb, players: playersToSave },
+        selectedCases: selectedCasesArr,
+        teams,           // ← locked permanently
+        modeLabel:     fb.mode_label || '1v1',
+        battleModes:   fb.battle_modes || {},
+      };
+      arenaDataRef.current = joinArenaData;
+      setArenaData(joinArenaData);
+      setView('arena');
+      loadBattles();
+
+    } finally {
+      joiningRef.current = false;
     }
-
-    // ── LOCK teams from teams_config — NEVER re-derive from players array ──
-    const teams = freshBattle.teams_config
-      ? JSON.parse(freshBattle.teams_config)
-      : [Array.from({length:Math.ceil(maxPlayers/2)},(_,i)=>i), Array.from({length:Math.floor(maxPlayers/2)},(_,i)=>i+Math.ceil(maxPlayers/2))];
-
-    const joinArenaData = {
-      battle:        { ...freshBattle, players: playersToSave },
-      selectedCases: selectedCasesArr,
-      teams,          // ← locked here, never touched again
-      modeLabel:     freshBattle.mode_label || '1v1',
-      battleModes:   freshBattle.battle_modes || {},
-    };
-    arenaDataRef.current = joinArenaData;
-    setArenaData(joinArenaData);
-    setView('arena');
-    loadBattles();
   };
 
   const makeBot = () => ({
@@ -516,7 +548,7 @@ export default function Battles() {
     isBot: true, total_value:0, items_won:[],
   });
 
-  /* ── updateArena — ONLY updates battle, never teams ── */
+  // Only updates battle — never touches teams or selectedCases
   const updateArena = (updatedBattle) => {
     setArenaData(prev => {
       if (!prev) return prev;
@@ -532,18 +564,20 @@ export default function Battles() {
     const battleId   = current.battle.id;
     const maxPlayers = current.battle.max_players || 2;
     const emptySlot  = { email:'', name:'', avatar_url:null, isBot:false, total_value:0, items_won:[] };
-    let freshBattle  = current.battle;
-    try { const { base44:b44 } = await import('@/api/base44Client'); const res = await b44.entities.CaseBattle.filter({id:battleId}); if(res?.[0]) freshBattle=res[0]; } catch {}
-    const playersArr = Array.from({length:maxPlayers},(_,i)=>{ const p=(freshBattle.players||[])[i]; return isRealPlayer(p)?p:{...emptySlot}; });
+    const fb = await fetchFreshBattle(battleId) || current.battle;
+    const playersArr = Array.from({length:maxPlayers},(_,i)=>{ const p=(fb.players||[])[i]; return isRealPlayer(p)?p:{...emptySlot}; });
     if (playersArr.filter(isRealPlayer).length >= maxPlayers) return;
     const firstEmpty = playersArr.findIndex(p=>!isRealPlayer(p));
-    if (firstEmpty===-1) return;
+    if (firstEmpty === -1) return;
     playersArr[firstEmpty] = makeBot();
     const allFilled = playersArr.filter(isRealPlayer).length >= maxPlayers;
     const patch = { players:playersArr, committed_rolls:null, ...(allFilled?{status:'in_progress'}:{}) };
     await base44.entities.CaseBattle.update(battleId, patch);
-    if (allFilled) { const sc=buildSelectedCasesFromBattle({...freshBattle,...patch},cases); if(sc.length>0) await resolveAndCommitRolls({...freshBattle,...patch},sc,playersArr,freshBattle.battle_modes||{}); }
-    updateArena({...freshBattle,...patch});
+    if (allFilled) {
+      const sc = buildSelectedCasesFromBattle({...fb,...patch}, cases);
+      if (sc.length>0) await resolveAndCommitRolls({...fb,...patch}, sc, playersArr, fb.battle_modes||{});
+    }
+    updateArena({...fb,...patch});
     loadBattles();
   };
 
@@ -553,20 +587,18 @@ export default function Battles() {
     const battleId   = current.battle.id;
     const maxPlayers = current.battle.max_players || 2;
     const emptySlot  = { email:'', name:'', avatar_url:null, isBot:false, total_value:0, items_won:[] };
-    let freshBattle  = current.battle;
-    try { const { base44:b44 } = await import('@/api/base44Client'); const res = await b44.entities.CaseBattle.filter({id:battleId}); if(res?.[0]) freshBattle=res[0]; } catch {}
-    const playersArr = Array.from({length:maxPlayers},(_,i)=>{ const p=(freshBattle.players||[])[i]; return isRealPlayer(p)?p:{...emptySlot}; });
+    const fb = await fetchFreshBattle(battleId) || current.battle;
+    const playersArr = Array.from({length:maxPlayers},(_,i)=>{ const p=(fb.players||[])[i]; return isRealPlayer(p)?p:{...emptySlot}; });
     playersArr.forEach((p,i)=>{ if(!isRealPlayer(p)) playersArr[i]=makeBot(); });
     const patch = { players:playersArr, status:'in_progress', committed_rolls:null };
     await base44.entities.CaseBattle.update(battleId, patch);
-    const sc = buildSelectedCasesFromBattle({...freshBattle,...patch},cases);
-    if (sc.length>0) await resolveAndCommitRolls({...freshBattle,...patch},sc,playersArr,freshBattle.battle_modes||{});
-    updateArena({...freshBattle,...patch});
+    const sc = buildSelectedCasesFromBattle({...fb,...patch}, cases);
+    if (sc.length>0) await resolveAndCommitRolls({...fb,...patch}, sc, playersArr, fb.battle_modes||{});
+    updateArena({...fb,...patch});
     loadBattles();
   };
 
   const handleBattleUpdated = (updatedBattle) => {
-    // ONLY update battle object — teams and selectedCases are immutable after join
     setArenaData(prev => {
       if (!prev) return prev;
       const next = { ...prev, battle: updatedBattle };
@@ -577,8 +609,8 @@ export default function Battles() {
   };
 
   const handleWatch = (battle) => {
-    const sc     = buildSelectedCasesFromBattle(battle, cases);
-    const teams  = battle.teams_config ? JSON.parse(battle.teams_config) : [(battle.players||[]).map((_,i)=>i)];
+    const sc    = buildSelectedCasesFromBattle(battle, cases);
+    const teams = battle.teams_config ? JSON.parse(battle.teams_config) : [(battle.players||[]).map((_,i)=>i)];
     setArenaData({ battle, selectedCases:sc, players:battle.players||[], teams, modeLabel:battle.mode_label||'1v1', battleModes:battle.battle_modes||{}, spectate:true });
     setView('arena');
   };
@@ -609,7 +641,7 @@ export default function Battles() {
     const arenaStatus  = arenaBattle?.status || 'waiting';
     return (
       <>
-        {/* Slot modal rendered above arena — visible to ALL players in the lobby */}
+        {toast && <Toast message={toast.message} sub={toast.sub} onDone={()=>setToast(null)}/>}
         <AnimatePresence>
           {joinModal && (
             <JoinSlotModal
@@ -618,7 +650,6 @@ export default function Battles() {
             />
           )}
         </AnimatePresence>
-        {alreadyInToast && <AlreadyInToast onDone={()=>setAlreadyInToast(false)}/>}
         <BattleArena
           key={`${arenaBattle?.id}-${arenaStatus}`}
           battle={arenaBattle}
@@ -652,7 +683,7 @@ export default function Battles() {
   return (
     <div className="bt-root" style={{background:'#04000a',minHeight:'100vh',padding:'20px 0 80px'}}>
       <style>{CSS}</style>
-      {alreadyInToast && <AlreadyInToast onDone={()=>setAlreadyInToast(false)}/>}
+      {toast && <Toast message={toast.message} sub={toast.sub} onDone={()=>setToast(null)}/>}
       <AnimatePresence>
         {joinModal && (
           <JoinSlotModal
@@ -663,7 +694,8 @@ export default function Battles() {
       </AnimatePresence>
 
       <div style={{maxWidth:860,margin:'0 auto',display:'flex',flexDirection:'column',gap:28}}>
-        <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} style={{position:'relative',overflow:'hidden',borderRadius:18,background:'linear-gradient(120deg,#04000a 0%,#0e0020 40%,#160040 70%,#080010 100%)',border:'1px solid rgba(251,191,36,.12)',boxShadow:'0 0 0 1px rgba(251,191,36,.06),0 32px 80px rgba(0,0,0,.85),0 0 100px rgba(168,85,247,.1)',padding:'30px 32px',minHeight:130}}>
+        <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}}
+          style={{position:'relative',overflow:'hidden',borderRadius:18,background:'linear-gradient(120deg,#04000a 0%,#0e0020 40%,#160040 70%,#080010 100%)',border:'1px solid rgba(251,191,36,.12)',boxShadow:'0 0 0 1px rgba(251,191,36,.06),0 32px 80px rgba(0,0,0,.85),0 0 100px rgba(168,85,247,.1)',padding:'30px 32px',minHeight:130}}>
           <div className="bt-scan"/><div className="bt-hex"/>
           <Particles accent="#fbbf24" count={8}/><Particles accent="#a855f7" count={6}/>
           <div style={{position:'absolute',inset:0,pointerEvents:'none',background:'radial-gradient(ellipse 50% 80% at 85% 50%,rgba(168,85,247,.18) 0%,transparent 60%)'}}/>
@@ -679,7 +711,8 @@ export default function Battles() {
           <div style={{position:'absolute',bottom:0,left:0,right:0,height:2,background:'linear-gradient(90deg,transparent,rgba(251,191,36,.5),rgba(168,85,247,.5),transparent)'}}/>
         </motion.div>
 
-        <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:.15}} style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}>
+        <motion.div initial={{opacity:0}} animate={{opacity:1}} transition={{delay:.15}}
+          style={{display:'flex',alignItems:'center',justifyContent:'space-between',gap:12,flexWrap:'wrap'}}>
           <div style={{display:'flex',alignItems:'center',gap:10}}>
             <div style={{width:3,height:20,borderRadius:2,background:'linear-gradient(to bottom,#fbbf24,#a855f7)'}}/>
             <Swords style={{width:15,height:15,color:'#fbbf24'}}/>
