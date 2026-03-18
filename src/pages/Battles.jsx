@@ -562,16 +562,30 @@ export default function Battles() {
     if (!current?.battle?.id) return;
     const battle     = current.battle;
     const maxPlayers = battle.max_players || 2;
-    const existing   = (battle.players || []).filter(isRealPlayer);
-    if (existing.length >= maxPlayers) return;
-    const updatedPlayers = [...existing, makeBot()];
-    const allFilled      = updatedPlayers.length >= maxPlayers;
-    const patch          = { players: updatedPlayers, ...(allFilled?{status:'in_progress'}:{}) };
+    const emptySlot  = { email:'', name:'', avatar_url:null, isBot:false, total_value:0, items_won:[] };
+
+    // Build full-length array preserving existing players at their exact indices
+    const playersArr = Array.from({ length: maxPlayers }, (_, i) => {
+      const p = (battle.players || [])[i];
+      return isRealPlayer(p) ? p : { ...emptySlot };
+    });
+
+    const realCount = playersArr.filter(isRealPlayer).length;
+    if (realCount >= maxPlayers) return;
+
+    // Place bot in the first empty slot
+    const firstEmpty = playersArr.findIndex(p => !isRealPlayer(p));
+    if (firstEmpty === -1) return;
+    playersArr[firstEmpty] = makeBot();
+
+    const allFilled = playersArr.filter(isRealPlayer).length >= maxPlayers;
+    const patch     = { players: playersArr, ...(allFilled ? { status:'in_progress' } : {}) };
     await base44.entities.CaseBattle.update(battle.id, patch);
+
     if (allFilled) {
       const selectedCasesArr = buildSelectedCasesFromBattle({...battle,...patch}, cases);
       if (selectedCasesArr.length > 0) {
-        await resolveAndCommitRolls({...battle,...patch}, selectedCasesArr, updatedPlayers, battle.battle_modes||{});
+        await resolveAndCommitRolls({...battle,...patch}, selectedCasesArr, playersArr, battle.battle_modes||{});
       }
     }
     updateArena({...battle,...patch});
@@ -583,14 +597,25 @@ export default function Battles() {
     if (!current?.battle?.id) return;
     const battle     = current.battle;
     const maxPlayers = battle.max_players || 2;
-    const existing   = (battle.players||[]).filter(isRealPlayer);
-    const updatedPlayers = [...existing];
-    while (updatedPlayers.length < maxPlayers) updatedPlayers.push(makeBot());
-    const patch = { players: updatedPlayers, status: 'in_progress' };
+    const emptySlot  = { email:'', name:'', avatar_url:null, isBot:false, total_value:0, items_won:[] };
+
+    // Build full-length array preserving existing players at their exact indices
+    const playersArr = Array.from({ length: maxPlayers }, (_, i) => {
+      const p = (battle.players || [])[i];
+      return isRealPlayer(p) ? p : { ...emptySlot };
+    });
+
+    // Fill every empty slot with a bot
+    playersArr.forEach((p, i) => {
+      if (!isRealPlayer(p)) playersArr[i] = makeBot();
+    });
+
+    const patch = { players: playersArr, status: 'in_progress' };
     await base44.entities.CaseBattle.update(battle.id, patch);
+
     const selectedCasesArr = buildSelectedCasesFromBattle({...battle,...patch}, cases);
     if (selectedCasesArr.length > 0) {
-      await resolveAndCommitRolls({...battle,...patch}, selectedCasesArr, updatedPlayers, battle.battle_modes||{});
+      await resolveAndCommitRolls({...battle,...patch}, selectedCasesArr, playersArr, battle.battle_modes||{});
     }
     updateArena({...battle,...patch});
     loadBattles();
@@ -669,7 +694,7 @@ export default function Battles() {
     const arenaStatus  = arenaBattle?.status || 'waiting';
     return (
       <BattleArena
-        key={`${arenaBattle?.id}-${arenaStatus}-${arenaPlayers.filter(isRealPlayer).length}`}
+        key={`${arenaBattle?.id}-${arenaStatus}`}
         battle={arenaBattle}
         selectedCases={arenaData.selectedCases}
         players={arenaPlayers}
