@@ -10,6 +10,8 @@ import {
   Shield, MessageCircle, Home, ScrollText, Box,
 } from 'lucide-react';
 
+const LOGO_URL = 'https://i.imgur.com/kdQd9ES.png';
+
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
 * { box-sizing: border-box; }
@@ -156,6 +158,27 @@ function CoinIcon({ size = 16 }) {
   );
 }
 
+// Persistent logo image — never fades out, never re-mounts
+const LogoImg = React.memo(function LogoImg({ size, borderRadius }) {
+  return (
+    <div
+      className="logo-pulse"
+      style={{
+        width: size, height: size, borderRadius, flexShrink: 0,
+        overflow: 'hidden',
+        boxShadow: '0 0 20px rgba(168,85,247,.5)',
+        background: '#0e0020',
+      }}
+    >
+      <img
+        src={LOGO_URL}
+        alt="Amethyst.GG"
+        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+      />
+    </div>
+  );
+});
+
 const StableAvatar = React.memo(({ avatarUrl, name, size, fontSize, gradient, boxShadow, onClick, style = {} }) => {
   const imgRef = useRef(null);
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -261,13 +284,7 @@ export default function Layout({ children, currentPageName }) {
         gap: 10,
       }}>
         <Link to={createPageUrl('Home')} style={{ display:'flex', alignItems:'center', gap:10, textDecoration:'none' }}>
-          <div className="logo-pulse" style={{
-            width: 36, height: 36, borderRadius: 10, flexShrink: 0,
-            overflow: 'hidden',
-            boxShadow: '0 0 20px rgba(168,85,247,.5)',
-          }}>
-            <img src="/gg4gf.png" alt="Amethyst.GG" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
-          </div>
+          <LogoImg size={36} borderRadius={10} />
           {!collapsed && (
             <div>
               <div style={{
@@ -463,8 +480,9 @@ export default function Layout({ children, currentPageName }) {
             width:28, height:28, borderRadius:8, flexShrink:0,
             overflow:'hidden',
             boxShadow:'0 0 14px rgba(168,85,247,.5)',
+            background:'#0e0020',
           }}>
-            <img src="/gg4gf.png" alt="Amethyst.GG" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
+            <img src={LOGO_URL} alt="Amethyst.GG" style={{ width:'100%', height:'100%', objectFit:'cover', display:'block' }} />
           </div>
           <span style={{
             fontSize:12, fontWeight:900, letterSpacing:'.12em',
