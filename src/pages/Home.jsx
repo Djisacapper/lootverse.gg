@@ -318,7 +318,7 @@ function HeroBanner() {
             className="hero-title-static">
             Welcome To
           </span>
-          <span style={{ display: 'block', fontSize: 'clamp(30px,4vw,48px)' }}
+          <span style={{ display: 'block', fontSize: 'clamp(30px,4vw,30px)' }}
             className="hero-title-accent">
             Amethystgg!
           </span>
@@ -463,7 +463,7 @@ function SectionHead() {
         fontSize: 17, fontWeight: 700, color: '#fff',
         letterSpacing: '.01em', fontFamily: 'Syne, sans-serif',
       }}>
-        Magic Games
+        Home Games
       </span>
     </motion.div>
   );
