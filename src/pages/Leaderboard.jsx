@@ -1,729 +1,525 @@
 import { useRequireAuth } from '@/components/useRequireAuth';
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { base44 } from '@/api/base44Client';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Zap, Crown, Flame, Gift, AlertCircle, RefreshCw, Trophy, Timer, Star, ChevronUp } from 'lucide-react';
 
-/* ─── PRIZE CONFIG ───────────────────────────────────────────────── */
-const PRIZE_CONFIG = {
+/* ═══════════════════════════════════════════════════════════════
+   PRIZE TABLES
+═══════════════════════════════════════════════════════════════ */
+const RACES = {
   monthly: {
     label: 'Monthly Race',
-    icon: Crown,
-    accentColor: '#fbbf24',
-    accentGlow: 'rgba(251,191,36,',
-    altColor: '#a855f7',
-    totalPool: 500000,
-    prizes: [225000, 125000, 75000],
-    top10Prize: 25000, // split among 4–10
-    top10Count: 7,
-    description: '500K Coin Prize Pool',
-    resets: 'Resets monthly · Last day of month',
+    pool: 500000,
+    prizes: [225000, 125000, 75000, 25000],
+    top10Split: 7,
+    cycle: 'Resets end of month',
+    color: '#C89B3C',
+    colorDim: '#7A5C1E',
+    glow: '180,140,50',
+    altColor: '#7C3AED',
   },
   weekly: {
     label: 'Weekly Race',
-    icon: Flame,
-    accentColor: '#f97316',
-    accentGlow: 'rgba(249,115,22,',
-    altColor: '#ec4899',
-    totalPool: 45000,
-    prizes: [20250, 11250, 6750], // same proportional split: 45%, 25%, 15%
-    top10Prize: 2250, // split among 4–10 (5% each of pool = 2250)
-    top10Count: 7,
-    description: '45K Coin Prize Pool',
-    resets: 'Resets every Sunday · Keep climbing!',
+    pool: 45000,
+    prizes: [20250, 11250, 6750, 2250],
+    top10Split: 7,
+    cycle: 'Resets every Sunday',
+    color: '#9B5CF6',
+    colorDim: '#5B21B6',
+    glow: '139,92,246',
+    altColor: '#C89B3C',
   },
 };
 
-/* ─── RANK PRIZE HELPER ──────────────────────────────────────────── */
-function getPrize(tab, rank) {
-  const cfg = PRIZE_CONFIG[tab];
-  if (rank <= 3) return cfg.prizes[rank - 1];
-  if (rank <= 10) return Math.floor(cfg.top10Prize / cfg.top10Count);
+function prizeFor(tab, rank) {
+  const r = RACES[tab];
+  if (rank === 1) return r.prizes[0];
+  if (rank === 2) return r.prizes[1];
+  if (rank === 3) return r.prizes[2];
+  if (rank <= 10) return Math.floor(r.prizes[3] / r.top10Split);
   return 0;
 }
 
-/* ─── CSS ──────────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   GLOBAL CSS
+═══════════════════════════════════════════════════════════════ */
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600;700&display=swap');
 
-* { box-sizing: border-box; margin: 0; padding: 0; }
+* { box-sizing:border-box; margin:0; padding:0; }
+.lb { font-family:'Outfit',sans-serif; background:#08040F; min-height:100vh; color:#fff; position:relative; }
 
-.lb-root {
-  font-family: 'Syne', sans-serif;
-  background: #050008;
-  min-height: 100vh;
+.lb-light {
+  position:fixed; border-radius:50%; filter:blur(90px); pointer-events:none; z-index:0;
+  animation:lb-breathe var(--dur,9s) ease-in-out infinite var(--dl,0s);
 }
-
-/* ── Scan line ── */
-@keyframes lb-scan {
-  0%   { top: -2px; opacity: 0; }
-  5%   { opacity: 0.6; }
-  95%  { opacity: 0.6; }
-  100% { top: 100%; opacity: 0; }
-}
-.lb-scan {
-  position: absolute; left: 0; right: 0; height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(251,191,36,0.35), rgba(168,85,247,0.25), transparent);
-  animation: lb-scan 8s linear infinite; pointer-events: none;
+@keyframes lb-breathe {
+  0%,100% { opacity:0.08; transform:scale(1); }
+  50%     { opacity:0.16; transform:scale(1.08); }
 }
 
-/* ── Grid bg ── */
-@keyframes lb-grid-pulse {
-  0%,100% { opacity: 0.03; }
-  50%     { opacity: 0.065; }
+@keyframes lb-spin {
+  to { transform:rotate(360deg); }
 }
-.lb-grid {
-  position: absolute; inset: 0; pointer-events: none;
-  background-image:
-    linear-gradient(rgba(251,191,36,0.07) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(251,191,36,0.07) 1px, transparent 1px);
-  background-size: 48px 48px;
-  animation: lb-grid-pulse 6s ease-in-out infinite;
-}
-
-/* ── Particles ── */
-@keyframes lb-rise {
-  0%   { transform: translateY(0) translateX(0) scale(1); opacity: 0; }
-  8%   { opacity: 1; }
-  90%  { opacity: 0.4; }
-  100% { transform: translateY(-110px) translateX(var(--dx)) scale(0.3); opacity: 0; }
-}
-.lb-pt {
-  position: absolute; border-radius: 50%; pointer-events: none;
-  animation: lb-rise var(--d) ease-out infinite var(--dl);
-}
-
-/* ── Crown float ── */
 @keyframes lb-float {
-  0%,100% { transform: translateY(0px); }
-  50%     { transform: translateY(-7px); }
+  0%,100% { transform:translateY(0); }
+  50%     { transform:translateY(-6px); }
 }
-.lb-float { animation: lb-float 3.5s ease-in-out infinite; }
+.lb-float { animation:lb-float 3.2s ease-in-out infinite; }
 
-/* ── Rank 1 pulse ── */
-@keyframes lb-glow1 {
-  0%,100% { box-shadow: 0 0 0 2px rgba(251,191,36,0.3), 0 0 30px rgba(251,191,36,0.25), 0 0 60px rgba(251,191,36,0.08); }
-  50%     { box-shadow: 0 0 0 3px rgba(251,191,36,0.55), 0 0 50px rgba(251,191,36,0.45), 0 0 100px rgba(251,191,36,0.15); }
-}
-.lb-glow1 { animation: lb-glow1 2.8s ease-in-out infinite; }
-
-/* ── Number glow ── */
-@keyframes lb-num-glow {
-  0%,100% { text-shadow: 0 0 8px currentColor; }
-  50%     { text-shadow: 0 0 22px currentColor, 0 0 44px currentColor; }
-}
-.lb-num-glow { animation: lb-num-glow 2s ease-in-out infinite; }
-
-/* ── Shimmer card ── */
-.lb-shimmer { position: relative; overflow: hidden; }
-.lb-shimmer::after {
-  content: ''; position: absolute; top: 0; left: 0; width: 30%; height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.03), transparent);
-  animation: lb-sw 5s ease-in-out infinite; pointer-events: none; border-radius: inherit;
-}
-@keyframes lb-sw {
-  0%   { transform: translateX(-200%) skewX(-15deg); }
-  100% { transform: translateX(500%) skewX(-15deg); }
+@keyframes lb-shim {
+  0%   { transform:translateX(-160%) skewX(-18deg); }
+  100% { transform:translateX(280%)  skewX(-18deg); }
 }
 
-/* ── Pulse ring ── */
-@keyframes lb-ring {
-  0%   { transform: scale(1); opacity: 0.6; }
-  100% { transform: scale(1.8); opacity: 0; }
+@keyframes lb-bar {
+  from { width:0; }
 }
-.lb-ring {
-  position: absolute; inset: -6px; border-radius: 50%;
-  border: 1px solid rgba(251,191,36,0.5);
-  animation: lb-ring 2s ease-out infinite;
+.lb-fill { animation:lb-bar 1.1s cubic-bezier(0.22,1,0.36,1) both; }
+
+@keyframes lb-orb {
+  0%,100% { box-shadow:0 0 0 0 rgba(var(--rgb),0.45); }
+  60%     { box-shadow:0 0 0 10px rgba(var(--rgb),0); }
 }
+.lb-orb { animation:lb-orb 2.6s ease-out infinite; }
 
-/* ── Prize badge flash ── */
-@keyframes lb-prize-flash {
-  0%,100% { background: rgba(251,191,36,0.08); }
-  50%     { background: rgba(251,191,36,0.16); }
-}
-.lb-prize-flash { animation: lb-prize-flash 3s ease-in-out infinite; }
+::-webkit-scrollbar { width:3px; }
+::-webkit-scrollbar-thumb { background:#2D1B5A; border-radius:4px; }
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-thumb { background: rgba(168,85,247,0.3); border-radius: 4px; }
-
-/* ── Tab button ── */
 .lb-tab {
-  padding: 10px 24px; border-radius: 12px; border: none; cursor: pointer;
-  font-family: 'Syne', sans-serif; font-size: 13px; font-weight: 700;
-  transition: all 0.22s; display: flex; align-items: center; gap: 7px;
-  letter-spacing: 0.02em;
+  font-family:'Outfit',sans-serif; font-size:13px; font-weight:600;
+  padding:10px 22px; border-radius:40px; border:none; cursor:pointer;
+  letter-spacing:0.025em; transition:all 0.22s;
+  display:flex; align-items:center; gap:7px;
 }
-.lb-tab:hover { filter: brightness(1.15); }
-
-/* ── Progress bar ── */
-@keyframes lb-bar-fill {
-  from { width: 0%; }
-}
-.lb-bar-fill { animation: lb-bar-fill 1.2s cubic-bezier(0.22,1,0.36,1) forwards; }
 `;
 
-/* ─── Particles Component ────────────────────────────────────────── */
-function Particles({ count = 12, accent = '#fbbf24' }) {
-  const pts = useRef(
-    Array.from({ length: count }, (_, i) => ({
-      id: i,
-      left: `${6 + Math.random() * 88}%`,
-      bottom: `${Math.random() * 20}%`,
-      size: 1.5 + Math.random() * 2.5,
-      d: `${3.5 + Math.random() * 5}s`,
-      dl: `${-Math.random() * 7}s`,
-      dx: `${(Math.random() - 0.5) * 50}px`,
-    }))
-  ).current;
-  return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-      {pts.map(p => (
-        <div key={p.id} className="lb-pt" style={{
-          left: p.left, bottom: p.bottom, width: p.size, height: p.size,
-          background: accent, boxShadow: `0 0 ${p.size * 5}px ${accent}`,
-          '--d': p.d, '--dl': p.dl, '--dx': p.dx,
-        }} />
-      ))}
-    </div>
-  );
-}
-
-/* ─── Avatar ─────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   AVATAR
+═══════════════════════════════════════════════════════════════ */
 function Avatar({ user, size = 44, rank }) {
   const hasImg = user?.avatar_url && user.avatar_url !== 'null';
-  const gradients = {
-    1: 'linear-gradient(135deg,#fef3c7,#fbbf24 45%,#92400e)',
-    2: 'linear-gradient(135deg,#e2e8f0,#94a3b8 45%,#1e293b)',
-    3: 'linear-gradient(135deg,#fed7aa,#f97316 45%,#7c2d12)',
-    default: 'linear-gradient(135deg,#7c3aed,#4338ca)',
-  };
-  const rings = { 1: '#fbbf24', 2: '#94a3b8', 3: '#f97316', default: 'rgba(168,85,247,0.5)' };
-  const grad = gradients[rank] || gradients.default;
-  const ring = rings[rank] || rings.default;
+  const p = rank === 1
+    ? { bg:'linear-gradient(135deg,#3D2200,#C89B3C,#FFF1B0)', ring:'#C89B3C', rgb:'200,155,60',  spd:6 }
+    : rank === 2
+    ? { bg:'linear-gradient(135deg,#1A003F,#7C3AED,#C4B5FD)', ring:'#7C3AED', rgb:'124,58,237',  spd:9 }
+    : rank === 3
+    ? { bg:'linear-gradient(135deg,#2D0030,#C026D3,#F0ABFC)', ring:'#C026D3', rgb:'192,38,211',  spd:12 }
+    : { bg:'linear-gradient(135deg,#1e0533,#4C1D95)',          ring:'#4C1D95', rgb:'76,29,149',   spd:0 };
 
   return (
-    <div style={{ position: 'relative', flexShrink: 0 }}>
-      {rank === 1 && <div className="lb-ring" />}
-      <div className={rank === 1 ? 'lb-glow1' : ''} style={{
-        width: size, height: size, borderRadius: '50%', overflow: 'hidden',
-        background: grad,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: size * 0.38, fontWeight: 800, color: '#fff',
-        boxShadow: `0 0 0 2px ${ring}`,
-        fontFamily: "'Syne', sans-serif",
-      }}>
+    <div style={{ position:'relative', flexShrink:0, width:size, height:size }}>
+      {rank <= 3 && (
+        <div style={{
+          position:'absolute', inset:-3, borderRadius:'50%',
+          background:`conic-gradient(${p.ring}, transparent 55%, ${p.ring})`,
+          animation:`lb-spin ${p.spd}s linear infinite`, opacity:0.75,
+        }} />
+      )}
+      <div
+        className={rank === 1 ? 'lb-orb' : ''}
+        style={{
+          '--rgb': p.rgb,
+          position:'absolute', inset: rank<=3 ? 2 : 0, borderRadius:'50%',
+          background: p.bg,
+          display:'flex', alignItems:'center', justifyContent:'center',
+          fontSize: size * 0.38, fontWeight:700, color:'#fff',
+          overflow:'hidden',
+        }}>
         {hasImg
-          ? <img src={user.avatar_url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ? <img src={user.avatar_url} alt="" style={{ width:'100%', height:'100%', objectFit:'cover' }} />
           : (user?.username?.[0]?.toUpperCase() || '?')}
       </div>
     </div>
   );
 }
 
-/* ─── Prize Pool Banner ──────────────────────────────────────────── */
-function PrizePoolBanner({ tab }) {
-  const cfg = PRIZE_CONFIG[tab];
-  const Icon = cfg.icon;
-  const prizes = [
-    { place: '1st', coins: cfg.prizes[0], color: '#fbbf24', bg: 'rgba(251,191,36,0.1)', border: 'rgba(251,191,36,0.25)', medal: '🥇' },
-    { place: '2nd', coins: cfg.prizes[1], color: '#94a3b8', bg: 'rgba(148,163,184,0.08)', border: 'rgba(148,163,184,0.2)', medal: '🥈' },
-    { place: '3rd', coins: cfg.prizes[2], color: '#f97316', bg: 'rgba(249,115,22,0.08)', border: 'rgba(249,115,22,0.2)', medal: '🥉' },
-    { place: '4–10', coins: `${(Math.floor(cfg.top10Prize / cfg.top10Count)).toLocaleString()} each`, color: '#a855f7', bg: 'rgba(168,85,247,0.08)', border: 'rgba(168,85,247,0.2)', medal: '⭐' },
+/* ═══════════════════════════════════════════════════════════════
+   PRIZE POOL CARD
+═══════════════════════════════════════════════════════════════ */
+function PrizeCard({ tab }) {
+  const r = RACES[tab];
+  const splits = [
+    { label:'1st Place',  coins: r.prizes[0],                              icon:'♛', color:'#C89B3C', bg:'rgba(200,155,60,0.1)',   border:'rgba(200,155,60,0.22)' },
+    { label:'2nd Place',  coins: r.prizes[1],                              icon:'♜', color:'#A78BFA', bg:'rgba(167,139,250,0.08)', border:'rgba(167,139,250,0.18)' },
+    { label:'3rd Place',  coins: r.prizes[2],                              icon:'♞', color:'#E879F9', bg:'rgba(232,121,249,0.08)', border:'rgba(232,121,249,0.18)' },
+    { label:'4th – 10th', coins: `${Math.floor(r.prizes[3]/r.top10Split).toLocaleString()} ea`, icon:'✦', color:'#818CF8', bg:'rgba(129,140,248,0.07)', border:'rgba(129,140,248,0.16)' },
   ];
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.1, duration: 0.5 }}
+      initial={{ opacity:0, y:18 }} animate={{ opacity:1, y:0 }} transition={{ duration:0.45 }}
       style={{
-        position: 'relative', overflow: 'hidden', borderRadius: 20,
-        background: `linear-gradient(145deg, rgba(5,0,15,0.98) 0%, rgba(12,0,25,0.98) 100%)`,
-        border: `1px solid ${cfg.accentColor}30`,
-        boxShadow: `0 0 0 1px ${cfg.accentColor}12, 0 24px 64px rgba(0,0,0,0.7), inset 0 1px 0 rgba(255,255,255,0.04)`,
-        padding: '24px 24px 20px',
+        position:'relative', borderRadius:24,
+        background:'linear-gradient(145deg,#0E0618,#130824,#0A0415)',
+        border:`1px solid rgba(${r.glow},0.22)`,
+        overflow:'hidden', padding:'26px 24px 22px',
+        boxShadow:`0 0 60px rgba(${r.glow},0.07), inset 0 1px 0 rgba(255,255,255,0.05)`,
       }}>
-      <div className="lb-scan" />
-      <div className="lb-grid" />
-      <Particles accent={cfg.accentColor} count={8} />
 
-      {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, position: 'relative', zIndex: 2 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div className="lb-float" style={{
-            width: 42, height: 42, borderRadius: 14,
-            background: `${cfg.accentColor}18`, border: `1px solid ${cfg.accentColor}35`,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: `0 0 20px ${cfg.accentColor}20`,
-          }}>
-            <Icon style={{ width: 20, height: 20, color: cfg.accentColor }} />
-          </div>
-          <div>
-            <p style={{ fontSize: 17, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>{cfg.label}</p>
-            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', marginTop: 1 }}>{cfg.resets}</p>
-          </div>
+      {/* shimmer sweep */}
+      <div style={{
+        position:'absolute', top:0, left:'-25%', width:'30%', height:'100%',
+        background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.022),transparent)',
+        animation:'lb-shim 6s ease-in-out infinite', pointerEvents:'none',
+      }} />
+
+      {/* header row */}
+      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:22, position:'relative' }}>
+        <div>
+          <p style={{ fontSize:10, letterSpacing:'0.15em', textTransform:'uppercase', color:'rgba(255,255,255,0.32)', fontWeight:500, marginBottom:7 }}>
+            Prize Pool · {r.cycle}
+          </p>
+          <h2 style={{ fontFamily:"'DM Serif Display',serif", fontSize:25, color:'#fff', lineHeight:1 }}>
+            {r.label}
+          </h2>
         </div>
-        {/* Total pool pill */}
-        <div className="lb-prize-flash" style={{
-          padding: '8px 16px', borderRadius: 12,
-          border: `1px solid ${cfg.accentColor}35`,
-          display: 'flex', alignItems: 'center', gap: 7,
-        }}>
-          <Gift style={{ width: 14, height: 14, color: cfg.accentColor }} />
-          <span style={{ fontSize: 15, fontWeight: 800, color: cfg.accentColor, fontFamily: "'Space Mono', monospace" }}>
-            {cfg.totalPool.toLocaleString()}
-          </span>
-          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 700, letterSpacing: '0.08em' }}>COINS</span>
+        <div style={{ textAlign:'right' }}>
+          <div style={{ fontFamily:"'DM Mono',monospace", fontSize:30, fontWeight:500, color:r.color, lineHeight:1, filter:`drop-shadow(0 0 10px rgba(${r.glow},0.45))` }}>
+            {r.pool.toLocaleString()}
+          </div>
+          <div style={{ fontSize:9, letterSpacing:'0.13em', color:'rgba(255,255,255,0.3)', marginTop:3, textTransform:'uppercase' }}>
+            Total Coins
+          </div>
         </div>
       </div>
 
-      {/* Prize breakdown */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, position: 'relative', zIndex: 2 }}>
-        {prizes.map((p, i) => (
-          <motion.div
-            key={p.place}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 + i * 0.07, duration: 0.4 }}
+      {/* 4-column grid */}
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
+        {splits.map((s, i) => (
+          <motion.div key={s.label}
+            initial={{ opacity:0, scale:0.88 }} animate={{ opacity:1, scale:1 }}
+            transition={{ delay:0.12 + i*0.07 }}
             style={{
-              background: p.bg, border: `1px solid ${p.border}`,
-              borderRadius: 14, padding: '12px 10px',
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
-              textAlign: 'center',
+              background:s.bg, border:`1px solid ${s.border}`,
+              borderRadius:16, padding:'14px 8px', textAlign:'center',
             }}>
-            <span style={{ fontSize: 20 }}>{p.medal}</span>
-            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.4)', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase' }}>{p.place}</span>
-            <span style={{ fontSize: typeof p.coins === 'string' ? 11 : 14, fontWeight: 800, color: p.color, fontFamily: "'Space Mono', monospace", lineHeight: 1.2 }}>
-              {typeof p.coins === 'number' ? p.coins.toLocaleString() : p.coins}
-            </span>
+            <div style={{ fontSize:17, lineHeight:1, marginBottom:7 }}>{s.icon}</div>
+            <div style={{ fontSize:9, letterSpacing:'0.1em', textTransform:'uppercase', color:'rgba(255,255,255,0.32)', marginBottom:6, fontWeight:500 }}>
+              {s.label}
+            </div>
+            <div style={{ fontFamily:"'DM Mono',monospace", fontSize: typeof s.coins === 'string' ? 11 : 14, fontWeight:500, color:s.color }}>
+              {typeof s.coins === 'number' ? s.coins.toLocaleString() : s.coins}
+            </div>
           </motion.div>
         ))}
       </div>
+
+      {/* bottom line */}
+      <div style={{ position:'absolute', bottom:0, left:'18%', right:'18%', height:1, background:`linear-gradient(90deg,transparent,rgba(${r.glow},0.55),transparent)` }} />
     </motion.div>
   );
 }
 
-/* ─── Hero Podium ────────────────────────────────────────────────── */
-const PODIUM = [
-  { rank: 1, height: 148, width: 96, medal: '👑', label: '1st', grad: 'linear-gradient(to top,#78350f,#d97706,#fde68a)', color: '#fbbf24', order: 1 },
-  { rank: 2, height: 108, width: 82, medal: '🥈', label: '2nd', grad: 'linear-gradient(to top,#1e293b,#475569,#e2e8f0)', color: '#94a3b8', order: 0 },
-  { rank: 3, height: 84,  width: 72, medal: '🥉', label: '3rd', grad: 'linear-gradient(to top,#7c2d12,#ea580c,#fed7aa)', color: '#f97316', order: 2 },
+/* ═══════════════════════════════════════════════════════════════
+   PODIUM
+═══════════════════════════════════════════════════════════════ */
+const SPOTS = [
+  { rank:1, h:158, color:'#C89B3C', dim:'rgba(120,90,20,0.7)', border:'rgba(200,155,60,0.3)',  label:'1st', labelBg:'rgba(200,155,60,0.14)' },
+  { rank:2, h:118, color:'#A78BFA', dim:'rgba(76,29,149,0.6)',  border:'rgba(167,139,250,0.25)', label:'2nd', labelBg:'rgba(167,139,250,0.11)' },
+  { rank:3, h:92,  color:'#E879F9', dim:'rgba(134,25,143,0.5)', border:'rgba(232,121,249,0.22)', label:'3rd', labelBg:'rgba(232,121,249,0.1)'  },
 ];
 
-function HeroPodium({ users, tab }) {
-  const cfg = PRIZE_CONFIG[tab];
-  const displayOrder = [PODIUM[1], PODIUM[0], PODIUM[2]]; // 2nd, 1st, 3rd
+function Podium({ users, tab }) {
+  const r = RACES[tab];
+  const display = [SPOTS[1], SPOTS[0], SPOTS[2]]; // 2nd, 1st, 3rd
 
   return (
     <div style={{
-      position: 'relative', overflow: 'hidden', borderRadius: 20,
-      background: 'linear-gradient(160deg,#06000f 0%,#0c001a 50%,#04000c 100%)',
-      border: '1px solid rgba(251,191,36,0.1)',
-      boxShadow: '0 0 0 1px rgba(168,85,247,0.06), 0 32px 80px rgba(0,0,0,0.85)',
-      padding: '36px 24px 0',
+      position:'relative', borderRadius:24, overflow:'hidden',
+      background:'linear-gradient(160deg,#0B0519 0%,#130824 55%,#090313 100%)',
+      border:'1px solid rgba(255,255,255,0.07)',
+      boxShadow:'0 24px 64px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.05)',
+      padding:'38px 20px 0',
     }}>
-      <div className="lb-grid" />
-      <div className="lb-scan" />
-      <Particles accent="#fbbf24" count={9} />
-      <Particles accent="#a855f7" count={7} />
+      {/* top glow */}
+      <div style={{ position:'absolute', top:'-25%', left:'50%', transform:'translateX(-50%)', width:420, height:220, borderRadius:'50%', background:`radial-gradient(ellipse,rgba(${r.glow},0.1) 0%,transparent 70%)`, pointerEvents:'none' }} />
+      {/* top rule */}
+      <div style={{ position:'absolute', top:0, left:0, right:0, height:1, background:'linear-gradient(90deg,transparent,rgba(200,155,60,0.28),rgba(139,92,246,0.28),transparent)' }} />
 
-      {/* Decorative corner accents */}
-      {[['top:0,left:0', '90deg'], ['top:0,right:0', '180deg'], ['bottom:0,left:0', '0deg'], ['bottom:0,right:0', '270deg']].map(([pos, rot], i) => {
-        const s = pos.split(',').reduce((acc, p) => { const [k,v] = p.split(':'); acc[k] = v; return acc; }, {});
-        return (
-          <div key={i} style={{ position: 'absolute', ...Object.fromEntries(Object.entries(s).map(([k,v]) => [k, v])), width: 24, height: 24, zIndex: 1, pointerEvents: 'none' }}>
-            <div style={{ width: '100%', height: '100%', borderTop: '1px solid rgba(251,191,36,0.3)', borderLeft: '1px solid rgba(251,191,36,0.3)', transform: `rotate(${rot})`, borderRadius: '2px 0 0 0' }} />
-          </div>
-        );
-      })}
-
-      {/* Title */}
-      <div style={{ textAlign: 'center', position: 'relative', zIndex: 2, marginBottom: 30 }}>
-        <div className="lb-float" style={{ display: 'inline-block', marginBottom: 10 }}>
-          <Trophy style={{ width: 28, height: 28, color: '#fbbf24', filter: 'drop-shadow(0 0 12px rgba(251,191,36,0.7))' }} />
-        </div>
-        <h2 style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Top Champions</h2>
-        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 4, letterSpacing: '0.08em', textTransform: 'uppercase', fontWeight: 600 }}>
-          Ranked by wager volume
-        </p>
+      {/* title */}
+      <div style={{ textAlign:'center', position:'relative', zIndex:2, marginBottom:34 }}>
+        <div className="lb-float" style={{ display:'inline-flex', alignItems:'center', justifyContent:'center', width:48, height:48, borderRadius:15, marginBottom:10, background:'linear-gradient(135deg,rgba(200,155,60,0.18),rgba(124,58,237,0.18))', border:'1px solid rgba(200,155,60,0.28)', fontSize:22 }}>♛</div>
+        <h2 style={{ fontFamily:"'DM Serif Display',serif", fontSize:22, color:'#fff', letterSpacing:'-0.01em' }}>Top Champions</h2>
+        <p style={{ fontSize:10, color:'rgba(255,255,255,0.28)', marginTop:5, letterSpacing:'0.1em', textTransform:'uppercase' }}>ranked by total wager</p>
       </div>
 
-      {/* Podium blocks */}
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'center', gap: 6, position: 'relative', zIndex: 2 }}>
-        {displayOrder.map((cfg_p) => {
-          const u = users[cfg_p.rank - 1];
-          const prize = getPrize(tab, cfg_p.rank);
-          if (!u) return <div key={cfg_p.rank} style={{ width: cfg_p.width + 32 }} />;
+      {/* columns */}
+      <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'center', gap:4, position:'relative', zIndex:2 }}>
+        {display.map((sp) => {
+          const u = users[sp.rank - 1];
+          const prize = prizeFor(tab, sp.rank);
           return (
             <motion.div
-              key={cfg_p.rank}
-              initial={{ opacity: 0, y: 24 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: cfg_p.rank * 0.1, duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: cfg_p.width + 32 }}>
+              key={sp.rank}
+              initial={{ opacity:0, y:26 }} animate={{ opacity:1, y:0 }}
+              transition={{ delay: sp.rank * 0.11, duration:0.55, ease:[0.22,1,0.36,1] }}
+              style={{ display:'flex', flexDirection:'column', alignItems:'center', flex:1, maxWidth:160 }}>
 
-              {/* Medal */}
-              <div style={{ fontSize: cfg_p.rank === 1 ? 28 : 22, marginBottom: 8 }}>{cfg_p.medal}</div>
+              <div style={{ fontSize:10, fontWeight:600, letterSpacing:'0.1em', textTransform:'uppercase', color:sp.color, marginBottom:8, opacity:0.8 }}>
+                {sp.label}
+              </div>
 
-              {/* Avatar */}
-              <Avatar user={u} size={cfg_p.rank === 1 ? 72 : 56} rank={cfg_p.rank} />
+              {u
+                ? <Avatar user={u} size={sp.rank===1?72:56} rank={sp.rank} />
+                : <div style={{ width:sp.rank===1?72:56, height:sp.rank===1?72:56, borderRadius:'50%', background:'rgba(255,255,255,0.04)', border:'1px dashed rgba(255,255,255,0.1)' }} />}
 
-              {/* Username */}
-              <p style={{
-                fontSize: 12, fontWeight: 800, color: '#fff', marginTop: 10, marginBottom: 3,
-                maxWidth: cfg_p.width + 16, overflow: 'hidden', textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap', textAlign: 'center', letterSpacing: '-0.01em',
-              }}>{u.username || 'Player'}</p>
-
-              {/* Wager */}
-              <p style={{ fontSize: 11, fontWeight: 700, color: cfg_p.color, marginBottom: 2, fontFamily: "'Space Mono', monospace" }}>
-                ${(u.total_wagered || 0).toLocaleString()}
+              <p style={{ fontSize:12, fontWeight:600, color:'#fff', marginTop:10, marginBottom:3, maxWidth:110, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', textAlign:'center' }}>
+                {u?.username || '—'}
+              </p>
+              <p style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:'rgba(255,255,255,0.38)', marginBottom:6 }}>
+                ${(u?.total_wagered||0).toLocaleString()}
               </p>
 
-              {/* Prize */}
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12,
-                padding: '3px 10px', borderRadius: 8,
-                background: `${cfg_p.color}15`, border: `1px solid ${cfg_p.color}30`,
-              }}>
-                <Gift style={{ width: 9, height: 9, color: cfg_p.color }} />
-                <span style={{ fontSize: 10, fontWeight: 800, color: cfg_p.color, fontFamily: "'Space Mono', monospace" }}>
+              {/* prize chip */}
+              <div style={{ display:'flex', alignItems:'center', gap:5, marginBottom:14, padding:'4px 12px', borderRadius:40, background:sp.labelBg, border:`1px solid ${sp.border}` }}>
+                <span style={{ fontSize:9, color:sp.color }}>✦</span>
+                <span style={{ fontFamily:"'DM Mono',monospace", fontSize:11, fontWeight:500, color:sp.color }}>
                   {prize.toLocaleString()}
                 </span>
               </div>
 
-              {/* Podium block */}
+              {/* block */}
               <motion.div
-                initial={{ scaleY: 0 }} animate={{ scaleY: 1 }}
-                transition={{ delay: 0.4 + cfg_p.rank * 0.1, duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                initial={{ scaleY:0 }} animate={{ scaleY:1 }}
+                transition={{ delay:0.35 + sp.rank*0.09, duration:0.5, ease:[0.22,1,0.36,1] }}
                 style={{
-                  width: '100%', height: cfg_p.height, borderRadius: '12px 12px 0 0',
-                  background: cfg_p.grad, transformOrigin: 'bottom',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  boxShadow: `0 -8px 32px ${cfg_p.color}35, inset 0 1px 0 rgba(255,255,255,0.18)`,
-                  position: 'relative', overflow: 'hidden',
+                  width:'100%', height:sp.h,
+                  borderRadius:'10px 10px 0 0',
+                  background:`linear-gradient(to top,${sp.dim},rgba(${sp.color.replace('#','').match(/.{2}/g).map(h=>parseInt(h,16)).join(',')},0.35))`,
+                  border:`1px solid ${sp.border}`, borderBottom:'none',
+                  transformOrigin:'bottom', position:'relative', overflow:'hidden',
+                  boxShadow:`0 -10px 32px ${sp.color}18`,
                 }}>
-                <div style={{
-                  position: 'absolute', inset: 0,
-                  background: 'linear-gradient(to bottom, rgba(255,255,255,0.12) 0%, transparent 40%, rgba(0,0,0,0.25) 100%)',
-                }} />
-                <span className="lb-num-glow" style={{
-                  fontSize: 22, fontWeight: 800, color: cfg_p.color,
-                  position: 'relative', zIndex: 1, fontFamily: "'Syne', sans-serif",
-                }}>{cfg_p.label}</span>
+                <div style={{ position:'absolute', inset:0, background:'linear-gradient(to bottom,rgba(255,255,255,0.07),transparent 40%)' }} />
+                {[20,40,60,80].map(pct => (
+                  <div key={pct} style={{ position:'absolute', top:`${pct}%`, left:0, right:0, height:1, background:'rgba(255,255,255,0.035)' }} />
+                ))}
+                <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:"'DM Serif Display',serif", fontSize: sp.rank===1?30:22, color:sp.color, opacity:0.6 }}>
+                  {sp.rank}
+                </div>
               </motion.div>
             </motion.div>
           );
         })}
       </div>
 
-      {/* Bottom glow line */}
-      <div style={{
-        position: 'absolute', bottom: 0, left: 0, right: 0, height: 2,
-        background: 'linear-gradient(90deg,transparent,rgba(251,191,36,0.5),rgba(168,85,247,0.4),transparent)',
-      }} />
+      {/* bottom rule */}
+      <div style={{ position:'absolute', bottom:0, left:0, right:0, height:1, background:`linear-gradient(90deg,transparent,rgba(${r.glow},0.5),rgba(139,92,246,0.4),transparent)` }} />
     </div>
   );
 }
 
-/* ─── Wager Progress Bar ─────────────────────────────────────────── */
-function WagerBar({ value, max, color }) {
-  const pct = Math.min(100, Math.round((value / max) * 100));
-  return (
-    <div style={{ width: '100%', height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 99, overflow: 'hidden', marginTop: 4 }}>
-      <div className="lb-bar-fill" style={{
-        height: '100%', borderRadius: 99, width: `${pct}%`,
-        background: `linear-gradient(90deg, ${color}88, ${color})`,
-        boxShadow: `0 0 8px ${color}`,
-      }} />
-    </div>
-  );
-}
-
-/* ─── List Row (#4–10) ───────────────────────────────────────────── */
-function ListRow({ user: u, rank, tab, index, topWager }) {
+/* ═══════════════════════════════════════════════════════════════
+   LIST ROW #4–10
+═══════════════════════════════════════════════════════════════ */
+function Row({ user:u, rank, tab, index, maxWager }) {
   const [hov, setHov] = useState(false);
-  const cfg = PRIZE_CONFIG[tab];
-  const prize = getPrize(tab, rank);
+  const r = RACES[tab];
+  const prize = prizeFor(tab, rank);
+  const pct = Math.min(100, Math.round(((u?.total_wagered||0) / maxWager) * 100));
 
   return (
     <motion.div
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.06, duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      initial={{ opacity:0, x:-14 }} animate={{ opacity:1, x:0 }}
+      transition={{ delay: index * 0.055, duration:0.38, ease:[0.22,1,0.36,1] }}
       onMouseEnter={() => setHov(true)}
       onMouseLeave={() => setHov(false)}
-      className="lb-shimmer"
       style={{
-        position: 'relative', overflow: 'hidden', borderRadius: 16,
-        background: 'linear-gradient(145deg,#070010,#0e001e,#050009)',
-        border: `1px solid ${hov ? cfg.accentColor + '30' : 'rgba(255,255,255,0.06)'}`,
-        boxShadow: hov
-          ? `0 0 0 1px ${cfg.accentColor}15, 0 16px 48px rgba(0,0,0,0.7), 0 0 30px ${cfg.accentColor}10`
-          : '0 4px 20px rgba(0,0,0,0.6)',
-        transition: 'border-color 0.22s, box-shadow 0.28s',
-        padding: '14px 18px',
-        display: 'flex', alignItems: 'center', gap: 14,
+        position:'relative', overflow:'hidden', borderRadius:18,
+        background: hov ? `linear-gradient(135deg,rgba(${r.glow},0.07),#0D0720)` : '#0D0720',
+        border:`1px solid ${hov ? `rgba(${r.glow},0.28)` : 'rgba(255,255,255,0.06)'}`,
+        transition:'border-color 0.2s, background 0.2s',
+        padding:'13px 18px', display:'flex', alignItems:'center', gap:14,
       }}>
 
-      {hov && <Particles accent={cfg.accentColor} count={4} />}
-
-      {/* Top edge accent */}
+      {/* left accent */}
       <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: 1,
-        background: hov
-          ? `linear-gradient(90deg,transparent,${cfg.accentColor}50,${cfg.altColor}30,transparent)`
-          : 'transparent',
-        transition: 'background 0.3s',
+        position:'absolute', left:0, top:'22%', bottom:'22%', width:2, borderRadius:2,
+        background: hov ? `linear-gradient(to bottom,${r.color},${r.altColor})` : 'transparent',
+        transition:'background 0.2s',
       }} />
 
-      {/* Rank badge */}
-      <div style={{
-        width: 38, height: 38, borderRadius: 12, flexShrink: 0,
-        background: `${cfg.accentColor}08`,
-        border: `1px solid ${cfg.accentColor}18`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        <span style={{
-          fontSize: 14, fontWeight: 800, color: cfg.accentColor,
-          fontFamily: "'Space Mono', monospace",
-        }}>#{rank}</span>
+      {hov && (
+        <div style={{ position:'absolute', top:0, left:'-25%', width:'28%', height:'100%', background:'linear-gradient(90deg,transparent,rgba(255,255,255,0.018),transparent)', animation:'lb-shim 2.8s ease-in-out infinite', pointerEvents:'none' }} />
+      )}
+
+      {/* rank badge */}
+      <div style={{ width:34, height:34, borderRadius:10, flexShrink:0, background:`rgba(${r.glow},0.07)`, border:`1px solid rgba(${r.glow},0.14)`, display:'flex', alignItems:'center', justifyContent:'center' }}>
+        <span style={{ fontFamily:"'DM Mono',monospace", fontSize:13, fontWeight:500, color:r.color }}>{rank}</span>
       </div>
 
-      {/* Avatar */}
-      <Avatar user={u} size={40} rank={rank} />
+      <Avatar user={u} size={38} rank={rank} />
 
-      {/* Name + wager bar */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <p style={{ fontSize: 14, fontWeight: 700, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 2, letterSpacing: '-0.01em' }}>
-          {u.username || 'Player'}
-        </p>
-        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.3)', fontWeight: 600, fontFamily: "'Space Mono', monospace" }}>
-          ${(u.total_wagered || 0).toLocaleString()} wagered
-        </p>
-        <WagerBar value={u.total_wagered || 0} max={topWager} color={cfg.accentColor} />
-      </div>
-
-      {/* Prize badge */}
-      <div style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 3, flexShrink: 0,
-      }}>
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 5,
-          padding: '5px 10px', borderRadius: 10,
-          background: `${cfg.accentColor}10`,
-          border: `1px solid ${cfg.accentColor}25`,
-        }}>
-          <Gift style={{ width: 10, height: 10, color: cfg.accentColor }} />
-          <span style={{ fontSize: 11, fontWeight: 800, color: cfg.accentColor, fontFamily: "'Space Mono', monospace" }}>
-            {prize.toLocaleString()}
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ display:'flex', alignItems:'baseline', gap:8, marginBottom:6 }}>
+          <p style={{ fontSize:14, fontWeight:600, color:'#fff', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+            {u?.username || 'Player'}
+          </p>
+          <span style={{ fontSize:10, color:'rgba(255,255,255,0.22)', fontFamily:"'DM Mono',monospace", flexShrink:0 }}>
+            lv.{u?.level||1}
           </span>
         </div>
-        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', fontWeight: 600, letterSpacing: '0.06em', paddingRight: 2 }}>
-          COINS
-        </span>
+        <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+          <div style={{ flex:1, height:2, background:'rgba(255,255,255,0.05)', borderRadius:99, overflow:'hidden' }}>
+            <div className="lb-fill" style={{ height:'100%', width:`${pct}%`, borderRadius:99, background:`linear-gradient(90deg,rgba(${r.glow},0.45),${r.color})` }} />
+          </div>
+          <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:'rgba(255,255,255,0.32)', flexShrink:0 }}>
+            ${(u?.total_wagered||0).toLocaleString()}
+          </span>
+        </div>
+      </div>
+
+      <div style={{ textAlign:'right', flexShrink:0 }}>
+        <div style={{ fontFamily:"'DM Mono',monospace", fontSize:12, fontWeight:500, color:r.color, padding:'4px 10px', borderRadius:40, background:`rgba(${r.glow},0.08)`, border:`1px solid rgba(${r.glow},0.18)` }}>
+          +{prize.toLocaleString()}
+        </div>
+        <p style={{ fontSize:9, color:'rgba(255,255,255,0.18)', letterSpacing:'0.08em', marginTop:3, textTransform:'uppercase' }}>coins</p>
       </div>
     </motion.div>
   );
 }
 
-/* ─── Main ───────────────────────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════
+   ROOT
+═══════════════════════════════════════════════════════════════ */
 export default function Leaderboard() {
   useRequireAuth();
-  const [top10, setTop10] = useState([]);
+  const [entries, setEntries] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [tab, setTab] = useState('monthly');
+  const [error, setError]     = useState(null);
+  const [tab, setTab]         = useState('monthly');
 
-  useEffect(() => { loadData(); }, []);
+  useEffect(() => { load(); }, []);
 
-  const loadData = async () => {
-    setLoading(true);
-    setError(null);
+  const load = async () => {
+    setLoading(true); setError(null);
     try {
-      const result = await base44.functions.invoke('syncLeaderboard', {});
-      setTop10(result?.data?.entries || result?.entries || []);
-    } catch (err) {
-      setError('Failed to load leaderboard. Please try again.');
-    } finally {
-      setLoading(false);
-    }
+      const res = await base44.functions.invoke('syncLeaderboard', {});
+      setEntries(res?.data?.entries || res?.entries || []);
+    } catch { setError('Failed to load leaderboard.'); }
+    finally { setLoading(false); }
   };
 
-  const cfg = PRIZE_CONFIG[tab];
-  const topWager = top10[0]?.total_wagered || 1;
+  const maxWager = entries[0]?.total_wagered || 1;
+  const r = RACES[tab];
 
-  /* ── Loading ── */
+  /* loaders */
   if (loading) return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      minHeight: '60vh', gap: 18, fontFamily: "'Syne', sans-serif", background: '#050008',
-    }}>
+    <div className="lb" style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'80vh', gap:20 }}>
       <style>{CSS}</style>
-      <div style={{ position: 'relative', width: 56, height: 56 }}>
-        <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', border: '2px solid #fbbf24', animation: 'lb-ring 1.2s ease-out infinite' }} />
-        <div style={{ position: 'absolute', inset: 8, borderRadius: '50%', border: '2px solid #a855f7', animation: 'lb-ring 1s ease-out 0.2s infinite' }} />
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fbbf24', boxShadow: '0 0 20px #fbbf24' }} />
+      <div style={{ position:'relative', width:60, height:60 }}>
+        {[0,1,2].map(i => <div key={i} style={{ position:'absolute', inset:i*10, borderRadius:'50%', border:`1px solid rgba(${i===0?'200,155,60':i===1?'139,92,246':'192,38,211'},0.45)`, animation:`lb-spin ${3+i*1.5}s linear ${i%2?'reverse':''} infinite` }} />)}
+        <div style={{ position:'absolute', inset:0, display:'flex', alignItems:'center', justifyContent:'center' }}>
+          <div style={{ width:8, height:8, borderRadius:'50%', background:'#C89B3C', boxShadow:'0 0 14px #C89B3C' }} />
         </div>
       </div>
-      <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.3)', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Loading Race…</p>
+      <p style={{ fontSize:11, color:'rgba(255,255,255,0.28)', letterSpacing:'0.14em', textTransform:'uppercase' }}>Loading Race…</p>
     </div>
   );
 
-  /* ── Error ── */
   if (error) return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      minHeight: '60vh', gap: 16, fontFamily: "'Syne', sans-serif", background: '#050008',
-    }}>
+    <div className="lb" style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'80vh', gap:14 }}>
       <style>{CSS}</style>
-      <AlertCircle style={{ width: 40, height: 40, color: 'rgba(248,113,113,0.7)' }} />
-      <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.5)', fontWeight: 700 }}>{error}</p>
-      <motion.button whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.96 }} onClick={loadData} style={{
-        display: 'flex', alignItems: 'center', gap: 8,
-        padding: '10px 20px', borderRadius: 12, border: '1px solid rgba(168,85,247,0.3)',
-        background: 'rgba(168,85,247,0.1)', color: '#c084fc',
-        fontSize: 13, fontWeight: 700, fontFamily: "'Syne', sans-serif", cursor: 'pointer',
-      }}>
-        <RefreshCw style={{ width: 14, height: 14 }} /> Try Again
-      </motion.button>
+      <p style={{ fontSize:14, color:'rgba(248,113,113,0.7)' }}>{error}</p>
+      <button onClick={load} style={{ fontFamily:"'Outfit',sans-serif", fontSize:13, fontWeight:600, padding:'9px 20px', borderRadius:40, cursor:'pointer', background:'rgba(139,92,246,0.14)', color:'#A78BFA', border:'1px solid rgba(139,92,246,0.28)' }}>Try Again</button>
     </div>
   );
 
-  /* ── Empty ── */
-  if (top10.length === 0) return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-      minHeight: '60vh', gap: 12, fontFamily: "'Syne', sans-serif", background: '#050008',
-    }}>
+  if (!entries.length) return (
+    <div className="lb" style={{ display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', minHeight:'80vh', gap:12 }}>
       <style>{CSS}</style>
-      <Trophy style={{ width: 52, height: 52, color: 'rgba(251,191,36,0.2)' }} />
-      <p style={{ fontSize: 18, fontWeight: 800, color: 'rgba(255,255,255,0.3)', letterSpacing: '-0.01em' }}>No players yet</p>
-      <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.18)', fontWeight: 600, letterSpacing: '0.06em' }}>Be the first to wager!</p>
+      <div style={{ fontSize:44, opacity:0.18, fontFamily:"'DM Serif Display',serif" }}>♛</div>
+      <p style={{ fontFamily:"'DM Serif Display',serif", fontSize:20, color:'rgba(255,255,255,0.22)' }}>No players yet</p>
     </div>
   );
 
   return (
-    <div className="lb-root">
+    <div className="lb">
       <style>{CSS}</style>
-      <div style={{ maxWidth: 700, margin: '0 auto', padding: '24px 16px 100px', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
-        {/* ── Page Header ── */}
-        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} style={{ marginBottom: 4 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+      {/* ambient orbs */}
+      <div className="lb-light" style={{ width:520, height:380, top:'-8%',  left:'15%',  background:'#7C3AED', '--dur':'9s',  '--dl':'0s'  }} />
+      <div className="lb-light" style={{ width:380, height:280, top:'35%',  right:'-8%', background:'#C89B3C', '--dur':'12s', '--dl':'-4s' }} />
+      <div className="lb-light" style={{ width:320, height:320, bottom:'5%',left:'-6%',  background:'#4C1D95', '--dur':'14s', '--dl':'-7s' }} />
+
+      <div style={{ maxWidth:700, margin:'0 auto', padding:'28px 16px 100px', display:'flex', flexDirection:'column', gap:18, position:'relative', zIndex:1 }}>
+
+        {/* header */}
+        <motion.div initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }}>
+          <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between' }}>
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 3, height: 30, borderRadius: 2, background: 'linear-gradient(to bottom,#fbbf24,#a855f7)' }} />
-                <h1 style={{ fontSize: 30, fontWeight: 800, color: '#fff', letterSpacing: '-0.03em' }}>Leaderboard</h1>
+              <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:6 }}>
+                <div style={{ width:2, height:34, borderRadius:2, background:'linear-gradient(to bottom,#C89B3C,#7C3AED)' }} />
+                <h1 style={{ fontFamily:"'DM Serif Display',serif", fontSize:34, color:'#fff', letterSpacing:'-0.02em', lineHeight:1 }}>Leaderboard</h1>
               </div>
-              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.3)', marginLeft: 13, marginTop: 4, fontWeight: 600, letterSpacing: '0.04em' }}>
+              <p style={{ fontSize:12, color:'rgba(255,255,255,0.28)', marginLeft:12, letterSpacing:'0.03em' }}>
                 Wager more · Rank higher · Earn bigger
               </p>
             </div>
-            {/* Refresh */}
-            <motion.button
-              whileHover={{ scale: 1.08, rotate: 30 }} whileTap={{ scale: 0.9 }}
-              onClick={loadData}
-              style={{
-                width: 38, height: 38, borderRadius: 12, border: '1px solid rgba(255,255,255,0.08)',
-                background: 'rgba(255,255,255,0.04)', display: 'flex', alignItems: 'center',
-                justifyContent: 'center', cursor: 'pointer',
-              }}>
-              <RefreshCw style={{ width: 15, height: 15, color: 'rgba(255,255,255,0.4)' }} />
-            </motion.button>
+            <button onClick={load} style={{ width:36, height:36, borderRadius:12, border:'1px solid rgba(255,255,255,0.08)', background:'rgba(255,255,255,0.04)', cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', fontSize:16, color:'rgba(255,255,255,0.28)', fontFamily:'sans-serif', transition:'all 0.2s' }}>↻</button>
           </div>
         </motion.div>
 
-        {/* ── Tabs ── */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.08 }}
-          style={{
-            display: 'inline-flex', gap: 4, padding: 5, borderRadius: 16,
-            background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)',
-            alignSelf: 'flex-start',
-          }}>
-          {[
-            { val: 'monthly', label: 'Monthly Race', Icon: Crown,  active: { color: '#fbbf24', bg: 'rgba(251,191,36,0.12)', border: 'rgba(251,191,36,0.3)' } },
-            { val: 'weekly',  label: 'Weekly Race',  Icon: Flame,  active: { color: '#f97316', bg: 'rgba(249,115,22,0.12)',  border: 'rgba(249,115,22,0.3)'  } },
-          ].map(({ val, label, Icon, active }) => {
-            const isActive = tab === val;
+        {/* tabs */}
+        <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.07 }}
+          style={{ display:'inline-flex', gap:4, padding:4, borderRadius:50, background:'rgba(255,255,255,0.04)', border:'1px solid rgba(255,255,255,0.07)', alignSelf:'flex-start' }}>
+          {(['monthly','weekly']).map(t => {
+            const rc = RACES[t];
+            const active = tab === t;
             return (
-              <button key={val} className="lb-tab" onClick={() => setTab(val)} style={{
-                background: isActive ? active.bg : 'transparent',
-                border: isActive ? `1px solid ${active.border}` : '1px solid transparent',
-                color: isActive ? active.color : 'rgba(255,255,255,0.3)',
-                boxShadow: isActive ? `0 0 20px ${active.color}20` : 'none',
+              <button key={t} className="lb-tab" onClick={() => setTab(t)} style={{
+                background: active ? `rgba(${rc.glow},0.16)` : 'transparent',
+                border: active ? `1px solid rgba(${rc.glow},0.32)` : '1px solid transparent',
+                color: active ? rc.color : 'rgba(255,255,255,0.3)',
+                boxShadow: active ? `0 0 18px rgba(${rc.glow},0.18)` : 'none',
               }}>
-                <Icon style={{ width: 14, height: 14 }} />
-                {label}
+                <span style={{ fontSize:13 }}>{t === 'monthly' ? '♛' : '✦'}</span>
+                {rc.label}
               </button>
             );
           })}
         </motion.div>
 
-        {/* ── Content (animated tab switch) ── */}
+        {/* tab content */}
         <AnimatePresence mode="wait">
-          <motion.div
-            key={tab}
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
-            style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <motion.div key={tab}
+            initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-10 }}
+            transition={{ duration:0.28, ease:[0.22,1,0.36,1] }}
+            style={{ display:'flex', flexDirection:'column', gap:16 }}>
 
-            {/* Prize Pool Banner */}
-            <PrizePoolBanner tab={tab} />
+            <PrizeCard tab={tab} />
+            <Podium users={entries} tab={tab} />
 
-            {/* Podium */}
-            <HeroPodium users={top10} tab={tab} />
-
-            {/* ── #4–10 ── */}
-            {top10.length > 3 && (
+            {/* 4–10 */}
+            {entries.length > 3 && (
               <div>
-                {/* Section header */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-                  <div style={{ width: 3, height: 18, borderRadius: 2, background: `linear-gradient(to bottom,${cfg.accentColor},${cfg.altColor})` }} />
-                  <ChevronUp style={{ width: 14, height: 14, color: cfg.accentColor }} />
-                  <span style={{ fontSize: 13, fontWeight: 800, color: '#fff', letterSpacing: '0.04em', textTransform: 'uppercase' }}>
-                    Climbing the Ranks
+                <div style={{ display:'flex', alignItems:'center', gap:10, margin:'4px 0 12px' }}>
+                  <div style={{ width:2, height:16, borderRadius:2, background:`linear-gradient(to bottom,${r.color},${r.altColor})` }} />
+                  <span style={{ fontSize:10, letterSpacing:'0.13em', textTransform:'uppercase', color:'rgba(255,255,255,0.3)', fontWeight:500 }}>
+                    4th to 10th Place
                   </span>
-                  <div style={{ flex: 1, height: 1, background: 'linear-gradient(90deg,rgba(255,255,255,0.06),transparent)' }} />
-                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.2)', fontWeight: 700, letterSpacing: '0.06em' }}>
-                    ALL EARN {Math.floor(cfg.top10Prize / cfg.top10Count).toLocaleString()} COINS
+                  <div style={{ flex:1, height:1, background:'linear-gradient(90deg,rgba(255,255,255,0.06),transparent)' }} />
+                  <span style={{ fontFamily:"'DM Mono',monospace", fontSize:10, color:'rgba(255,255,255,0.2)' }}>
+                    +{Math.floor(r.prizes[3]/r.top10Split).toLocaleString()} coins each
                   </span>
                 </div>
-
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  {top10.slice(3).map((u, i) => (
-                    <ListRow
-                      key={u.user_email || i}
-                      user={u}
-                      rank={i + 4}
-                      tab={tab}
-                      index={i}
-                      topWager={topWager}
-                    />
+                <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+                  {entries.slice(3, 10).map((u, i) => (
+                    <Row key={u.user_email || i} user={u} rank={i+4} tab={tab} index={i} maxWager={maxWager} />
                   ))}
                 </div>
               </div>
             )}
 
-            {/* Footer note */}
-            <motion.div
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
-              style={{
-                padding: '12px 18px', borderRadius: 14,
-                background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)',
-                display: 'flex', alignItems: 'center', gap: 10,
-              }}>
-              <Timer style={{ width: 14, height: 14, color: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
-              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', fontWeight: 600, letterSpacing: '0.02em' }}>
+            {/* footer note */}
+            <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:0.45 }}
+              style={{ padding:'12px 16px', borderRadius:14, background:'rgba(255,255,255,0.02)', border:'1px solid rgba(255,255,255,0.05)', display:'flex', alignItems:'flex-start', gap:10 }}>
+              <span style={{ fontSize:12, opacity:0.25, lineHeight:1.5 }}>ℹ</span>
+              <p style={{ fontSize:11, color:'rgba(255,255,255,0.22)', lineHeight:1.65 }}>
                 {tab === 'monthly'
-                  ? 'Monthly race resets on the last day of each month. Top 10 wagers share the 500,000 coin prize pool.'
-                  : 'Weekly race resets every Sunday. Top 10 wagers share the 45,000 coin prize pool.'}
+                  ? 'Monthly race tracks total wagers. The 500,000 coin pool is split among the top 10 at the end of each calendar month.'
+                  : 'Weekly race resets every Sunday. The 45,000 coin pool is distributed to the top 10 at midnight.'}
               </p>
             </motion.div>
           </motion.div>
