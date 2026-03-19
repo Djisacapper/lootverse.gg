@@ -1,389 +1,568 @@
 import { useRequireAuth } from '@/components/useRequireAuth';
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { useWallet } from '../components/game/useWallet';
 import { motion } from 'framer-motion';
-import { Trophy, ChevronRight, Swords, Box, RotateCcw, Zap } from 'lucide-react';
+import { Trophy, Swords, Box, RotateCcw, Zap, ArrowUpRight } from 'lucide-react';
 
-const vtechImg = 'https://i.imgur.com/doYHRMp.png';
-const roseImg  = 'https://i.imgur.com/WVoUpzN.png';
-const irishImg = 'https://i.imgur.com/7KIsUqY.png';
-
+const vtechImg    = 'https://i.imgur.com/doYHRMp.png';
+const roseImg     = 'https://i.imgur.com/WVoUpzN.png';
+const irishImg    = 'https://i.imgur.com/7KIsUqY.png';
 const battlesImg  = 'https://i.imgur.com/vHp8zbU.png';
 const casesImg    = 'https://i.imgur.com/WXw330m.png';
 const coinflipImg = 'https://i.imgur.com/3AUD8Vu.png';
 const crashImg    = 'https://i.imgur.com/53dgn4r.png';
 
-/* ═══════════════════════════════════════════════════
-   AMBIENT CANVAS
-   position:absolute — lives entirely inside the content
-   column. Sidebar/chat are outside this DOM node so
-   they are 100% unaffected. overflow:hidden on parent
-   clips it perfectly. zIndex:0, pointer-events:none.
-   ═══════════════════════════════════════════════════ */
-function AmbientCanvas() {
-  const canvasRef = useRef(null);
-  const rafRef    = useRef(null);
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-
-    const COLORS = [
-      'rgba(251,191,36,',
-      'rgba(168,85,247,',
-      'rgba(192,132,252,',
-      'rgba(251,191,36,',
-      'rgba(96,165,250,',
-    ];
-
-    const resize = () => {
-      canvas.width  = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-    };
-    resize();
-    const ro = new ResizeObserver(resize);
-    ro.observe(canvas);
-
-    const makeOrb = () => {
-      const w = canvas.offsetWidth  || 800;
-      const h = canvas.offsetHeight || 600;
-      return {
-        x: Math.random() * w, y: Math.random() * h,
-        r: 80 + Math.random() * 140,
-        vx: (Math.random() - 0.5) * 0.14,
-        vy: (Math.random() - 0.5) * 0.14,
-        base: 0.022 + Math.random() * 0.025,
-        amp:  0.008 + Math.random() * 0.012,
-        freq: 0.0003 + Math.random() * 0.0004,
-        phase: Math.random() * Math.PI * 2,
-        color: COLORS[Math.floor(Math.random() * COLORS.length)],
-      };
-    };
-
-    const makeSparkle = (fromBottom) => {
-      const w = canvas.offsetWidth  || 800;
-      const h = canvas.offsetHeight || 600;
-      return {
-        x: Math.random() * w,
-        y: fromBottom ? h + 5 : Math.random() * h,
-        r: 0.7 + Math.random() * 1.6,
-        life:    fromBottom ? 0 : Math.floor(Math.random() * 180),
-        maxLife: 100 + Math.random() * 120,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: -0.18 - Math.random() * 0.38,
-        color: COLORS[Math.floor(Math.random() * COLORS.length)],
-      };
-    };
-
-    const ORBS     = Array.from({ length: 8  }, makeOrb);
-    const SPARKLES = Array.from({ length: 28 }, () => makeSparkle(false));
-    let t = 0;
-
-    const tick = () => {
-      const w = canvas.width, h = canvas.height;
-      ctx.clearRect(0, 0, w, h);
-
-      for (const o of ORBS) {
-        o.x += o.vx; o.y += o.vy;
-        if (o.x < -o.r * 2)    o.x = w + o.r;
-        if (o.x > w + o.r * 2) o.x = -o.r;
-        if (o.y < -o.r * 2)    o.y = h + o.r;
-        if (o.y > h + o.r * 2) o.y = -o.r;
-        const alpha = o.base + Math.sin(t * o.freq + o.phase) * o.amp;
-        const g2 = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, o.r);
-        g2.addColorStop(0,   o.color + alpha.toFixed(3) + ')');
-        g2.addColorStop(0.5, o.color + (alpha * 0.35).toFixed(3) + ')');
-        g2.addColorStop(1,   o.color + '0)');
-        ctx.beginPath(); ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2);
-        ctx.fillStyle = g2; ctx.fill();
-      }
-
-      for (const s of SPARKLES) {
-        s.x += s.vx; s.y += s.vy;
-        s.life = (s.life + 1) % s.maxLife;
-        const p = s.life / s.maxLife;
-        const alpha = p < 0.15 ? (p / 0.15) * 0.8
-          : p < 0.7 ? 0.8 : (1 - (p - 0.7) / 0.3) * 0.8;
-        if (alpha > 0.01) {
-          const halo = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, s.r * 5);
-          halo.addColorStop(0, s.color + (alpha * 0.35).toFixed(3) + ')');
-          halo.addColorStop(1, s.color + '0)');
-          ctx.beginPath(); ctx.arc(s.x, s.y, s.r * 5, 0, Math.PI * 2);
-          ctx.fillStyle = halo; ctx.fill();
-          ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
-          ctx.fillStyle = s.color + alpha.toFixed(3) + ')'; ctx.fill();
-        }
-        if (s.life === 0 || s.x < -10 || s.x > w + 10 || s.y < -10) {
-          Object.assign(s, makeSparkle(true));
-        }
-      }
-
-      t++;
-      rafRef.current = requestAnimationFrame(tick);
-    };
-
-    rafRef.current = requestAnimationFrame(tick);
-    return () => { cancelAnimationFrame(rafRef.current); ro.disconnect(); };
-  }, []);
-
-  return (
-    <canvas ref={canvasRef} style={{
-      position: 'absolute', inset: 0, width: '100%', height: '100%',
-      pointerEvents: 'none', zIndex: 0, display: 'block',
-    }}/>
-  );
-}
-
-function HeroParticles({ accent, count = 10 }) {
-  const pts = useRef(Array.from({ length: count }, (_, i) => ({
-    id: i, left: (5 + Math.random() * 90) + '%', bottom: (Math.random() * 18) + '%',
-    size: 1.2 + Math.random() * 2.2, pd: (3 + Math.random() * 5) + 's',
-    pdl: (-Math.random() * 6) + 's', px: ((Math.random() - 0.5) * 45) + 'px',
-    py: -(48 + Math.random() * 75) + 'px',
-  }))).current;
-  return (
-    <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', overflow: 'hidden' }}>
-      {pts.map(p => (
-        <div key={p.id} className="hp" style={{
-          position: 'absolute', borderRadius: '50%',
-          left: p.left, bottom: p.bottom, width: p.size, height: p.size,
-          background: accent, boxShadow: '0 0 ' + (p.size * 4) + 'px ' + accent,
-          '--pd': p.pd, '--pdl': p.pdl, '--px': p.px, '--py': p.py,
-        }}/>
-      ))}
-    </div>
-  );
-}
-
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
-*, *::before, *::after { box-sizing: border-box; }
-.lv { font-family: 'Nunito', sans-serif; }
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
 
-@keyframes hf1{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-14px) rotate(0deg)}}
-@keyframes hf2{0%,100%{transform:translateY(0) rotate(2deg)}50%{transform:translateY(-18px) rotate(5deg)}}
-@keyframes hf3{0%,100%{transform:translateY(0) rotate(1deg)}42%{transform:translateY(-10px) rotate(-2deg)}}
-.hfa{animation:hf1 6s ease-in-out infinite}
-.hfb{animation:hf2 8s ease-in-out infinite .9s}
-.hfc{animation:hf3 7s ease-in-out infinite 1.5s}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-@keyframes hp-rise{
-  0%{transform:translateY(0) translateX(0);opacity:0}
-  8%{opacity:1}88%{opacity:.5}
-  100%{transform:translateY(var(--py)) translateX(var(--px));opacity:0}
+.hv-root {
+  font-family: 'DM Sans', sans-serif;
+  background: #08000f;
+  min-height: 100vh;
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
 }
-.hp{animation:hp-rise var(--pd) ease-out infinite var(--pdl)}
 
-@keyframes live-pulse{0%{transform:scale(1);opacity:.7}100%{transform:scale(3.5);opacity:0}}
-.live-ring{animation:live-pulse 1.8s ease-out infinite}
+/* grain overlay — adds tactile texture, kills the "clean AI render" feel */
+.hv-root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.032;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px;
+}
 
-@keyframes scan{0%{top:-1px;opacity:0}4%{opacity:.45}92%{opacity:.2}100%{top:100%;opacity:0}}
-.scan{position:absolute;left:0;right:0;height:1px;pointer-events:none;z-index:4;
-  background:linear-gradient(90deg,transparent,rgba(251,191,36,.14),rgba(200,140,255,.1),transparent);
-  animation:scan 10s linear infinite}
+.hv-root > * { position: relative; z-index: 1; }
 
-.ambi-grid{position:absolute;inset:0;pointer-events:none;
-  background-image:linear-gradient(rgba(251,191,36,.024) 1px,transparent 1px),
-    linear-gradient(90deg,rgba(251,191,36,.024) 1px,transparent 1px);
-  background-size:44px 44px}
+.hv-shell {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 24px 100px;
+}
 
-@keyframes grad-shift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
-.title-grad{
-  background:linear-gradient(90deg,#fbbf24,#f59e0b,#e879f9,#c084fc,#818cf8,#fbbf24);
-  background-size:300% 100%;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
-  animation:grad-shift 5s ease-in-out infinite;filter:drop-shadow(0 0 20px rgba(251,191,36,.28))}
+/* ── HERO ── */
+.hero {
+  position: relative;
+  padding: 72px 0 60px;
+  overflow: hidden;
+}
 
-.gc-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;
-  border-radius:inherit;filter:grayscale(1) brightness(.3) sepia(.5) hue-rotate(228deg);
-  transform:scale(1.03);transition:filter .55s cubic-bezier(.4,0,.2,1),transform .6s cubic-bezier(.4,0,.2,1);
-  will-change:filter,transform}
-.gc-card:hover .gc-img{filter:grayscale(0) brightness(.88) saturate(1.15) contrast(1.04);transform:scale(1.1)}
-.gc-vignette{position:absolute;inset:0;z-index:2;border-radius:inherit;pointer-events:none;
-  background:linear-gradient(to top,rgba(2,0,14,.97) 0%,rgba(5,0,20,.62) 32%,rgba(8,0,28,.18) 62%,transparent 100%)}
-.gc-overlay{position:absolute;inset:0;z-index:3;border-radius:inherit;pointer-events:none;opacity:0;transition:opacity .5s ease}
-.gc-card:hover .gc-overlay{opacity:1}
+/* editorial left rule — anchors the text column */
+.hero-rule {
+  position: absolute;
+  left: -1px;
+  top: 60px;
+  bottom: 60px;
+  width: 2px;
+  background: linear-gradient(to bottom, transparent, #fbbf24 20%, #a855f7 70%, transparent);
+  opacity: 0.7;
+}
 
-@keyframes sheen{0%{transform:translateX(-130%) skewX(-20deg)}100%{transform:translateX(320%) skewX(-20deg)}}
-.gc-sheen{position:absolute;inset:0;z-index:4;pointer-events:none;overflow:hidden;border-radius:inherit}
-.gc-sheen::after{content:'';position:absolute;top:0;bottom:0;width:32%;
-  background:linear-gradient(90deg,transparent,rgba(255,255,255,.055) 40%,rgba(255,255,255,.1) 50%,rgba(255,255,255,.055) 60%,transparent);
-  transform:translateX(-130%) skewX(-20deg);opacity:0;transition:opacity .08s}
-.gc-card:hover .gc-sheen::after{opacity:1;animation:sheen .8s ease forwards}
+.hero-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(251,191,36,0.65);
+  margin-bottom: 22px;
+}
 
-.gc-bar{position:absolute;top:0;left:0;right:0;height:2px;z-index:9;
-  transform:scaleX(0);opacity:0;transform-origin:left;
-  transition:transform .42s cubic-bezier(.4,0,.2,1),opacity .28s ease}
-.gc-card:hover .gc-bar{transform:scaleX(1);opacity:1}
-.gc-card{position:relative;overflow:hidden;border-radius:20px;cursor:pointer;
-  transition:box-shadow .4s ease,transform .3s cubic-bezier(.4,0,.2,1)}
-.gc-card:hover{transform:translateY(-8px) scale(1.016)}
+.hero-eyebrow-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fbbf24;
+  box-shadow: 0 0 8px rgba(251,191,36,0.8);
+}
 
-@keyframes badge-pulse{0%,100%{box-shadow:0 0 0 0 rgba(124,58,237,.5)}50%{box-shadow:0 0 0 5px rgba(124,58,237,0)}}
-.badge-live{animation:badge-pulse 2s ease infinite}
+/* big, confident — no animated gradients */
+.hero-h1 {
+  font-family: 'Syne', sans-serif;
+  font-size: clamp(52px, 7.5vw, 88px);
+  font-weight: 800;
+  line-height: 0.93;
+  letter-spacing: -0.035em;
+  color: #fff;
+}
 
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes spinr{to{transform:rotate(-360deg)}}
-::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-thumb{background:#120020;border-radius:4px}
+.hero-h1-accent {
+  color: #fbbf24;
+  display: block;
+}
+
+.hero-sub {
+  font-size: 14px;
+  font-weight: 300;
+  font-style: italic;
+  color: rgba(255,255,255,0.32);
+  line-height: 1.75;
+  max-width: 300px;
+  margin: 20px 0 38px;
+}
+
+.hero-sub strong {
+  font-style: normal;
+  font-weight: 500;
+  color: rgba(255,255,255,0.55);
+}
+
+.hero-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 24px;
+  background: #fbbf24;
+  color: #0a0008;
+  font-family: 'Syne', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  transition: background 0.15s;
+  text-decoration: none;
+}
+.btn-gold:hover { background: #fcd34d; }
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 11px 20px;
+  background: transparent;
+  color: rgba(255,255,255,0.38);
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border: 1px solid rgba(255,255,255,0.09);
+  border-radius: 3px;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+  text-decoration: none;
+}
+.btn-ghost:hover {
+  border-color: rgba(255,255,255,0.22);
+  color: rgba(255,255,255,0.62);
+}
+
+/* item showcase — layered depth, no floating animation circus */
+.hero-items {
+  position: absolute;
+  right: -20px;
+  top: 50%;
+  transform: translateY(-48%);
+  display: flex;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+.hero-item--side2 img {
+  width: 95px;
+  opacity: 0.28;
+  margin-bottom: -14px;
+  filter: drop-shadow(0 12px 32px rgba(0,0,0,0.85));
+}
+.hero-item--side1 img {
+  width: 135px;
+  opacity: 0.52;
+  margin-bottom: -6px;
+  filter: drop-shadow(0 16px 44px rgba(0,0,0,0.85));
+}
+.hero-item--main img {
+  width: 230px;
+  filter: drop-shadow(0 24px 64px rgba(0,0,0,0.92)) drop-shadow(0 0 48px rgba(168,85,247,0.25));
+}
+
+/* ── STATS ── */
+.stats-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  border: 1px solid rgba(255,255,255,0.055);
+  border-radius: 5px;
+  overflow: hidden;
+  margin: 52px 0 48px;
+  background: rgba(255,255,255,0.012);
+}
+
+.stat-cell {
+  padding: 20px 26px;
+  border-right: 1px solid rgba(255,255,255,0.055);
+}
+.stat-cell:last-child { border-right: none; }
+
+.stat-num {
+  font-family: 'Syne', sans-serif;
+  font-size: 26px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.025em;
+  line-height: 1;
+}
+.stat-num span { color: #fbbf24; }
+
+.stat-label {
+  font-size: 10px;
+  color: rgba(255,255,255,0.24);
+  margin-top: 5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* ── SECTION HEADER ── */
+.section-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.section-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.28);
+}
+
+/* ── GAME GRID — intentionally asymmetric ── */
+.games-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.game-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 5px;
+  cursor: pointer;
+  display: block;
+  text-decoration: none;
+  background: #0c0016;
+  /* no glow, no box-shadow theater */
+}
+
+.game-card__img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  transition: transform 0.65s cubic-bezier(0.2, 0, 0, 1), filter 0.45s ease;
+  filter: grayscale(0.55) brightness(0.4) contrast(1.06);
+  will-change: transform;
+}
+.game-card:hover .game-card__img {
+  transform: scale(1.055);
+  filter: grayscale(0) brightness(0.58) saturate(1.08);
+}
+
+.game-card__fade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(3,0,10,0.97) 0%, rgba(3,0,10,0.45) 32%, transparent 58%);
+  z-index: 2;
+}
+
+/* subtle left accent on hover */
+.game-card__accent-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  z-index: 4;
+  transform: scaleY(0);
+  transform-origin: bottom center;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.game-card:hover .game-card__accent-bar { transform: scaleY(1); }
+
+.game-card__body {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 5;
+  padding: 18px 18px 16px;
+}
+
+.game-card__title {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.game-card__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.05);
+  flex-shrink: 0;
+}
+
+.game-card__arrow {
+  margin-left: auto;
+  opacity: 0;
+  transform: translate(-3px, 3px);
+  transition: opacity 0.18s, transform 0.18s;
+}
+.game-card:hover .game-card__arrow { opacity: 1; transform: translate(0, 0); }
+
+.game-card__sub {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.game-card__online {
+  font-size: 10px;
+  color: rgba(255,255,255,0.26);
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.game-card__online-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+}
+
+.live-tag {
+  font-family: 'Syne', sans-serif;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 2px;
+}
+
+/* card sizing — asymmetric layout */
+.gc-battles  { min-height: 420px; grid-row: span 2; }
+.gc-cases    { height: 200px; }
+.gc-coinflip { height: 200px; }
+.gc-crash    { height: 160px; grid-column: span 2; }
+
+/* font size per card size */
+.gc-battles .game-card__title  { font-size: 26px; }
+.gc-cases .game-card__title,
+.gc-coinflip .game-card__title { font-size: 19px; }
+.gc-crash .game-card__title    { font-size: 19px; }
+
+/* ── RECENT WINS ── */
+.wins-section { margin-top: 52px; }
+
+.wins-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.wins-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.22);
+}
+
+.wins-list { display: flex; flex-direction: column; }
+
+.win-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 14px;
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.038);
+}
+.win-row:last-child { border-bottom: none; }
+
+.win-user { font-size: 12px; color: rgba(255,255,255,0.4); font-weight: 300; }
+.win-user strong { font-weight: 500; color: rgba(255,255,255,0.65); }
+.win-item { font-size: 11px; color: rgba(255,255,255,0.22); }
+.win-amount {
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fbbf24;
+  letter-spacing: -0.01em;
+}
+
+/* ── LOADING ── */
+.loading-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+.loading-bar-track {
+  width: 100px;
+  height: 1px;
+  background: rgba(255,255,255,0.07);
+  overflow: hidden;
+}
+.loading-bar-fill {
+  height: 100%;
+  background: #fbbf24;
+  animation: lf 1.3s cubic-bezier(0.4,0,0.2,1) infinite;
+}
+@keyframes lf {
+  0%   { width: 0; margin-left: 0; }
+  50%  { width: 55%; margin-left: 22%; }
+  100% { width: 0; margin-left: 100%; }
+}
+.loading-label {
+  font-family: 'Syne', sans-serif;
+  font-size: 9px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.15);
+  margin-top: 12px;
+  text-align: center;
+}
+
+/* ── RESPONSIVE ── */
+@media (max-width: 680px) {
+  .hero-items { display: none; }
+  .hero-h1 { font-size: 48px; }
+  .games-grid { grid-template-columns: 1fr; }
+  .gc-battles  { grid-row: span 1; min-height: 260px; }
+  .gc-crash    { grid-column: span 1; }
+  .stats-strip { grid-template-columns: repeat(3, 1fr); }
+}
 `;
 
-function HeroBanner() {
-  return (
-    <motion.div initial={{opacity:0,y:22}} animate={{opacity:1,y:0}}
-      transition={{duration:.78,ease:[.22,1,.36,1]}}
-      style={{position:'relative',overflow:'hidden',borderRadius:22,
-        background:'linear-gradient(130deg,#040010 0%,#0b001e 35%,#170035 65%,#060014 100%)',
-        minHeight:260,
-        boxShadow:'0 0 0 1px rgba(251,191,36,.09),0 28px 88px rgba(0,0,0,.96),inset 0 1px 0 rgba(255,255,255,.03)'}}>
-      <div className="ambi-grid"/>
-      <div className="scan"/>
-      <div style={{position:'absolute',inset:0,pointerEvents:'none',
-        background:'radial-gradient(ellipse 58% 80% at 70% 50%,rgba(100,25,195,.26) 0%,transparent 62%),' +
-                   'radial-gradient(ellipse 30% 40% at 88% 8%,rgba(251,191,36,.10) 0%,transparent 52%)'}}/>
-      <div style={{position:'absolute',inset:0,pointerEvents:'none'}}>
-        <HeroParticles accent="#fbbf24" count={9}/>
-        <HeroParticles accent="#a855f7" count={7}/>
-      </div>
-      <img src={vtechImg} alt="" className="hfa" style={{position:'absolute',right:'27%',top:'5%',width:126,pointerEvents:'none',
-        filter:'drop-shadow(0 0 24px rgba(168,85,247,.88)) drop-shadow(0 12px 36px rgba(0,0,0,.95))'}}/>
-      <img src={roseImg} alt="" className="hfb" style={{position:'absolute',right:'6%',top:'10%',width:144,pointerEvents:'none',
-        filter:'drop-shadow(0 0 24px rgba(251,191,36,.8)) drop-shadow(0 12px 36px rgba(0,0,0,.95))'}}/>
-      <img src={irishImg} alt="" className="hfc" style={{position:'absolute',right:'17%',bottom:'6%',width:106,pointerEvents:'none',
-        filter:'drop-shadow(0 0 19px rgba(251,191,36,.68)) drop-shadow(0 10px 32px rgba(0,0,0,.95))'}}/>
-      <div className="hfa" style={{position:'absolute',right:'44%',top:'9%',width:46,height:46,
-        background:'radial-gradient(circle at 35% 35%,#e9d5ff,#7c3aed)',
-        clipPath:'polygon(50% 0%,100% 38%,82% 100%,18% 100%,0% 38%)',
-        filter:'drop-shadow(0 0 15px rgba(168,85,247,.88))',animationDelay:'.4s'}}/>
-      <div className="hfc" style={{position:'absolute',right:'50%',bottom:'14%',width:36,height:36,
-        background:'radial-gradient(circle at 35% 30%,#fde68a,#b45309)',borderRadius:'50%',
-        filter:'drop-shadow(0 0 11px rgba(251,191,36,.88))',animationDelay:'1s'}}/>
-      <div style={{position:'relative',zIndex:10,padding:'46px 48px'}}>
-        <motion.div initial={{opacity:0,x:-10}} animate={{opacity:1,x:0}} transition={{delay:.2}}
-          style={{display:'inline-flex',alignItems:'center',gap:8,marginBottom:18,
-            background:'rgba(251,191,36,.065)',border:'1px solid rgba(251,191,36,.18)',
-            borderRadius:100,padding:'4px 14px 4px 10px'}}>
-          <div style={{position:'relative',width:7,height:7}}>
-            <div className="live-ring" style={{position:'absolute',inset:0,borderRadius:'50%',background:'rgba(251,191,36,.38)'}}/>
-            <div style={{position:'absolute',inset:0,borderRadius:'50%',background:'#fbbf24',boxShadow:'0 0 10px #fbbf24'}}/>
-          </div>
-          <span style={{fontSize:10,fontWeight:700,letterSpacing:'.18em',color:'rgba(251,191,36,.68)',textTransform:'uppercase'}}>Live Now</span>
-        </motion.div>
-        <motion.h1 initial={{opacity:0,y:18}} animate={{opacity:1,y:0}}
-          transition={{delay:.24,duration:.8,ease:[.22,1,.36,1]}}
-          style={{margin:0,lineHeight:1.07,marginBottom:13}}>
-          <span style={{display:'block',fontSize:'clamp(28px,3.6vw,44px)',fontWeight:900,color:'#fff',
-            textShadow:'0 2px 22px rgba(0,0,0,.65)'}}>Welcome To</span>
-          <span className="title-grad" style={{display:'block',fontSize:'clamp(32px,4.2vw,50px)',fontWeight:900}}>Amethystgg!</span>
-        </motion.h1>
-        <motion.p initial={{opacity:0}} animate={{opacity:1}} transition={{delay:.38}}
-          style={{fontSize:13,color:'rgba(255,255,255,.36)',lineHeight:1.72,marginBottom:30,maxWidth:305,fontWeight:400}}>
-          Step into a world of magic, luck, and excitement where every unbox and battle brings you closer to{' '}
-          <span style={{color:'#fbbf24',fontWeight:700}}>amazing rewards.</span>
-        </motion.p>
-        <motion.div initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{delay:.5}}
-          style={{display:'flex',gap:10,flexWrap:'wrap'}}>
-          <Link to={createPageUrl('Leaderboard')}>
-            <motion.button whileHover={{scale:1.05,y:-2}} whileTap={{scale:.96}}
-              style={{display:'flex',alignItems:'center',gap:7,padding:'12px 24px',borderRadius:12,border:'none',cursor:'pointer',
-                fontSize:14,fontWeight:800,color:'#000',fontFamily:'Nunito,sans-serif',
-                background:'linear-gradient(135deg,#fbbf24 0%,#f59e0b 55%,#fde68a 100%)',
-                boxShadow:'0 0 36px rgba(251,191,36,.46),0 4px 18px rgba(0,0,0,.55)'}}>
-              <Trophy style={{width:15,height:15}}/> View Leaderboard
-            </motion.button>
-          </Link>
-          <Link to={createPageUrl('Cases')}>
-            <motion.button whileHover={{scale:1.05,y:-2}} whileTap={{scale:.96}}
-              style={{display:'flex',alignItems:'center',gap:7,padding:'12px 24px',borderRadius:12,cursor:'pointer',
-                fontSize:14,fontWeight:800,color:'rgba(251,191,36,.86)',fontFamily:'Nunito,sans-serif',
-                background:'rgba(251,191,36,.065)',border:'1px solid rgba(251,191,36,.2)'}}>
-              Open Cases <ChevronRight style={{width:15,height:15}}/>
-            </motion.button>
-          </Link>
-        </motion.div>
-      </div>
-      <div style={{position:'absolute',bottom:0,left:0,right:0,height:1.5,pointerEvents:'none',
-        background:'linear-gradient(90deg,transparent,rgba(251,191,36,.5),rgba(168,85,247,.42),transparent)'}}/>
-    </motion.div>
-  );
-}
-
 const GAMES = [
-  { name:'Battles',  page:'Battles',  icon:Swords,   img:battlesImg,  accent:'#c084fc',
-    overlay:'linear-gradient(150deg,rgba(192,132,252,.22) 0%,rgba(251,191,36,.11) 55%,rgba(76,29,149,.2) 100%)',
-    barGrad:'linear-gradient(90deg,transparent,#c084fc 18%,#fbbf24 50%,#c084fc 82%,transparent)',
-    sd:'0 0 0 1px rgba(255,255,255,.055),0 14px 44px rgba(0,0,0,.92)',
-    sh:'0 0 0 1.5px rgba(192,132,252,.62),0 18px 52px rgba(0,0,0,.92),0 0 44px rgba(192,132,252,.26),0 0 90px rgba(251,191,36,.07)',
-    tag:'HOT', tagBg:'linear-gradient(135deg,#fbbf24,#f59e0b)', tagColor:'#000' },
-  { name:'Cases',    page:'Cases',    icon:Box,       img:casesImg,    accent:'#fbbf24',
-    overlay:'linear-gradient(150deg,rgba(251,191,36,.2) 0%,rgba(192,132,252,.1) 55%,rgba(120,50,0,.2) 100%)',
-    barGrad:'linear-gradient(90deg,transparent,#fbbf24 18%,#c084fc 50%,#fbbf24 82%,transparent)',
-    sd:'0 0 0 1px rgba(255,255,255,.055),0 14px 44px rgba(0,0,0,.92)',
-    sh:'0 0 0 1.5px rgba(251,191,36,.62),0 18px 52px rgba(0,0,0,.92),0 0 44px rgba(251,191,36,.26),0 0 90px rgba(192,132,252,.07)',
-    tag:'NEW', tagBg:'#7c3aed', tagColor:'#fff' },
-  { name:'Coinflip', page:'Coinflip', icon:RotateCcw, img:coinflipImg, accent:'#fbbf24',
-    overlay:'linear-gradient(150deg,rgba(251,191,36,.2) 0%,rgba(124,58,237,.13) 55%,rgba(76,29,149,.18) 100%)',
-    barGrad:'linear-gradient(90deg,transparent,#fbbf24 18%,#a855f7 50%,#fbbf24 82%,transparent)',
-    sd:'0 0 0 1px rgba(255,255,255,.055),0 14px 44px rgba(0,0,0,.92)',
-    sh:'0 0 0 1.5px rgba(251,191,36,.58),0 18px 52px rgba(0,0,0,.92),0 0 40px rgba(251,191,36,.22),0 0 80px rgba(168,85,247,.07)' },
-  { name:'Crash',    page:'Crash',    icon:Zap,       img:crashImg,    accent:'#a855f7',
-    overlay:'linear-gradient(150deg,rgba(168,85,247,.24) 0%,rgba(251,191,36,.11) 55%,rgba(76,29,149,.22) 100%)',
-    barGrad:'linear-gradient(90deg,transparent,#a855f7 18%,#fbbf24 50%,#a855f7 82%,transparent)',
-    sd:'0 0 0 1px rgba(255,255,255,.055),0 14px 44px rgba(0,0,0,.92)',
-    sh:'0 0 0 1.5px rgba(168,85,247,.6),0 18px 52px rgba(0,0,0,.92),0 0 40px rgba(168,85,247,.24),0 0 80px rgba(251,191,36,.07)',
-    tag:'LIVE', tagBg:'rgba(124,58,237,.9)', tagColor:'#fff' },
+  {
+    id: 'battles',
+    name: 'Battles',
+    page: 'Battles',
+    Icon: Swords,
+    img: battlesImg,
+    accent: '#c084fc',
+    online: '1,204',
+    cardClass: 'gc-battles',
+    live: false,
+  },
+  {
+    id: 'cases',
+    name: 'Cases',
+    page: 'Cases',
+    Icon: Box,
+    img: casesImg,
+    accent: '#fbbf24',
+    online: '3,841',
+    cardClass: 'gc-cases',
+    live: false,
+  },
+  {
+    id: 'coinflip',
+    name: 'Coinflip',
+    page: 'Coinflip',
+    Icon: RotateCcw,
+    img: coinflipImg,
+    accent: '#fbbf24',
+    online: '687',
+    cardClass: 'gc-coinflip',
+    live: false,
+  },
+  {
+    id: 'crash',
+    name: 'Crash',
+    page: 'Crash',
+    Icon: Zap,
+    img: crashImg,
+    accent: '#a855f7',
+    online: '5,122',
+    cardClass: 'gc-crash',
+    live: true,
+  },
 ];
 
-function GameCard({ g, i, height }) {
-  const [hov, setHov] = useState(false);
+const WINS = [
+  { user: 'phantom_x',  item: 'Dragon Lore FN',    amount: '$1,240.00', game: 'Cases'   },
+  { user: 'nox__',      item: 'AK-47 Redline FN',   amount: '$380.00',  game: 'Cases'   },
+  { user: 'drift.io',   item: 'Battle Win',          amount: '$220.00',  game: 'Battles' },
+  { user: 'kr1spy',     item: 'AWP Asiimov FT',      amount: '$155.00',  game: 'Cases'   },
+  { user: 'velox',      item: 'Crash ×4.21',         amount: '$93.00',   game: 'Crash'   },
+];
+
+function GameCard({ game, index }) {
   return (
-    <motion.div initial={{opacity:0,y:26,scale:.95}} animate={{opacity:1,y:0,scale:1}}
-      transition={{delay:.08+i*.1,duration:.66,ease:[.22,1,.36,1]}}>
-      <Link to={createPageUrl(g.page)}>
-        <div className="gc-card" onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
-          style={{height,boxShadow:hov?g.sh:g.sd}}>
-          <img src={g.img} alt={g.name} className="gc-img"/>
-          <div className="gc-vignette"/>
-          <div className="gc-overlay" style={{background:g.overlay}}/>
-          <div className="gc-sheen"/>
-          <div className="gc-bar" style={{background:g.barGrad}}/>
-          <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:10,
-            padding:height>200?'32px 22px 20px':'24px 20px 16px'}}>
-            <div style={{display:'flex',alignItems:'center',gap:9}}>
-              <div style={{display:'flex',alignItems:'center',justifyContent:'center',
-                width:height>200?32:28,height:height>200?32:28,borderRadius:height>200?10:8,
-                background:'linear-gradient(135deg,'+g.accent+'1e,'+g.accent+'42)',
-                border:'1px solid '+g.accent+'4e',backdropFilter:'blur(10px)',flexShrink:0,
-                transition:'transform .44s ease',transform:hov?'rotate(360deg)':'rotate(0deg)'}}>
-                <g.icon style={{width:height>200?15:13,height:height>200?15:13,color:g.accent}}/>
-              </div>
-              <span style={{fontSize:height>200?18:15,fontWeight:900,color:'#fff',letterSpacing:'.01em',
-                textShadow:'0 2px 14px rgba(0,0,0,.95),0 0 32px rgba(0,0,0,.6)'}}>{g.name}</span>
-              {g.tag&&<span className={g.tag==='LIVE'?'badge-live':''} style={{
-                fontSize:9,fontWeight:800,letterSpacing:'.15em',textTransform:'uppercase',
-                color:g.tagColor,background:g.tagBg,borderRadius:6,padding:'2px 9px',flexShrink:0}}>{g.tag}</span>}
+    <motion.div
+      className={game.cardClass}
+      initial={{ opacity: 0, y: 14 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.1 + index * 0.065, duration: 0.48, ease: [0.22, 1, 0.36, 1] }}
+    >
+      <Link to={createPageUrl(game.page)} className="game-card" style={{ height: '100%' }}>
+        <img src={game.img} alt={game.name} className="game-card__img" />
+        <div className="game-card__fade" />
+        <div className="game-card__accent-bar" style={{ background: game.accent }} />
+        <div className="game-card__body">
+          <div className="game-card__title">
+            <div className="game-card__icon">
+              <game.Icon size={13} color={game.accent} />
             </div>
+            {game.name}
+            {game.live && (
+              <span
+                className="live-tag"
+                style={{ background: `${game.accent}18`, color: game.accent, border: `1px solid ${game.accent}28` }}
+              >
+                Live
+              </span>
+            )}
+            <ArrowUpRight size={14} className="game-card__arrow" style={{ color: game.accent }} />
           </div>
-          <div style={{position:'absolute',top:14,right:16,zIndex:9,width:5,height:5,borderRadius:'50%',
-            background:g.accent,boxShadow:'0 0 10px 3px '+g.accent,
-            opacity:hov?.88:0,transition:'opacity .32s ease'}}/>
+          <div className="game-card__sub">
+            <span className="game-card__online">
+              <span className="game-card__online-dot" style={{ background: game.accent, opacity: 0.7 }} />
+              {game.online} playing
+            </span>
+          </div>
         </div>
       </Link>
-    </motion.div>
-  );
-}
-
-function SectionHead() {
-  return (
-    <motion.div initial={{opacity:0,x:-8}} animate={{opacity:1,x:0}} transition={{delay:.26}}
-      style={{display:'flex',alignItems:'center',gap:10,marginBottom:22}}>
-      <div style={{width:3,height:22,borderRadius:3,
-        background:'linear-gradient(to bottom,#fbbf24,#a855f7)',
-        boxShadow:'0 0 12px rgba(251,191,36,.38)'}}/>
-      <Zap style={{width:16,height:16,color:'#fbbf24'}}/>
-      <span style={{fontSize:17,fontWeight:900,color:'#fff',letterSpacing:'.01em'}}>Magic Games</span>
     </motion.div>
   );
 }
@@ -393,38 +572,117 @@ export default function Home() {
   useRequireAuth();
 
   if (loading) return (
-    <div style={{display:'flex',alignItems:'center',justifyContent:'center',minHeight:'60vh',background:'#030009'}}>
-      <div style={{position:'relative',width:52,height:52}}>
-        <div style={{position:'absolute',inset:0,borderRadius:'50%',border:'2px solid #fbbf24',animation:'spin 1s linear infinite'}}/>
-        <div style={{position:'absolute',inset:7,borderRadius:'50%',border:'2px solid #a855f7',animation:'spinr .72s linear infinite'}}/>
-        <div style={{position:'absolute',inset:0,display:'flex',alignItems:'center',justifyContent:'center'}}>
-          <div style={{width:6,height:6,borderRadius:'50%',background:'#fbbf24',boxShadow:'0 0 16px #fbbf24'}}/>
+    <div className="hv-root loading-screen">
+      <style>{CSS}</style>
+      <div>
+        <div className="loading-bar-track">
+          <div className="loading-bar-fill" />
         </div>
+        <div className="loading-label">Loading</div>
       </div>
     </div>
   );
 
   return (
-    <div className="lv" style={{
-      background:'#030009',
-      backgroundImage:
-        'radial-gradient(ellipse 62% 40% at 10% 0%,rgba(85,15,185,.17) 0%,transparent 60%),' +
-        'radial-gradient(ellipse 48% 32% at 90% 100%,rgba(185,115,0,.11) 0%,transparent 55%)',
-      minHeight:'100vh',
-      padding:'24px 0 90px',
-      position:'relative',
-      overflow:'hidden',
-    }}>
+    <div className="hv-root">
       <style>{CSS}</style>
-      <AmbientCanvas/>
-      <div style={{position:'relative',zIndex:1,display:'flex',flexDirection:'column',gap:32}}>
-        <HeroBanner/>
-        <section>
-          <SectionHead/>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:16}}>
-            {GAMES.map((g,i) => <GameCard key={g.name} g={g} i={i} height={210}/>)}
+      <div className="hv-shell">
+
+        {/* ── HERO ── */}
+        <div className="hero">
+          <div className="hero-rule" />
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          >
+            <div className="hero-eyebrow">
+              <div className="hero-eyebrow-dot" />
+              Amethystgg
+            </div>
+            <h1 className="hero-h1">
+              Win<br />
+              <span className="hero-h1-accent">legendary</span><br />
+              drops.
+            </h1>
+            <p className="hero-sub">
+              Cases, battles, coinflips — every round is a shot at <strong>something rare.</strong>
+            </p>
+            <div className="hero-actions">
+              <Link to={createPageUrl('Cases')}>
+                <motion.div className="btn-gold" whileTap={{ scale: 0.97 }}>
+                  Open a Case <ArrowUpRight size={12} />
+                </motion.div>
+              </Link>
+              <Link to={createPageUrl('Leaderboard')}>
+                <div className="btn-ghost">
+                  <Trophy size={11} /> Leaderboard
+                </div>
+              </Link>
+            </div>
+          </motion.div>
+
+          {/* item showcase — stacked depth, no floating/rotating */}
+          <div className="hero-items">
+            <div className="hero-item--side2"><img src={irishImg} alt="" /></div>
+            <div className="hero-item--side1"><img src={vtechImg} alt="" /></div>
+            <div className="hero-item--main" ><img src={roseImg}  alt="" /></div>
           </div>
-        </section>
+        </div>
+
+        {/* ── STATS ── */}
+        <motion.div
+          className="stats-strip"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.28, duration: 0.55 }}
+        >
+          <div className="stat-cell">
+            <div className="stat-num">12,<span>041</span></div>
+            <div className="stat-label">Online now</div>
+          </div>
+          <div className="stat-cell">
+            <div className="stat-num">$<span>2.4M</span></div>
+            <div className="stat-label">Won today</div>
+          </div>
+          <div className="stat-cell">
+            <div className="stat-num"><span>340K</span>+</div>
+            <div className="stat-label">Total users</div>
+          </div>
+        </motion.div>
+
+        {/* ── GAMES ── */}
+        <div className="section-head">
+          <span className="section-title">Games</span>
+          <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.15)', letterSpacing: '0.1em' }}>4 modes</span>
+        </div>
+
+        <div className="games-grid">
+          {GAMES.map((game, i) => <GameCard key={game.id} game={game} index={i} />)}
+        </div>
+
+        {/* ── RECENT WINS ── */}
+        <motion.div
+          className="wins-section"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.5, duration: 0.55 }}
+        >
+          <div className="wins-header">
+            <span className="wins-title">Recent wins</span>
+            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.14)', letterSpacing: '0.08em' }}>last hour</span>
+          </div>
+          <div className="wins-list">
+            {WINS.map((w, i) => (
+              <div className="win-row" key={i}>
+                <div className="win-user"><strong>{w.user}</strong> opened {w.game}</div>
+                <div className="win-item">{w.item}</div>
+                <div className="win-amount">{w.amount}</div>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+
       </div>
     </div>
   );
