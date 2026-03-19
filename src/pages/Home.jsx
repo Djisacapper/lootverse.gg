@@ -308,18 +308,35 @@ function HeroBanner() {
           }}>Live Now</span>
         </motion.div>
 
-        {/* title — Syne, static gold accent, no animated gradient */}
         <motion.h1
           initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }}
           transition={{ delay: .24, duration: .8, ease: [.22, 1, .36, 1] }}
-          style={{ margin: 0, lineHeight: 1.07, marginBottom: 13 }}
+          style={{ margin: 0, lineHeight: 1.08, marginBottom: 13 }}
         >
-          <span style={{ display: 'block', fontSize: 'clamp(26px,3.4vw,42px)' }}
-            className="hero-title-static">
+          <span style={{
+            display: 'block',
+            fontSize: 'clamp(20px, 2.6vw, 30px)',
+            fontFamily: 'DM Sans, sans-serif',
+            fontWeight: 300,
+            color: 'rgba(255,255,255,0.48)',
+            letterSpacing: '0.015em',
+            marginBottom: 2,
+          }}>
             Welcome To
           </span>
-          <span style={{ display: 'block', fontSize: 'clamp(30px,4vw,30px)' }}
-            className="hero-title-accent">
+          <span style={{
+            display: 'block',
+            fontSize: 'clamp(36px, 4.8vw, 58px)',
+            fontFamily: 'Syne, sans-serif',
+            fontWeight: 800,
+            letterSpacing: '-0.025em',
+            lineHeight: 1,
+            background: 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 30%, #e879f9 65%, #a855f7 100%)',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+            backgroundClip: 'text',
+            filter: 'drop-shadow(0 0 32px rgba(251,191,36,.22))',
+          }}>
             Amethystgg!
           </span>
         </motion.h1>
