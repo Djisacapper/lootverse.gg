@@ -5,7 +5,6 @@ import { useWallet } from '../components/game/useWallet';
 import { safeAvatarUrl } from '../components/game/usePlayerAvatars';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Swords, X, RotateCcw, Trophy, Zap } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 /* ─── CSS ──────────────────────────────────────────────────────── */
 const CSS = `
@@ -13,46 +12,41 @@ const CSS = `
 
 .cf-root { font-family: 'Nunito', sans-serif; }
 
-@keyframes cf-spin { to { transform: rotate(360deg); } }
-@keyframes cf-pulse-ring {
-  0%  { transform: scale(1);   opacity: .7; }
-  100%{ transform: scale(2.6); opacity: 0;  }
-}
-@keyframes cf-shimmer {
-  0%  { transform: translateX(-120%) skewX(-15deg); }
-  100%{ transform: translateX(350%)  skewX(-15deg); }
-}
-.cf-shim { position: relative; overflow: hidden; }
-.cf-shim::after {
-  content:''; position:absolute; top:0; left:0; width:25%; height:100%;
-  background:linear-gradient(90deg,transparent,rgba(255,220,0,.06),transparent);
-  animation:cf-shimmer 5s ease-in-out infinite; pointer-events:none; border-radius:inherit;
+/* grain texture */
+.cf-root::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.022;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 160px;
 }
 
-@keyframes cf-scan {
-  0%  { top:-1px; opacity:0; }
-  5%  { opacity:.6; }
-  95% { opacity:.6; }
-  100%{ top:100%; opacity:0; }
+/* coin idle bob — kept, it's tasteful */
+@keyframes cf-coin-idle {
+  0%,100% { transform: translateY(0px) rotateY(0deg); }
+  50%     { transform: translateY(-7px) rotateY(6deg); }
 }
-.cf-scan {
-  position:absolute; left:0; right:0; height:1px;
-  background:linear-gradient(90deg,transparent,rgba(255,220,0,.18),transparent);
-  animation:cf-scan 6s linear infinite; pointer-events:none;
-}
+.cf-coin-idle { animation: cf-coin-idle 3.5s ease-in-out infinite; }
 
+/* win pop */
+@keyframes cf-win-pop {
+  0%  { transform: scale(0.5); opacity: 0; }
+  60% { transform: scale(1.12); }
+  100%{ transform: scale(1); opacity: 1; }
+}
+.cf-win-pop { animation: cf-win-pop .55s cubic-bezier(.34,1.56,.64,1) forwards; }
+
+/* float for empty state */
 @keyframes cf-float {
   0%,100% { transform: translateY(0px); }
   50%     { transform: translateY(-10px); }
 }
 .cf-float { animation: cf-float 3s ease-in-out infinite; }
 
-@keyframes cf-glow-pulse {
-  0%,100% { box-shadow: 0 0 0 1px rgba(251,191,36,.12), 0 16px 50px rgba(0,0,0,.7), 0 0 50px rgba(251,191,36,.12); }
-  50%     { box-shadow: 0 0 0 1px rgba(251,191,36,.28), 0 16px 50px rgba(0,0,0,.7), 0 0 80px rgba(251,191,36,.28); }
-}
-.cf-card-glow { animation: cf-glow-pulse 3s ease-in-out infinite; }
-
+/* particles — only used in flip overlay */
 @keyframes cf-p-rise {
   0%   { transform: translateY(0) translateX(0); opacity: 0; }
   8%   { opacity: 1; }
@@ -60,38 +54,92 @@ const CSS = `
   100% { transform: translateY(-90px) translateX(var(--dx)); opacity: 0; }
 }
 .cf-pt {
-  position:absolute; border-radius:50%; pointer-events:none;
+  position: absolute; border-radius: 50%; pointer-events: none;
   animation: cf-p-rise var(--d) ease-out infinite var(--dl);
 }
 
-@keyframes cf-coin-idle {
-  0%,100% { transform: rotateY(0deg) translateY(0px); }
-  25%     { transform: rotateY(8deg)  translateY(-3px); }
-  75%     { transform: rotateY(-8deg) translateY(-3px); }
-}
-.cf-coin-idle { animation: cf-coin-idle 4s ease-in-out infinite; }
-
-@keyframes cf-win-pop {
-  0%   { transform: scale(0.5); opacity: 0; }
-  60%  { transform: scale(1.15); }
-  100% { transform: scale(1); opacity: 1; }
-}
-.cf-win-pop { animation: cf-win-pop .55s cubic-bezier(.34,1.56,.64,1) forwards; }
-
-@keyframes cf-border-flow {
-  0%   { background-position: 0% 50%; }
-  100% { background-position: 200% 50%; }
-}
-
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-thumb { background: #1e1a00; border-radius: 4px; }
-
+/* input */
 .cf-input:focus { outline: none; border-color: rgba(251,191,36,.45) !important; box-shadow: 0 0 0 3px rgba(251,191,36,.08); }
 .cf-input::-webkit-outer-spin-button,
 .cf-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* card hover accent — left bar slides up */
+.cf-card-bar {
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 2px;
+  background: linear-gradient(to bottom, #fbbf24, #a855f7);
+  transform: scaleY(0);
+  transform-origin: bottom center;
+  transition: transform 0.3s cubic-bezier(.4,0,.2,1);
+  border-radius: 0 2px 2px 0;
+}
+.cf-card:hover .cf-card-bar { transform: scaleY(1); }
+
+/* card base */
+.cf-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px;
+  background: linear-gradient(145deg, #080012 0%, #0e001e 60%, #060010 100%);
+  border: 1px solid rgba(255,255,255,.07);
+  transition: border-color .22s ease, box-shadow .22s ease, transform .22s ease;
+}
+.cf-card:hover {
+  border-color: rgba(251,191,36,.2);
+  box-shadow: 0 16px 48px rgba(0,0,0,.85), 0 0 40px rgba(251,191,36,.1);
+  transform: translateY(-3px);
+}
+
+/* side chip — no filled pill, just a subtle outline text */
+.side-chip {
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid;
+  background: transparent;
+  font-family: 'Nunito', sans-serif;
+}
+
+/* quick amount btn */
+.quick-btn {
+  padding: 8px 0;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 800;
+  font-family: 'Nunito', sans-serif;
+  cursor: pointer;
+  border: 1px solid rgba(255,255,255,.07);
+  background: rgba(255,255,255,.04);
+  color: rgba(255,255,255,.38);
+  transition: background .16s, border-color .16s, color .16s;
+}
+.quick-btn:hover {
+  background: rgba(251,191,36,.08);
+  border-color: rgba(251,191,36,.25);
+  color: rgba(251,191,36,.8);
+}
+.quick-btn.active {
+  background: rgba(251,191,36,.16);
+  border-color: rgba(251,191,36,.4);
+  color: #fbbf24;
+}
+
+/* skeleton pulse */
+@keyframes sk-pulse {
+  0%,100% { opacity: .4; }
+  50%     { opacity: .7; }
+}
+.cf-skeleton { animation: sk-pulse 1.8s ease-in-out infinite; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-thumb { background: rgba(168,85,247,.15); border-radius: 4px; }
 `;
 
-/* ─── Particles ─────────────────────────────────────────────────── */
+/* ─── Particles — ONLY used in flip overlay ─────────────────────── */
 function Particles({ accent, count = 12 }) {
   const pts = React.useRef(
     Array.from({ length: count }, (_, i) => ({
@@ -119,7 +167,7 @@ function Particles({ accent, count = 12 }) {
   );
 }
 
-/* ─── 3-D Coin ───────────────────────────────────────────────────── */
+/* ─── 3-D Coin — unchanged, it's good ───────────────────────────── */
 function CoinDisplay({ side, size = 'md', spinning = false, idle = false }) {
   const sizeMap = { sm: 44, md: 68, lg: 110 };
   const px = sizeMap[size];
@@ -135,24 +183,22 @@ function CoinDisplay({ side, size = 'md', spinning = false, idle = false }) {
         className={idle && !spinning ? 'cf-coin-idle' : ''}
         style={{ width: '100%', height: '100%', position: 'relative', transformStyle: 'preserve-3d' }}
       >
-        {/* Heads */}
         <div style={{
           position: 'absolute', inset: 0,
           backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
           borderRadius: '50%',
           background: 'radial-gradient(circle at 32% 32%, #fef3c7, #fbbf24 45%, #92400e)',
-          boxShadow: '0 0 32px rgba(251,191,36,.7), 0 0 80px rgba(251,191,36,.3), inset -4px -4px 14px rgba(0,0,0,.35), inset 4px 4px 12px rgba(255,255,255,.4)',
+          boxShadow: '0 0 28px rgba(251,191,36,.65), inset -4px -4px 14px rgba(0,0,0,.35), inset 4px 4px 12px rgba(255,255,255,.4)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: fs,
         }}>👑</div>
-        {/* Tails */}
         <div style={{
           position: 'absolute', inset: 0,
           backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
           transform: 'rotateY(180deg)',
           borderRadius: '50%',
           background: 'radial-gradient(circle at 32% 32%, #ddd6fe, #7c3aed 50%, #1e1b4b)',
-          boxShadow: '0 0 32px rgba(168,85,247,.65), 0 0 70px rgba(168,85,247,.25), inset -4px -4px 14px rgba(0,0,0,.35), inset 4px 4px 12px rgba(255,255,255,.3)',
+          boxShadow: '0 0 28px rgba(168,85,247,.6), inset -4px -4px 14px rgba(0,0,0,.35), inset 4px 4px 12px rgba(255,255,255,.3)',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: fs,
         }}>🔱</div>
@@ -170,8 +216,7 @@ function PlayerAvatar({ avatarUrl, name, size = 36 }) {
       background: 'linear-gradient(135deg,#7c3aed,#4338ca)',
       display: 'flex', alignItems: 'center', justifyContent: 'center',
       fontSize: size * 0.38, fontWeight: 800, color: '#fff',
-      border: '2px solid rgba(251,191,36,.25)',
-      boxShadow: '0 0 16px rgba(168,85,247,.35)',
+      border: '2px solid rgba(168,85,247,.3)',
     }}>
       {safe
         ? <img src={safe} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -182,145 +227,141 @@ function PlayerAvatar({ avatarUrl, name, size = 36 }) {
 
 /* ─── Game Card ─────────────────────────────────────────────────── */
 function GameCard({ game, user, balance, onJoin, onAddBot }) {
-  const [hov, setHov] = useState(false);
   const isOwn = game.creator_email === user?.email;
   const opponentSide = game.creator_side === 'heads' ? 'tails' : 'heads';
   const pot = game.bet_amount * 2;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 16, scale: .97 }}
+      initial={{ opacity: 0, y: 14, scale: .97 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ duration: .5, ease: [.22, 1, .36, 1] }}
-      onMouseEnter={() => setHov(true)}
-      onMouseLeave={() => setHov(false)}
-      className="cf-shim"
-      style={{
-        position: 'relative', overflow: 'hidden', borderRadius: 16, cursor: 'pointer',
-        background: 'linear-gradient(145deg,#080010 0%,#100025 60%,#04000d 100%)',
-        border: `1px solid ${hov ? 'rgba(251,191,36,.25)' : 'rgba(255,255,255,.07)'}`,
-        boxShadow: hov
-          ? '0 0 0 1px rgba(251,191,36,.18), 0 20px 60px rgba(0,0,0,.8), 0 0 60px rgba(251,191,36,.18)'
-          : '0 8px 32px rgba(0,0,0,.7)',
-        transition: 'border-color .25s, box-shadow .3s',
-      }}>
+      transition={{ duration: .45, ease: [.22, 1, .36, 1] }}
+      className="cf-card"
+    >
+      {/* left accent bar — slides up on hover via CSS */}
+      <div className="cf-card-bar" />
 
-      <div className="cf-scan" />
-      {hov && <Particles accent="#fbbf24" count={8} />}
+      <div style={{ padding: '16px 16px 14px' }}>
 
-      {/* Top gradient bar */}
-      <div style={{
-        height: 2,
-        background: hov
-          ? 'linear-gradient(90deg,transparent,#fbbf24,#a855f7,transparent)'
-          : 'linear-gradient(90deg,transparent,rgba(251,191,36,.25),rgba(168,85,247,.25),transparent)',
-        transition: 'background .3s',
-      }} />
+        {/* ── Players row ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
 
-      <div style={{ padding: '18px 18px 16px' }}>
-        {/* Players row */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-
-          {/* Creator */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          {/* Creator side */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
             <CoinDisplay side={game.creator_side} size="sm" idle />
-            <PlayerAvatar avatarUrl={game.creator_avatar_url} name={game.creator_name} />
-            <p style={{ fontSize: 11, color: 'rgba(255,255,255,.5)', fontWeight: 700, maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'center' }}>
+            <PlayerAvatar avatarUrl={game.creator_avatar_url} name={game.creator_name} size={32} />
+            <p style={{
+              fontSize: 11, fontWeight: 700,
+              color: 'rgba(255,255,255,.55)',
+              maxWidth: 72, overflow: 'hidden', textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap', textAlign: 'center',
+            }}>
               {game.creator_name}
             </p>
-            <span style={{
-              fontSize: 9, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase',
-              padding: '2px 8px', borderRadius: 20,
-              background: game.creator_side === 'heads' ? 'rgba(251,191,36,.15)' : 'rgba(168,85,247,.15)',
+            <span className="side-chip" style={{
               color: game.creator_side === 'heads' ? '#fbbf24' : '#c084fc',
-              border: `1px solid ${game.creator_side === 'heads' ? 'rgba(251,191,36,.3)' : 'rgba(168,85,247,.3)'}`,
+              borderColor: game.creator_side === 'heads' ? 'rgba(251,191,36,.3)' : 'rgba(168,85,247,.3)',
             }}>
               {game.creator_side}
             </span>
           </div>
 
-          {/* VS + Pot */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-            <span style={{ fontSize: 10, fontWeight: 900, color: 'rgba(255,255,255,.18)', letterSpacing: '.2em' }}>VS</span>
-            <div style={{
-              background: 'rgba(251,191,36,.06)', border: '1px solid rgba(251,191,36,.15)',
-              borderRadius: 12, padding: '8px 14px', textAlign: 'center',
-              boxShadow: '0 0 20px rgba(251,191,36,.08)',
-            }}>
-              <p style={{ fontSize: 9, color: 'rgba(255,255,255,.3)', textTransform: 'uppercase', letterSpacing: '.12em', marginBottom: 2 }}>Pot</p>
-              <p style={{ fontSize: 15, fontWeight: 900, color: '#fbbf24', lineHeight: 1 }}>{pot.toLocaleString()}</p>
-              <p style={{ fontSize: 8, color: 'rgba(251,191,36,.4)', marginTop: 1 }}>coins</p>
+          {/* Center — VS + pot */}
+          <div style={{
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5,
+            padding: '10px 12px',
+            background: 'rgba(255,255,255,.03)',
+            border: '1px solid rgba(255,255,255,.06)',
+            borderRadius: 10,
+          }}>
+            <span style={{
+              fontSize: 9, fontWeight: 900,
+              color: 'rgba(255,255,255,.16)',
+              letterSpacing: '.22em',
+            }}>VS</span>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{
+                fontSize: 16, fontWeight: 900, color: '#fbbf24',
+                lineHeight: 1, letterSpacing: '-.01em',
+              }}>
+                {pot.toLocaleString()}
+              </p>
+              <p style={{ fontSize: 8, color: 'rgba(251,191,36,.38)', marginTop: 2, letterSpacing: '.08em' }}>
+                COINS
+              </p>
             </div>
           </div>
 
           {/* Opponent slot */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
             <CoinDisplay side={opponentSide} size="sm" idle />
             <div style={{
-              width: 36, height: 36, borderRadius: '50%',
-              background: 'rgba(255,255,255,.04)',
-              border: '2px dashed rgba(255,255,255,.12)',
+              width: 32, height: 32, borderRadius: '50%',
+              background: 'rgba(255,255,255,.03)',
+              border: '2px dashed rgba(255,255,255,.1)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
-              <span style={{ color: 'rgba(255,255,255,.2)', fontSize: 16 }}>?</span>
+              <span style={{ color: 'rgba(255,255,255,.18)', fontSize: 14 }}>?</span>
             </div>
-            <p style={{ fontSize: 11, color: 'rgba(255,255,255,.2)', fontWeight: 600 }}>Waiting...</p>
-            <span style={{
-              fontSize: 9, fontWeight: 800, letterSpacing: '.14em', textTransform: 'uppercase',
-              padding: '2px 8px', borderRadius: 20,
-              background: opponentSide === 'heads' ? 'rgba(251,191,36,.12)' : 'rgba(168,85,247,.12)',
-              color: opponentSide === 'heads' ? 'rgba(251,191,36,.6)' : 'rgba(192,132,252,.6)',
-              border: `1px solid ${opponentSide === 'heads' ? 'rgba(251,191,36,.2)' : 'rgba(168,85,247,.2)'}`,
+            <p style={{ fontSize: 11, fontWeight: 600, color: 'rgba(255,255,255,.2)' }}>Open</p>
+            <span className="side-chip" style={{
+              color: opponentSide === 'heads' ? 'rgba(251,191,36,.5)' : 'rgba(192,132,252,.5)',
+              borderColor: opponentSide === 'heads' ? 'rgba(251,191,36,.2)' : 'rgba(168,85,247,.2)',
             }}>
               {opponentSide}
             </span>
           </div>
         </div>
 
-        {/* Action */}
+        {/* ── Action ── */}
         {isOwn ? (
           <div style={{ display: 'flex', gap: 8 }}>
             <div style={{
-              flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              height: 38, borderRadius: 10,
-              background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)',
+              flex: 1, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              borderRadius: 8, background: 'rgba(255,255,255,.025)',
+              border: '1px solid rgba(255,255,255,.05)',
             }}>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,.2)', fontWeight: 600 }}>Waiting for opponent…</span>
+              <span style={{ fontSize: 11, color: 'rgba(255,255,255,.2)', fontWeight: 600 }}>
+                Awaiting opponent…
+              </span>
             </div>
             <button
               onClick={() => onAddBot(game)}
               style={{
-                display: 'flex', alignItems: 'center', gap: 6,
-                height: 38, padding: '0 14px', borderRadius: 10, cursor: 'pointer',
-                background: 'rgba(168,85,247,.1)', border: '1px solid rgba(168,85,247,.3)',
-                color: '#c084fc', fontSize: 12, fontWeight: 800, fontFamily: 'Nunito,sans-serif',
-                transition: 'background .2s',
+                height: 36, padding: '0 13px', borderRadius: 8, cursor: 'pointer',
+                background: 'rgba(168,85,247,.08)',
+                border: '1px solid rgba(168,85,247,.25)',
+                color: '#c084fc', fontSize: 12, fontWeight: 800,
+                fontFamily: 'Nunito, sans-serif',
+                transition: 'background .16s',
+                display: 'flex', alignItems: 'center', gap: 5,
               }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(168,85,247,.2)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'rgba(168,85,247,.1)'}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(168,85,247,.18)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(168,85,247,.08)'}
             >
               🤖 Bot
             </button>
           </div>
         ) : (
           <motion.button
-            whileHover={{ scale: 1.02, y: -1 }}
+            whileHover={{ scale: 1.02 }}
             whileTap={{ scale: .97 }}
             onClick={() => onJoin(game)}
             disabled={game.bet_amount > balance}
             style={{
-              width: '100%', height: 38, borderRadius: 10,
+              width: '100%', height: 36, borderRadius: 8,
               background: game.bet_amount > balance
-                ? 'rgba(255,255,255,.06)'
-                : 'linear-gradient(135deg,#fbbf24 0%,#f59e0b 50%,#fde68a 100%)',
-              border: 'none', cursor: game.bet_amount > balance ? 'not-allowed' : 'pointer',
-              color: game.bet_amount > balance ? 'rgba(255,255,255,.25)' : '#000',
-              fontSize: 13, fontWeight: 900, fontFamily: 'Nunito,sans-serif',
+                ? 'rgba(255,255,255,.05)'
+                : 'linear-gradient(135deg,#fbbf24 0%,#f59e0b 100%)',
+              border: game.bet_amount > balance ? '1px solid rgba(255,255,255,.08)' : 'none',
+              cursor: game.bet_amount > balance ? 'not-allowed' : 'pointer',
+              color: game.bet_amount > balance ? 'rgba(255,255,255,.22)' : '#000',
+              fontSize: 13, fontWeight: 900, fontFamily: 'Nunito, sans-serif',
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-              boxShadow: game.bet_amount > balance ? 'none' : '0 0 30px rgba(251,191,36,.4)',
-              transition: 'opacity .2s',
+              boxShadow: game.bet_amount > balance ? 'none' : '0 0 24px rgba(251,191,36,.35)',
+              transition: 'opacity .18s',
             }}>
-            <Swords style={{ width: 14, height: 14 }} />
+            <Swords style={{ width: 13, height: 13 }} />
             Join · {game.bet_amount.toLocaleString()} coins
           </motion.button>
         )}
@@ -332,25 +373,6 @@ function GameCard({ game, user, balance, onJoin, onAddBot }) {
 /* ─── Quick amount button ────────────────────────────────────────── */
 const QUICK_AMOUNTS = [100, 500, 1000, 5000, 10000, 50000];
 
-function QuickBtn({ v, active, onClick }) {
-  return (
-    <motion.button
-      whileHover={{ scale: 1.05 }} whileTap={{ scale: .95 }}
-      onClick={() => onClick(v)}
-      style={{
-        padding: '7px 0', borderRadius: 10, fontSize: 12, fontWeight: 800,
-        fontFamily: 'Nunito,sans-serif', cursor: 'pointer',
-        background: active ? 'rgba(251,191,36,.18)' : 'rgba(255,255,255,.04)',
-        border: `1px solid ${active ? 'rgba(251,191,36,.45)' : 'rgba(255,255,255,.07)'}`,
-        color: active ? '#fbbf24' : 'rgba(255,255,255,.4)',
-        boxShadow: active ? '0 0 16px rgba(251,191,36,.2)' : 'none',
-        transition: 'all .18s',
-      }}>
-      {v.toLocaleString()}
-    </motion.button>
-  );
-}
-
 /* ─── Create Panel ──────────────────────────────────────────────── */
 function CreatePanel({ balance, onClose, onCreate }) {
   const [amount, setAmount] = useState(1000);
@@ -358,143 +380,182 @@ function CreatePanel({ balance, onClose, onCreate }) {
   const [vsBot, setVsBot] = useState(false);
   const canCreate = amount > 0 && amount <= balance;
 
-  const SideBtn = ({ s }) => (
-    <motion.button
-      whileHover={{ scale: 1.02 }} whileTap={{ scale: .96 }}
-      onClick={() => setSide(s)}
-      style={{
-        flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
-        padding: '18px 12px', borderRadius: 14, cursor: 'pointer',
-        background: side === s
-          ? s === 'heads' ? 'rgba(251,191,36,.1)' : 'rgba(168,85,247,.1)'
-          : 'rgba(255,255,255,.03)',
-        border: `1px solid ${side === s
-          ? s === 'heads' ? 'rgba(251,191,36,.45)' : 'rgba(168,85,247,.45)'
-          : 'rgba(255,255,255,.07)'}`,
-        boxShadow: side === s
-          ? s === 'heads' ? '0 0 30px rgba(251,191,36,.15)' : '0 0 30px rgba(168,85,247,.15)'
-          : 'none',
-        fontFamily: 'Nunito,sans-serif', transition: 'all .2s',
-      }}>
-      <CoinDisplay side={s} size="md" idle={side === s} />
-      <span style={{
-        fontSize: 13, fontWeight: 800, textTransform: 'capitalize',
-        color: side === s ? (s === 'heads' ? '#fbbf24' : '#c084fc') : 'rgba(255,255,255,.3)',
-      }}>{s}</span>
-    </motion.button>
-  );
+  const SideBtn = ({ s }) => {
+    const active = side === s;
+    const isGold = s === 'heads';
+    return (
+      <motion.button
+        whileHover={{ scale: 1.02 }} whileTap={{ scale: .96 }}
+        onClick={() => setSide(s)}
+        style={{
+          flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10,
+          padding: '16px 12px', borderRadius: 12, cursor: 'pointer',
+          background: active
+            ? (isGold ? 'rgba(251,191,36,.08)' : 'rgba(168,85,247,.08)')
+            : 'rgba(255,255,255,.025)',
+          border: `1px solid ${active
+            ? (isGold ? 'rgba(251,191,36,.38)' : 'rgba(168,85,247,.38)')
+            : 'rgba(255,255,255,.07)'}`,
+          fontFamily: 'Nunito, sans-serif',
+          transition: 'all .18s',
+        }}>
+        <CoinDisplay side={s} size="md" idle={active} />
+        <span style={{
+          fontSize: 12, fontWeight: 800, textTransform: 'capitalize',
+          color: active ? (isGold ? '#fbbf24' : '#c084fc') : 'rgba(255,255,255,.28)',
+        }}>{s}</span>
+      </motion.button>
+    );
+  };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: -14, scale: .98 }}
+      initial={{ opacity: 0, y: -12, scale: .98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -14, scale: .98 }}
-      transition={{ duration: .35, ease: [.22, 1, .36, 1] }}
+      exit={{ opacity: 0, y: -12, scale: .98 }}
+      transition={{ duration: .32, ease: [.22, 1, .36, 1] }}
       style={{
-        position: 'relative', overflow: 'hidden', borderRadius: 18,
-        background: 'linear-gradient(145deg,#08000e,#120028,#05000e)',
-        border: '1px solid rgba(251,191,36,.2)',
-        boxShadow: '0 0 0 1px rgba(251,191,36,.08), 0 24px 60px rgba(0,0,0,.85), 0 0 80px rgba(251,191,36,.1)',
-        padding: '22px 22px 20px',
+        position: 'relative', overflow: 'hidden', borderRadius: 16,
+        background: 'linear-gradient(145deg, #080012 0%, #100022 60%, #06000e 100%)',
+        border: '1px solid rgba(251,191,36,.18)',
+        boxShadow: '0 20px 60px rgba(0,0,0,.8)',
+        padding: '20px 20px 18px',
         marginBottom: 20,
       }}>
 
-      <div className="cf-scan" />
-      <Particles accent="#fbbf24" count={10} />
-      <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: 'linear-gradient(90deg,transparent,#fbbf24,#a855f7,transparent)' }} />
+      {/* top accent line — static, no sweep */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: 2,
+        background: 'linear-gradient(90deg, transparent, #fbbf24 30%, #a855f7 70%, transparent)',
+        opacity: .7,
+      }} />
 
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, position: 'relative', zIndex: 2 }}>
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        marginBottom: 18, position: 'relative', zIndex: 2,
+      }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 3, height: 20, borderRadius: 2, background: 'linear-gradient(to bottom,#fbbf24,#a855f7)' }} />
-          <RotateCcw style={{ width: 16, height: 16, color: '#fbbf24' }} />
-          <span style={{ fontSize: 17, fontWeight: 900, color: '#fff' }}>Create Coinflip</span>
+          <span style={{ fontSize: 16, fontWeight: 900, color: '#fff', fontFamily: 'Nunito, sans-serif' }}>
+            Create Coinflip
+          </span>
         </div>
         <motion.button
-          whileHover={{ scale: 1.1, rotate: 90 }} whileTap={{ scale: .9 }}
+          whileHover={{ rotate: 90 }} whileTap={{ scale: .9 }}
           onClick={onClose}
           style={{
-            width: 30, height: 30, borderRadius: 8, border: 'none', cursor: 'pointer',
-            background: 'rgba(255,255,255,.06)', color: 'rgba(255,255,255,.4)',
+            width: 28, height: 28, borderRadius: 7, border: 'none', cursor: 'pointer',
+            background: 'rgba(255,255,255,.05)', color: 'rgba(255,255,255,.38)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            transition: 'background .2s',
+            transition: 'background .15s',
           }}>
-          <X style={{ width: 15, height: 15 }} />
+          <X style={{ width: 13, height: 13 }} />
         </motion.button>
       </div>
 
-      {/* Opponent */}
-      <p style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,.35)', letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 8, position: 'relative', zIndex: 2 }}>Opponent</p>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 20, position: 'relative', zIndex: 2 }}>
-        {[{ label: '👤 Real Player', val: false, accent: '#60a5fa' }, { label: '🤖 vs Bot', val: true, accent: '#c084fc' }].map(({ label, val, accent }) => (
-          <motion.button
-            key={String(val)}
-            whileHover={{ scale: 1.02 }} whileTap={{ scale: .97 }}
-            onClick={() => setVsBot(val)}
-            style={{
-              flex: 1, padding: '10px 0', borderRadius: 12, cursor: 'pointer',
-              fontSize: 13, fontWeight: 800, fontFamily: 'Nunito,sans-serif',
-              background: vsBot === val ? `${accent}18` : 'rgba(255,255,255,.04)',
-              border: `1px solid ${vsBot === val ? `${accent}50` : 'rgba(255,255,255,.07)'}`,
-              color: vsBot === val ? accent : 'rgba(255,255,255,.35)',
-              boxShadow: vsBot === val ? `0 0 24px ${accent}20` : 'none',
-              transition: 'all .2s',
-            }}>
-            {label}
-          </motion.button>
-        ))}
-      </div>
+      <div style={{ position: 'relative', zIndex: 2 }}>
+        {/* Opponent type */}
+        <p style={{
+          fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,.3)',
+          letterSpacing: '.18em', textTransform: 'uppercase', marginBottom: 8,
+        }}>Opponent</p>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
+          {[
+            { label: '👤 Real Player', val: false, color: '#60a5fa' },
+            { label: '🤖 vs Bot',      val: true,  color: '#c084fc' },
+          ].map(({ label, val, color }) => (
+            <motion.button
+              key={String(val)}
+              whileHover={{ scale: 1.02 }} whileTap={{ scale: .97 }}
+              onClick={() => setVsBot(val)}
+              style={{
+                flex: 1, padding: '9px 0', borderRadius: 10, cursor: 'pointer',
+                fontSize: 12, fontWeight: 800, fontFamily: 'Nunito, sans-serif',
+                background: vsBot === val ? `${color}14` : 'rgba(255,255,255,.03)',
+                border: `1px solid ${vsBot === val ? `${color}45` : 'rgba(255,255,255,.07)'}`,
+                color: vsBot === val ? color : 'rgba(255,255,255,.3)',
+                transition: 'all .16s',
+              }}>
+              {label}
+            </motion.button>
+          ))}
+        </div>
 
-      {/* Side */}
-      <p style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,.35)', letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 10, position: 'relative', zIndex: 2 }}>Pick your side</p>
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20, position: 'relative', zIndex: 2 }}>
-        <SideBtn s="heads" />
-        <SideBtn s="tails" />
-      </div>
+        {/* Side */}
+        <p style={{
+          fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,.3)',
+          letterSpacing: '.18em', textTransform: 'uppercase', marginBottom: 10,
+        }}>Pick your side</p>
+        <div style={{ display: 'flex', gap: 10, marginBottom: 18 }}>
+          <SideBtn s="heads" />
+          <SideBtn s="tails" />
+        </div>
 
-      {/* Amount */}
-      <p style={{ fontSize: 10, fontWeight: 800, color: 'rgba(255,255,255,.35)', letterSpacing: '.16em', textTransform: 'uppercase', marginBottom: 8, position: 'relative', zIndex: 2 }}>Bet amount</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8, marginBottom: 10, position: 'relative', zIndex: 2 }}>
-        {QUICK_AMOUNTS.map(v => <QuickBtn key={v} v={v} active={amount === v} onClick={setAmount} />)}
-      </div>
-      <div style={{ position: 'relative', zIndex: 2, marginBottom: 6 }}>
+        {/* Amount */}
+        <p style={{
+          fontSize: 9, fontWeight: 800, color: 'rgba(255,255,255,.3)',
+          letterSpacing: '.18em', textTransform: 'uppercase', marginBottom: 8,
+        }}>Bet amount</p>
+        <div style={{
+          display: 'grid', gridTemplateColumns: 'repeat(3,1fr)',
+          gap: 6, marginBottom: 10,
+        }}>
+          {QUICK_AMOUNTS.map(v => (
+            <button
+              key={v}
+              onClick={() => setAmount(v)}
+              className={`quick-btn${amount === v ? ' active' : ''}`}
+            >
+              {v.toLocaleString()}
+            </button>
+          ))}
+        </div>
+
         <input
           type="number"
           value={amount}
           onChange={e => setAmount(Number(e.target.value))}
           className="cf-input"
           style={{
-            width: '100%', padding: '11px 14px', borderRadius: 12,
-            background: 'rgba(255,255,255,.05)', border: '1px solid rgba(255,255,255,.1)',
-            color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'Nunito,sans-serif',
-            boxSizing: 'border-box',
+            width: '100%', padding: '10px 14px', borderRadius: 10,
+            background: 'rgba(255,255,255,.04)',
+            border: '1px solid rgba(255,255,255,.09)',
+            color: '#fff', fontSize: 14, fontWeight: 700,
+            fontFamily: 'Nunito, sans-serif',
+            marginBottom: 8,
           }}
           min={1} max={balance}
         />
-      </div>
-      <p style={{ fontSize: 11, color: 'rgba(255,255,255,.2)', marginBottom: 18, position: 'relative', zIndex: 2 }}>
-        Balance: <span style={{ color: '#fbbf24', fontWeight: 700 }}>{balance?.toLocaleString()}</span> coins
-      </p>
 
-      {/* CTA */}
-      <motion.button
-        whileHover={{ scale: canCreate ? 1.02 : 1, y: canCreate ? -2 : 0 }}
-        whileTap={{ scale: canCreate ? .97 : 1 }}
-        onClick={() => onCreate(amount, side, vsBot)}
-        disabled={!canCreate}
-        style={{
-          width: '100%', height: 46, borderRadius: 12, border: 'none', cursor: canCreate ? 'pointer' : 'not-allowed',
-          background: canCreate
-            ? 'linear-gradient(135deg,#fbbf24 0%,#f59e0b 50%,#fde68a 100%)'
-            : 'rgba(255,255,255,.06)',
-          color: canCreate ? '#000' : 'rgba(255,255,255,.2)',
-          fontSize: 14, fontWeight: 900, fontFamily: 'Nunito,sans-serif',
-          boxShadow: canCreate ? '0 0 40px rgba(251,191,36,.45), 0 4px 20px rgba(0,0,0,.5)' : 'none',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-          position: 'relative', zIndex: 2, transition: 'all .2s',
-        }}>
-        {vsBot ? '🤖' : '🎲'} {vsBot ? 'Play vs Bot' : 'Create Game'} · Win {(amount * 2).toLocaleString()} coins
-      </motion.button>
+        <p style={{ fontSize: 11, color: 'rgba(255,255,255,.22)', marginBottom: 16 }}>
+          Balance:{' '}
+          <span style={{ color: '#fbbf24', fontWeight: 700 }}>{balance?.toLocaleString()}</span>
+          {' '}coins
+        </p>
+
+        {/* CTA */}
+        <motion.button
+          whileHover={{ scale: canCreate ? 1.02 : 1, y: canCreate ? -1 : 0 }}
+          whileTap={{ scale: canCreate ? .97 : 1 }}
+          onClick={() => onCreate(amount, side, vsBot)}
+          disabled={!canCreate}
+          style={{
+            width: '100%', height: 44, borderRadius: 10,
+            border: 'none', cursor: canCreate ? 'pointer' : 'not-allowed',
+            background: canCreate
+              ? 'linear-gradient(135deg,#fbbf24 0%,#f59e0b 100%)'
+              : 'rgba(255,255,255,.05)',
+            color: canCreate ? '#000' : 'rgba(255,255,255,.2)',
+            fontSize: 14, fontWeight: 900, fontFamily: 'Nunito, sans-serif',
+            boxShadow: canCreate ? '0 0 32px rgba(251,191,36,.4)' : 'none',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+            transition: 'all .18s',
+          }}>
+          {vsBot ? '🤖' : '🎲'}{' '}
+          {vsBot ? 'Play vs Bot' : 'Create Game'} · Win {(amount * 2).toLocaleString()}
+        </motion.button>
+      </div>
     </motion.div>
   );
 }
@@ -511,50 +572,47 @@ function FlipOverlay({ flipResult, user }) {
       style={{
         position: 'fixed', inset: 0, zIndex: 50,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        background: 'rgba(4,0,10,.9)',
-        backdropFilter: 'blur(16px)',
+        background: 'rgba(4,0,10,.92)',
+        backdropFilter: 'blur(18px)',
       }}>
-      {/* Radial glow bg */}
       <div style={{
         position: 'absolute', inset: 0, pointerEvents: 'none',
         background: won
-          ? 'radial-gradient(ellipse 60% 50% at 50% 50%,rgba(251,191,36,.12) 0%,transparent 70%)'
-          : 'radial-gradient(ellipse 60% 50% at 50% 50%,rgba(168,85,247,.1) 0%,transparent 70%)',
+          ? 'radial-gradient(ellipse 55% 45% at 50% 50%,rgba(251,191,36,.1) 0%,transparent 70%)'
+          : 'radial-gradient(ellipse 55% 45% at 50% 50%,rgba(168,85,247,.08) 0%,transparent 70%)',
       }} />
       <Particles accent={won ? '#fbbf24' : '#a855f7'} count={20} />
 
-      <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 28, position: 'relative', zIndex: 2 }}>
-
-        {/* Coin */}
+      <div style={{
+        textAlign: 'center', display: 'flex', flexDirection: 'column',
+        alignItems: 'center', gap: 28, position: 'relative', zIndex: 2,
+      }}>
         <motion.div
-          animate={{ scale: [1, 1.08, 1] }}
+          animate={{ scale: [1, 1.06, 1] }}
           transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}>
           <CoinDisplay side={flipResult?.result} size="lg" spinning />
         </motion.div>
 
-        {/* Result */}
         <motion.div
-          initial={{ opacity: 0, y: 28 }}
+          initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 2.2 }}
           style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
           <div style={{
-            fontSize: 34, fontWeight: 900,
-            background: 'linear-gradient(135deg,#fff 0%,rgba(255,255,255,.7) 100%)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
+            fontSize: 32, fontWeight: 900, color: '#fff',
           }}>
             {flipResult?.result === 'heads' ? '👑 Heads!' : '🔱 Tails!'}
           </div>
           <div className={won ? 'cf-win-pop' : ''} style={{
-            fontSize: 26, fontWeight: 900,
+            fontSize: 24, fontWeight: 900,
             color: won ? '#fbbf24' : '#c084fc',
-            textShadow: won ? '0 0 40px rgba(251,191,36,.8)' : '0 0 40px rgba(168,85,247,.6)',
+            textShadow: won ? '0 0 32px rgba(251,191,36,.7)' : '0 0 32px rgba(168,85,247,.55)',
           }}>
             {won
               ? `+${(flipResult.game.bet_amount * 2).toLocaleString()} coins!`
               : 'Better luck next time!'}
           </div>
-          <div style={{ fontSize: 16, color: 'rgba(255,255,255,.4)', fontWeight: 700 }}>
+          <div style={{ fontSize: 15, color: 'rgba(255,255,255,.38)', fontWeight: 700 }}>
             {won ? '🎉 You won!' : '😔 You lost'}
           </div>
         </motion.div>
@@ -569,27 +627,31 @@ function EmptyState({ onCreate }) {
     <motion.div
       initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
       style={{
-        textAlign: 'center', padding: '60px 20px',
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20,
+        textAlign: 'center', padding: '56px 20px',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 18,
       }}>
       <div className="cf-float">
         <CoinDisplay side="heads" size="lg" idle />
       </div>
       <div>
-        <p style={{ fontSize: 17, fontWeight: 800, color: 'rgba(255,255,255,.45)', marginBottom: 6 }}>No active games</p>
-        <p style={{ fontSize: 13, color: 'rgba(255,255,255,.2)' }}>Be the first to flip the coin!</p>
+        <p style={{ fontSize: 16, fontWeight: 800, color: 'rgba(255,255,255,.42)', marginBottom: 5 }}>
+          No open lobbies
+        </p>
+        <p style={{ fontSize: 13, color: 'rgba(255,255,255,.2)', fontWeight: 400 }}>
+          Be the first to flip the coin
+        </p>
       </div>
       <motion.button
-        whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: .96 }}
+        whileHover={{ scale: 1.04, y: -2 }} whileTap={{ scale: .96 }}
         onClick={onCreate}
         style={{
-          padding: '12px 28px', borderRadius: 12, border: 'none', cursor: 'pointer',
+          padding: '11px 26px', borderRadius: 10, border: 'none', cursor: 'pointer',
           background: 'linear-gradient(135deg,#fbbf24,#f59e0b)',
-          color: '#000', fontSize: 14, fontWeight: 900, fontFamily: 'Nunito,sans-serif',
-          boxShadow: '0 0 40px rgba(251,191,36,.45)',
-          display: 'flex', alignItems: 'center', gap: 8,
+          color: '#000', fontSize: 13, fontWeight: 900, fontFamily: 'Nunito, sans-serif',
+          boxShadow: '0 0 32px rgba(251,191,36,.4)',
+          display: 'flex', alignItems: 'center', gap: 7,
         }}>
-        <Plus style={{ width: 16, height: 16 }} />
+        <Plus style={{ width: 14, height: 14 }} />
         Create Game
       </motion.button>
     </motion.div>
@@ -599,11 +661,10 @@ function EmptyState({ onCreate }) {
 /* ─── Skeleton ───────────────────────────────────────────────────── */
 function Skeleton() {
   return (
-    <div style={{
-      borderRadius: 16, height: 200,
-      background: 'linear-gradient(145deg,#0c0018,#140030)',
-      border: '1px solid rgba(255,255,255,.05)',
-      animation: 'cf-shimmer-bg 1.8s ease-in-out infinite',
+    <div className="cf-skeleton" style={{
+      borderRadius: 14, height: 190,
+      background: 'linear-gradient(145deg, #0a0016, #120028)',
+      border: '1px solid rgba(255,255,255,.04)',
     }} />
   );
 }
@@ -619,8 +680,6 @@ export default function Coinflip() {
   const [showCreate, setShowCreate] = useState(false);
   const [flipping, setFlipping] = useState(null);
   const [flipResult, setFlipResult] = useState(null);
-
-  // Track which completed games this client has already paid out
   const paidOut = React.useRef(new Set());
 
   const loadGames = async () => {
@@ -629,31 +688,19 @@ export default function Coinflip() {
     setLoading(false);
   };
 
-  // Runs every time the subscription fires or on mount.
-  // Looks for completed PvP games where the CURRENT USER is the creator
-  // and the winner — meaning the joiner's client already wrote winner_email
-  // and it's now safe for the creator's client to call updateBalance for itself.
   const collectMyCreatorWins = React.useCallback(async () => {
     if (!user?.email) return;
     try {
-      // Fetch recent completed games where this user was the creator
       const myCreatedGames = await base44.entities.CoinflipGame.filter(
         { status: 'completed', creator_email: user.email },
-        '-created_date',
-        50
+        '-created_date', 50
       );
       for (const g of myCreatedGames) {
-        // Only PvP (not bot), only if this user won, only if not already paid
         if (g.opponent_email === 'bot@system') continue;
         if (g.winner_email !== user.email) continue;
         if (paidOut.current.has(g.id)) continue;
-        // Mark immediately so concurrent subscription fires don't double-pay
         paidOut.current.add(g.id);
-        await updateBalance(
-          g.bet_amount * 2,
-          'coinflip_win',
-          `Won coinflip vs ${g.opponent_name || 'opponent'} for ${g.bet_amount * 2}`
-        );
+        await updateBalance(g.bet_amount * 2, 'coinflip_win', `Won coinflip vs ${g.opponent_name || 'opponent'} for ${g.bet_amount * 2}`);
         await addXp(50);
       }
     } catch (_) {}
@@ -688,7 +735,6 @@ export default function Coinflip() {
         bet_amount: amount, opponent_email: 'bot@system', opponent_name: botName,
         status: 'completed', result, winner_email: winnerEmail,
       });
-      // Mark as paid immediately so collectMyCreatorWins skips it
       if (game?.id) paidOut.current.add(game.id);
       setShowCreate(false);
       setFlipping(game.id);
@@ -701,7 +747,7 @@ export default function Coinflip() {
         setTimeout(() => { setFlipping(null); setFlipResult(null); loadGames(); }, 2500);
       }, 2000);
     } else {
-      const game = await base44.entities.CoinflipGame.create({
+      await base44.entities.CoinflipGame.create({
         creator_email: freshUser.email, creator_name: creatorName,
         creator_avatar_url: creatorAvatar, creator_side: side,
         bet_amount: amount, status: 'waiting',
@@ -713,48 +759,26 @@ export default function Coinflip() {
 
   const handleJoin = async (game) => {
     if (game.bet_amount > balance) return;
-
-    // Deduct the joiner's bet
     await updateBalance(-game.bet_amount, 'coinflip_bet', `Joined coinflip for ${game.bet_amount}`);
     addRakeback(game.bet_amount);
-
     const result = Math.random() < 0.5 ? 'heads' : 'tails';
     const creatorWon = result === game.creator_side;
     const winnerEmail = creatorWon ? game.creator_email : user.email;
-
     setFlipping(game.id);
     setFlipResult({ result, winnerEmail, game });
-
     setTimeout(async () => {
-      // Write the result to DB. This is what the creator's subscription
-      // picks up — seeing status=completed + winner_email=their email
-      // triggers collectMyCreatorWins() on their client, which calls
-      // updateBalance for themselves.
       await base44.entities.CoinflipGame.update(game.id, {
         opponent_email: user.email,
         opponent_name: user.full_name || user.username || 'Anonymous',
-        status: 'completed',
-        result,
-        winner_email: winnerEmail,
+        status: 'completed', result, winner_email: winnerEmail,
       });
-
       if (creatorWon) {
-        // Mark this game as paid on the JOINER's paidOut ref too, so if
-        // somehow the joiner is also the creator (shouldn't happen) we don't double-pay.
         paidOut.current.add(game.id);
-        // The creator's client will handle their own payout via collectMyCreatorWins.
-        // Nothing to do here for the joiner — they lost, bet already deducted above.
       } else {
-        // Joiner won — pay them right now
         paidOut.current.add(game.id);
-        await updateBalance(
-          game.bet_amount * 2,
-          'coinflip_win',
-          `Won coinflip for ${game.bet_amount * 2}`
-        );
+        await updateBalance(game.bet_amount * 2, 'coinflip_win', `Won coinflip for ${game.bet_amount * 2}`);
         await addXp(50);
       }
-
       setTimeout(() => { setFlipping(null); setFlipResult(null); loadGames(); }, 2500);
     }, 2000);
   };
@@ -763,7 +787,6 @@ export default function Coinflip() {
     const botName = BOT_NAMES[Math.floor(Math.random() * BOT_NAMES.length)];
     const result = Math.random() < 0.5 ? 'heads' : 'tails';
     const winnerEmail = result === game.creator_side ? game.creator_email : 'bot@system';
-    // Mark as paid before writing to DB so the subscription doesn't double-pay
     paidOut.current.add(game.id);
     await base44.entities.CoinflipGame.update(game.id, {
       opponent_email: 'bot@system', opponent_name: botName,
@@ -784,121 +807,132 @@ export default function Coinflip() {
     <div className="cf-root" style={{ background: '#04000a', minHeight: '100vh', padding: '20px 0 80px' }}>
       <style>{CSS}</style>
 
-      <div style={{ maxWidth: 700, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 24 }}>
+      <div style={{ maxWidth: 700, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 22 }}>
 
         {/* ── Header ── */}
         <motion.div
-          initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
           style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 3 }}>
               <div style={{ width: 3, height: 24, borderRadius: 2, background: 'linear-gradient(to bottom,#fbbf24,#a855f7)' }} />
-              <RotateCcw style={{ width: 18, height: 18, color: '#fbbf24' }} />
-              <h1 style={{ fontSize: 26, fontWeight: 900, color: '#fff', margin: 0, letterSpacing: '-.01em' }}>Coinflip</h1>
+              <h1 style={{
+                fontSize: 26, fontWeight: 900, color: '#fff', margin: 0,
+                letterSpacing: '-.02em', fontFamily: 'Nunito, sans-serif',
+              }}>Coinflip</h1>
             </div>
-            <p style={{ fontSize: 13, color: 'rgba(255,255,255,.35)', marginLeft: 13, fontWeight: 600 }}>Pick a side · Winner takes all</p>
+            <p style={{
+              fontSize: 12, color: 'rgba(255,255,255,.3)', marginLeft: 13,
+              fontWeight: 400, letterSpacing: '.01em',
+            }}>
+              Pick a side · Winner takes all
+            </p>
           </div>
 
           <motion.button
-            whileHover={{ scale: 1.05, y: -2 }} whileTap={{ scale: .96 }}
+            whileHover={{ scale: 1.04, y: -1 }} whileTap={{ scale: .96 }}
             onClick={() => setShowCreate(v => !v)}
             style={{
               display: 'flex', alignItems: 'center', gap: 7,
-              padding: '10px 20px', borderRadius: 12, border: 'none', cursor: 'pointer',
+              padding: '9px 18px', borderRadius: 10, cursor: 'pointer',
               background: showCreate
-                ? 'rgba(251,191,36,.08)'
+                ? 'rgba(251,191,36,.07)'
                 : 'linear-gradient(135deg,#fbbf24 0%,#f59e0b 100%)',
-              border: showCreate ? '1px solid rgba(251,191,36,.3)' : 'none',
+              border: showCreate ? '1px solid rgba(251,191,36,.28)' : 'none',
               color: showCreate ? '#fbbf24' : '#000',
-              fontSize: 14, fontWeight: 900, fontFamily: 'Nunito,sans-serif',
-              boxShadow: showCreate ? 'none' : '0 0 30px rgba(251,191,36,.4)',
+              fontSize: 13, fontWeight: 900, fontFamily: 'Nunito, sans-serif',
+              boxShadow: showCreate ? 'none' : '0 0 24px rgba(251,191,36,.38)',
+              transition: 'all .18s',
             }}>
-            <Plus style={{ width: 16, height: 16 }} />
+            <Plus style={{ width: 14, height: 14 }} />
             {showCreate ? 'Cancel' : 'Create'}
           </motion.button>
         </motion.div>
 
-        {/* Stats bar */}
+        {/* ── Stats bar — no icon boxes, clean row ── */}
         <motion.div
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: .15 }}
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: .12 }}
           style={{
-            display: 'flex', gap: 10,
-            padding: '12px 16px', borderRadius: 14,
-            background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.06)',
+            display: 'flex', gap: 0,
+            borderRadius: 12,
+            background: 'rgba(255,255,255,.025)',
+            border: '1px solid rgba(255,255,255,.055)',
+            overflow: 'hidden',
           }}>
           {[
-            { icon: RotateCcw, label: 'Active Games', val: games.length, color: '#fbbf24' },
-            { icon: Zap, label: 'Your Balance', val: `${balance?.toLocaleString()} coins`, color: '#a855f7' },
-            { icon: Trophy, label: 'Min Bet', val: '100 coins', color: '#60a5fa' },
-          ].map(({ icon: Icon, label, val, color }) => (
-            <div key={label} style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8 }}>
-              <div style={{
-                width: 30, height: 30, borderRadius: 8, flexShrink: 0,
-                background: `${color}15`, border: `1px solid ${color}30`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <Icon style={{ width: 14, height: 14, color }} />
-              </div>
-              <div>
-                <p style={{ fontSize: 9, color: 'rgba(255,255,255,.3)', textTransform: 'uppercase', letterSpacing: '.12em', marginBottom: 1 }}>{label}</p>
-                <p style={{ fontSize: 13, fontWeight: 800, color: '#fff' }}>{val}</p>
-              </div>
+            { label: 'Active Games', val: games.length, accent: '#fbbf24' },
+            { label: 'Your Balance', val: `${balance?.toLocaleString()}`, accent: '#a855f7' },
+            { label: 'Min Bet',      val: '100',                          accent: '#60a5fa' },
+          ].map(({ label, val, accent }, i, arr) => (
+            <div key={label} style={{
+              flex: 1, padding: '12px 16px',
+              borderRight: i < arr.length - 1 ? '1px solid rgba(255,255,255,.05)' : 'none',
+            }}>
+              <p style={{
+                fontSize: 9, fontWeight: 700,
+                color: 'rgba(255,255,255,.25)',
+                textTransform: 'uppercase', letterSpacing: '.14em',
+                marginBottom: 4,
+              }}>{label}</p>
+              <p style={{
+                fontSize: 15, fontWeight: 900,
+                color: accent,
+                letterSpacing: '-.01em',
+                fontFamily: 'Nunito, sans-serif',
+              }}>{val}</p>
             </div>
           ))}
         </motion.div>
 
-        {/* Create Panel */}
+        {/* ── Create Panel ── */}
         <AnimatePresence>
           {showCreate && (
             <CreatePanel balance={balance} onClose={() => setShowCreate(false)} onCreate={handleCreate} />
           )}
         </AnimatePresence>
 
-        {/* Section label */}
+        {/* ── Section label ── */}
         {!loading && games.length > 0 && (
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }}
             style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ width: 3, height: 18, borderRadius: 2, background: 'linear-gradient(to bottom,#fbbf24,#a855f7)' }} />
-            <Swords style={{ width: 15, height: 15, color: '#fbbf24' }} />
-            <span style={{ fontSize: 15, fontWeight: 900, color: '#fff' }}>Open Lobbies</span>
+            <div style={{ width: 3, height: 16, borderRadius: 2, background: 'linear-gradient(to bottom,#fbbf24,#a855f7)' }} />
+            <span style={{ fontSize: 13, fontWeight: 800, color: 'rgba(255,255,255,.5)', letterSpacing: '.01em' }}>
+              Open Lobbies
+            </span>
             <span style={{
-              fontSize: 10, fontWeight: 800, padding: '2px 8px', borderRadius: 20,
-              background: 'rgba(251,191,36,.15)', color: '#fbbf24',
-              border: '1px solid rgba(251,191,36,.3)',
+              fontSize: 10, fontWeight: 800, padding: '1px 8px', borderRadius: 4,
+              background: 'rgba(251,191,36,.1)',
+              color: 'rgba(251,191,36,.7)',
+              border: '1px solid rgba(251,191,36,.22)',
+              fontFamily: 'Nunito, sans-serif',
             }}>{games.length}</span>
           </motion.div>
         )}
 
-        {/* Games Grid */}
+        {/* ── Games ── */}
         {loading ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,1fr)', gap: 10 }}>
             {Array(4).fill(0).map((_, i) => <Skeleton key={i} />)}
           </div>
         ) : games.length === 0 ? (
           <EmptyState onCreate={() => setShowCreate(true)} />
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 12 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(278px,1fr))', gap: 10 }}>
             {games.map((game, i) => (
               <motion.div
                 key={game.id}
-                initial={{ opacity: 0, y: 16 }}
+                initial={{ opacity: 0, y: 14 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * .06 }}>
-                <GameCard
-                  game={game}
-                  user={user}
-                  balance={balance}
-                  onJoin={handleJoin}
-                  onAddBot={handleAddBot}
-                />
+                transition={{ delay: i * .055 }}>
+                <GameCard game={game} user={user} balance={balance} onJoin={handleJoin} onAddBot={handleAddBot} />
               </motion.div>
             ))}
           </div>
         )}
       </div>
 
-      {/* Flip Overlay */}
+      {/* ── Flip Overlay ── */}
       <AnimatePresence>
         {flipping && flipResult && (
           <FlipOverlay flipResult={flipResult} user={user} />
