@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { useWallet } from '../components/game/useWallet';
 import { motion } from 'framer-motion';
-import { Trophy, ChevronRight, Swords, Box, RotateCcw, Zap } from 'lucide-react';
+import { Trophy, ChevronRight, Zap } from 'lucide-react';
 
 const vtechImg    = 'https://i.imgur.com/doYHRMp.png';
 const roseImg     = 'https://i.imgur.com/WVoUpzN.png';
@@ -149,17 +149,18 @@ const CSS = `
   background: transparent;
 }
 
-/* icon rotation on hover */
-.gc-icon-wrap {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 10px;
-  backdrop-filter: blur(10px);
-  flex-shrink: 0;
-  transition: transform .44s ease;
+/* gradient text util */
+.gc-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: .01em;
+  text-shadow: 0 2px 14px rgba(0,0,0,.95);
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  line-height: 1.1;
 }
-.gc-card:hover .gc-icon-wrap { transform: rotate(360deg); }
 
 /* spinners */
 @keyframes spin  { to { transform: rotate(360deg) } }
@@ -171,29 +172,33 @@ const CSS = `
 /* ─── GAME DATA ────────────────────────────────────────────── */
 const GAMES = [
   {
-    name: 'Battles', page: 'Battles', icon: Swords,
+    name: 'Battles', page: 'Battles',
     img: battlesImg, accent: '#c084fc',
+    nameGrad: 'linear-gradient(90deg, #fff 0%, #c084fc 100%)',
     shadow: '0 0 0 1px rgba(255,255,255,.055), 0 14px 44px rgba(0,0,0,.92)',
     shadowHover: '0 0 0 1.5px rgba(192,132,252,.5), 0 18px 52px rgba(0,0,0,.92)',
     tag: 'HOT', tagColor: 'rgba(251,191,36,.7)',
   },
   {
-    name: 'Cases', page: 'Cases', icon: Box,
+    name: 'Cases', page: 'Cases',
     img: casesImg, accent: '#fbbf24',
+    nameGrad: 'linear-gradient(90deg, #fff 0%, #fbbf24 100%)',
     shadow: '0 0 0 1px rgba(255,255,255,.055), 0 14px 44px rgba(0,0,0,.92)',
     shadowHover: '0 0 0 1.5px rgba(251,191,36,.5), 0 18px 52px rgba(0,0,0,.92)',
     tag: 'NEW', tagColor: 'rgba(192,132,252,.7)',
   },
   {
-    name: 'Coinflip', page: 'Coinflip', icon: RotateCcw,
+    name: 'Coinflip', page: 'Coinflip',
     img: coinflipImg, accent: '#fbbf24',
+    nameGrad: 'linear-gradient(90deg, #fff 0%, #fbbf24 100%)',
     shadow: '0 0 0 1px rgba(255,255,255,.055), 0 14px 44px rgba(0,0,0,.92)',
     shadowHover: '0 0 0 1.5px rgba(251,191,36,.46), 0 18px 52px rgba(0,0,0,.92)',
     tag: null,
   },
   {
-    name: 'Crash', page: 'Crash', icon: Zap,
+    name: 'Crash', page: 'Crash',
     img: crashImg, accent: '#a855f7',
+    nameGrad: 'linear-gradient(90deg, #fff 0%, #a855f7 100%)',
     shadow: '0 0 0 1px rgba(255,255,255,.055), 0 14px 44px rgba(0,0,0,.92)',
     shadowHover: '0 0 0 1.5px rgba(168,85,247,.5), 0 18px 52px rgba(0,0,0,.92)',
     tag: 'LIVE', tagColor: 'rgba(168,85,247,.8)',
@@ -407,29 +412,16 @@ function GameCard({ g, i }) {
             position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 10,
             padding: '28px 20px 18px',
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 9 }}>
-              {/* icon */}
-              <div
-                className="gc-icon-wrap"
-                style={{
-                  width: 32, height: 32,
-                  background: `linear-gradient(135deg,${g.accent}18,${g.accent}38)`,
-                  border: `1px solid ${g.accent}40`,
-                }}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              {/* gradient name — no icon */}
+              <span
+                className="gc-name"
+                style={{ backgroundImage: g.nameGrad }}
               >
-                <g.icon style={{ width: 14, height: 14, color: g.accent }} />
-              </div>
-
-              {/* name */}
-              <span style={{
-                fontSize: 18, fontWeight: 700, color: '#fff', letterSpacing: '.01em',
-                fontFamily: 'Syne, sans-serif',
-                textShadow: '0 2px 14px rgba(0,0,0,.95)',
-              }}>
                 {g.name}
               </span>
 
-              {/* tag — outline chip, no filled pill */}
+              {/* tag — outline chip */}
               {g.tag && (
                 <span className="gc-tag" style={{ color: g.tagColor, borderColor: g.tagColor }}>
                   {g.tag}
