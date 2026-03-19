@@ -25,22 +25,7 @@ const crashImg    = 'https://i.imgur.com/53dgn4r.png';
 /* topPct = percentage of the INITIAL window height, resolved to px once on mount.
    This avoids iOS Safari's "dynamic viewport" jitter where vh units are
    recalculated on every scroll event, making fixed elements bounce. */
-const GEM_LEFT = [
-  { shape:'diamond', size:46, c1:'#e9d5ff', c2:'#5b21b6', glow:'rgba(167,139,250,.95)', topPct:8,  anim:'gfA 7.2s ease-in-out infinite' },
-  { shape:'hex',     size:36, c1:'#fde68a', c2:'#b45309', glow:'rgba(251,191,36,.9)',   topPct:22, anim:'gfB 8.8s ease-in-out infinite 1.3s' },
-  { shape:'marquise',size:42, c1:'#f9a8d4', c2:'#9d174d', glow:'rgba(236,72,153,.88)', topPct:37, anim:'gfC 6.9s ease-in-out infinite 2.6s' },
-  { shape:'oval',    size:32, c1:'#a78bfa', c2:'#4c1d95', glow:'rgba(139,92,246,.9)',   topPct:53, anim:'gfD 9.1s ease-in-out infinite 0.8s' },
-  { shape:'diamond', size:40, c1:'#fbbf24', c2:'#92400e', glow:'rgba(251,191,36,.88)', topPct:68, anim:'gfE 7.7s ease-in-out infinite 2.0s' },
-  { shape:'hex',     size:28, c1:'#c084fc', c2:'#6d28d9', glow:'rgba(192,132,252,.92)', topPct:83, anim:'gfF 10.2s ease-in-out infinite 3.4s' },
-];
-const GEM_RIGHT = [
-  { shape:'hex',      size:50, c1:'#fbbf24', c2:'#92400e', glow:'rgba(251,191,36,.95)',  topPct:6,  anim:'gfB 8.4s ease-in-out infinite 0.4s' },
-  { shape:'marquise', size:34, c1:'#c084fc', c2:'#4c1d95', glow:'rgba(192,132,252,.9)',  topPct:20, anim:'gfD 9.4s ease-in-out infinite 1.8s' },
-  { shape:'diamond',  size:44, c1:'#fde68a', c2:'#a16207', glow:'rgba(251,191,36,.9)',   topPct:35, anim:'gfF 7.5s ease-in-out infinite 3.6s' },
-  { shape:'oval',     size:30, c1:'#e879f9', c2:'#7e22ce', glow:'rgba(232,121,249,.86)', topPct:51, anim:'gfA 8.0s ease-in-out infinite 0.6s' },
-  { shape:'marquise', size:40, c1:'#bfdbfe', c2:'#1d4ed8', glow:'rgba(96,165,250,.84)',  topPct:66, anim:'gfC 7.1s ease-in-out infinite 2.2s' },
-  { shape:'diamond',  size:32, c1:'#bbf7d0', c2:'#15803d', glow:'rgba(74,222,128,.82)',  topPct:81, anim:'gfE 9.8s ease-in-out infinite 1.1s' },
-];
+
 
 const CSS = `
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
