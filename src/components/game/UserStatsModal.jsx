@@ -136,9 +136,7 @@ const Toast = ({ msg, type }) => (
 
 /* ─── Main Modal ──────────────────────────────────────────────────── */
 export default function UserStatsModal({ userName, userEmail, onClose, currentUser }) {
-  // profileData = the target user's info (who we're viewing)
   const [profileData, setProfileData] = useState(null);
-  // liveMe = fresh fetch of the logged-in user so balance is never stale
   const [liveMe,      setLiveMe]      = useState(currentUser || null);
   const [loading,     setLoading]     = useState(true);
   const [tipAmount,   setTipAmount]   = useState('');
@@ -157,7 +155,6 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
     const load = async () => {
       setLoading(true);
       try {
-        // Try getUserStats by userName first (works even without email)
         if (userName) {
           const res = await base44.functions.invoke('getUserStats', { userName });
           if (!cancelled && res?.data && res.data.email) {
@@ -171,8 +168,8 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
       }
 
       try {
-        // Try getPlayerStats by email
-        if (userEmail) {
+        // Only use userEmail if it looks like an actual email
+        if (userEmail && userEmail.includes('@')) {
           const res = await base44.functions.invoke('getPlayerStats', { userEmail });
           if (!cancelled && res?.data) {
             setProfileData(res.data);
@@ -186,11 +183,11 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
 
       // Final fallback: fetch directly from entity
       try {
-        const filter = userEmail ? { email: userEmail } : {};
-        const users = await base44.entities.User.filter(filter);
-        const match = userEmail
-          ? users?.find(u => u.email === userEmail)
-          : users?.find(u => u.full_name === userName);
+        const users = await base44.entities.User.filter({});
+        const match = users?.find(u =>
+          (userEmail && userEmail.includes('@') && u.email === userEmail) ||
+          u.full_name === userName
+        );
         if (!cancelled && match) setProfileData(match);
       } catch (e) {
         console.error('All profile fetch methods failed:', e);
@@ -202,7 +199,7 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
     return () => { cancelled = true; };
   }, [userEmail, userName]);
 
-  /* ── Always fetch fresh "me" so balance is live, not stale from props ── */
+  /* ── Always fetch fresh "me" so balance is live ── */
   useEffect(() => {
     base44.auth.me().then(me => { if (me) setLiveMe(me); }).catch(() => {});
   }, []);
@@ -217,7 +214,7 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
   };
 
   const handleTip = async () => {
-    // Re-fetch sender balance right before sending to guarantee it's current
+    // Re-fetch sender balance right before sending
     let freshMe;
     try {
       freshMe = await base44.auth.me();
@@ -227,7 +224,25 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
     }
 
     if (!freshMe) { showToast('Not logged in', 'error'); return; }
-    if ((freshMe.level || 0) < 5) { showToast('Reach level 5 to tip players', 'error'); return; }
+
+    // ── LEVEL CHECK: sender must be level 5+ ──
+    if ((freshMe.level || 0) < 5) {
+      showToast('Reach level 5 to tip players', 'error');
+      return;
+    }
+
+    // ── LEVEL CHECK: recipient must also be level 5+ ──
+    if ((profileData?.level || 0) < 5) {
+      showToast(`${displayName} must be level 5+ to receive tips`, 'error');
+      return;
+    }
+
+    // ── Recipient email MUST come from profileData (fully resolved) ──
+    const recipientEmail = profileData?.email;
+    if (!recipientEmail || !recipientEmail.includes('@')) {
+      showToast('Could not resolve recipient — try again', 'error');
+      return;
+    }
 
     const amount = parseInt(tipAmount, 10);
     if (!amount || amount <= 0) { showToast('Enter a valid amount', 'error'); return; }
@@ -241,11 +256,8 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
       // 1. Deduct sender
       await base44.auth.updateMe({ balance: freshMe.balance - amount });
 
-      // 2. Credit recipient via direct fetch to correct function URL
+      // 2. Credit recipient via base44 function invoke (NOT raw fetch)
       try {
-        // Use email from profileData (populated by getUserStats) — most reliable
-        const recipientEmail = profileData?.email || userEmail;
-        console.log('[TIP DEBUG]', { recipientEmail, profileData, userEmail }); // ADD THIS
         const payload = {
           recipientEmail,
           amount,
@@ -253,23 +265,19 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
           senderEmail: freshMe.email,
         };
 
-        const resp = await fetch('https://practical-robo-rush-win.base44.app/api/functions/processTip', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        const result = await resp.json();
-        if (!resp.ok || result?.error) throw new Error(result?.error || `HTTP ${resp.status}`);
+        const result = await base44.functions.invoke('processTip', payload);
+
+        if (result?.error) throw new Error(result.error);
       } catch (serverErr) {
         // Refund sender if server step failed
         await base44.auth.updateMe({ balance: freshMe.balance });
         throw serverErr;
       }
 
-      // Refresh our local balance display
+      // Refresh local balance
       base44.auth.me().then(me => { if (me) setLiveMe(me); }).catch(() => {});
 
-      showToast(`Sent ${amount.toLocaleString()} coins to ${userName}!`);
+      showToast(`Sent ${amount.toLocaleString()} coins to ${displayName}!`);
       setTipAmount('');
       setTimeout(onClose, 1600);
     } catch (err) {
@@ -280,15 +288,21 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
     }
   };
 
-  // Display values — fall back to props so profile always shows something
   const displayName   = profileData?.full_name || userName || userEmail?.split('@')[0] || '?';
   const displayLevel  = profileData?.level  || 1;
   const displayAvatar = profileData?.avatar_url;
   const shortId       = profileData?.id ? '#' + profileData.id.slice(-6).toUpperCase() : null;
-  const isSelf        = (liveMe?.email && (profileData?.email || userEmail)) && liveMe.email === (profileData?.email || userEmail);
-  // Default locked (level ?? 0) so tip input never flashes before liveMe loads
-  const meLevel       = liveMe?.level ?? 0;
-  const levelLock     = !isSelf && meLevel < 5;
+
+  // Self-check: compare by resolved email only
+  const resolvedRecipientEmail = profileData?.email;
+  const isSelf = !!(liveMe?.email && resolvedRecipientEmail && liveMe.email === resolvedRecipientEmail);
+
+  // Sender level lock (wait for liveMe to load before unlocking)
+  const meLevel   = liveMe?.level ?? 0;
+  const levelLock = !isSelf && meLevel < 5;
+
+  // Recipient level lock (they must also be 5+)
+  const recipientLevelLock = !isSelf && (profileData?.level || 0) < 5;
 
   return (
     <Portal>
@@ -339,7 +353,7 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-                {/* ── Avatar + Identity — always renders using prop fallbacks ── */}
+                {/* ── Avatar + Identity ── */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, paddingBottom: 18, borderBottom: '1px solid rgba(255,255,255,.06)' }}>
                   <StableAvatar url={displayAvatar} name={displayName} size={76} />
 
@@ -373,10 +387,17 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
                       <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,.06)' }} />
                     </div>
 
+                    {/* Sender level lock */}
                     {levelLock ? (
                       <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.07)', textAlign: 'center' }}>
                         <p style={{ fontSize: 12, color: 'rgba(240,234,255,.3)', fontWeight: 600 }}>🔒 Reach <span style={{ color: '#f5c842' }}>Level 5</span> to tip players</p>
                         <p style={{ fontSize: 10, color: 'rgba(240,234,255,.18)', fontWeight: 500, marginTop: 4 }}>Your level: <span style={{ color: '#c084fc' }}>{meLevel}</span> / 5 required</p>
+                      </div>
+                    ) : recipientLevelLock ? (
+                      /* Recipient level lock */
+                      <div style={{ padding: '12px 14px', borderRadius: 12, background: 'rgba(255,255,255,.03)', border: '1px solid rgba(255,255,255,.07)', textAlign: 'center' }}>
+                        <p style={{ fontSize: 12, color: 'rgba(240,234,255,.3)', fontWeight: 600 }}>🔒 <span style={{ color: '#f5c842' }}>{displayName}</span> must reach Level 5 to receive tips</p>
+                        <p style={{ fontSize: 10, color: 'rgba(240,234,255,.18)', fontWeight: 500, marginTop: 4 }}>Their level: <span style={{ color: '#c084fc' }}>{profileData?.level || 0}</span> / 5 required</p>
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
