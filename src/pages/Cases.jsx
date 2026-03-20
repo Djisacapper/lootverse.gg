@@ -1,107 +1,366 @@
 import { useRequireAuth } from '@/components/useRequireAuth';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Box, Search, Sparkles, TrendingUp, ArrowUpDown } from 'lucide-react';
+import { Box, Search, ChevronLeft, ChevronRight, SlidersHorizontal, X } from 'lucide-react';
+
+const CASES_PER_PAGE = 24;
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Nunito:wght@400;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap');
 
-.cv { font-family: 'Nunito', sans-serif; }
+*, *::before, *::after { box-sizing: border-box; }
 
-/* ── Scan line ── */
-@keyframes scan {
-  0%  { top:-1px; opacity:0; }
-  5%  { opacity:1; }
-  95% { opacity:1; }
-  100%{ top:100%; opacity:0; }
-}
-.scan {
-  position:absolute; left:0; right:0; height:1px; z-index:2;
-  background:linear-gradient(90deg,transparent,rgba(255,220,0,.15),transparent);
-  animation:scan 7s linear infinite; pointer-events:none;
+.cases-root {
+  font-family: 'DM Sans', sans-serif;
+  min-height: 100vh;
+  background: #f5f0e8;
+  color: #1a1208;
 }
 
-/* ── Shimmer ── */
-@keyframes shim {
-  0%  { transform: translateX(-160%) skewX(-18deg); }
-  100%{ transform: translateX(460%)  skewX(-18deg); }
-}
-.shim::after {
-  content:''; position:absolute; top:0; left:0; width:18%; height:100%;
-  background:linear-gradient(90deg,transparent,rgba(255,220,0,.06),transparent);
-  animation:shim 7s ease-in-out infinite; pointer-events:none; border-radius:inherit;
+/* ─── Layout ─── */
+.cases-wrap {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
 }
 
-/* ── Pulse glow ── */
-@keyframes gold-pulse {
-  0%,100%{ box-shadow: 0 0 0 1px rgba(251,191,36,.06), 0 2px 12px rgba(0,0,0,.7); }
-  50%    { box-shadow: 0 0 0 1px rgba(251,191,36,.18), 0 2px 12px rgba(0,0,0,.7), 0 0 20px rgba(251,191,36,.07); }
-}
-.gold-glow { animation: gold-pulse 3.5s ease-in-out infinite; }
-
-/* ── Card hover ── */
-.case-card {
-  transition: transform .22s cubic-bezier(.34,1.56,.64,1), border-color .22s, box-shadow .22s;
-}
-.case-card:hover {
-  transform: translateY(-4px) scale(1.04);
-  box-shadow: 0 8px 28px rgba(0,0,0,.8), 0 0 20px rgba(251,191,36,.12);
+/* ─── Header strip ─── */
+.cases-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  border-top: 3px solid #1a1208;
+  border-bottom: 1px solid rgba(26,18,8,.15);
+  padding: 14px 0 12px;
+  margin-bottom: 24px;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
-/* ── Category pill ── */
-.cat-pill {
-  cursor: pointer;
-  transition: all .18s ease;
-  user-select: none;
-  white-space: nowrap;
+.cases-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -.02em;
+  margin: 0;
+  line-height: 1;
 }
-.cat-pill:hover { transform: translateY(-1px); }
 
-/* ── Sort select ── */
-.sort-select option { background: #0d0015; }
+.cases-meta {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: rgba(26,18,8,.4);
+  letter-spacing: .04em;
+}
 
-/* ── Search input focus ── */
-.search-input:focus {
-  border-color: rgba(251,191,36,.35) !important;
-  background: rgba(251,191,36,.09) !important;
+/* ─── Filter bar ─── */
+.filter-bar {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.filter-search {
+  flex: 1;
+  min-width: 180px;
+  position: relative;
+}
+
+.filter-search input {
+  width: 100%;
+  height: 38px;
+  border: 1.5px solid rgba(26,18,8,.2);
+  border-radius: 4px;
+  background: #fff;
+  padding: 0 12px 0 34px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  color: #1a1208;
   outline: none;
+  transition: border-color .15s;
+}
+.filter-search input::placeholder { color: rgba(26,18,8,.3); }
+.filter-search input:focus { border-color: #1a1208; }
+.filter-search svg {
+  position: absolute;
+  left: 10px; top: 50%;
+  transform: translateY(-50%);
+  width: 14px; height: 14px;
+  color: rgba(26,18,8,.35);
+  pointer-events: none;
 }
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-thumb { background: #1a0f00; border-radius: 4px; }
-
-/* ── Background grid lines ── */
-.bg-grid {
-  position: fixed; inset: 0; pointer-events: none; z-index: 0;
-  background-image:
-    linear-gradient(rgba(251,191,36,.018) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(251,191,36,.018) 1px, transparent 1px);
-  background-size: 40px 40px;
+.cat-btn {
+  height: 38px;
+  padding: 0 14px;
+  border-radius: 4px;
+  border: 1.5px solid rgba(26,18,8,.18);
+  background: transparent;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: .04em;
+  color: rgba(26,18,8,.55);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .14s;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cat-btn:hover {
+  border-color: #1a1208;
+  color: #1a1208;
+  background: rgba(26,18,8,.03);
+}
+.cat-btn.active {
+  background: #1a1208;
+  border-color: #1a1208;
+  color: #f5f0e8;
+}
+.cat-btn .count {
+  font-size: 10px;
+  opacity: .6;
 }
 
-/* ── Floating orbs ── */
-@keyframes float1 { 0%,100%{ transform:translate(0,0); } 50%{ transform:translate(20px,-30px); } }
-@keyframes float2 { 0%,100%{ transform:translate(0,0); } 50%{ transform:translate(-15px,25px); } }
-.orb1 { animation: float1 12s ease-in-out infinite; }
-.orb2 { animation: float2 16s ease-in-out infinite; }
+.sort-select {
+  height: 38px;
+  padding: 0 10px;
+  border: 1.5px solid rgba(26,18,8,.18);
+  border-radius: 4px;
+  background: #fff;
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: rgba(26,18,8,.7);
+  outline: none;
+  cursor: pointer;
+  letter-spacing: .03em;
+}
+
+/* ─── Grid ─── */
+.cases-grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 2px;
+}
+
+/* ─── Card ─── */
+.case-card {
+  background: #fff;
+  border: 1px solid rgba(26,18,8,.1);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform .18s ease, box-shadow .18s ease;
+  display: flex;
+  flex-direction: column;
+  text-decoration: none;
+  color: inherit;
+  position: relative;
+}
+
+.case-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(26,18,8,.12);
+  z-index: 2;
+}
+
+.case-card-img {
+  height: 110px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: #faf8f4;
+  border-bottom: 1px solid rgba(26,18,8,.06);
+  overflow: hidden;
+  position: relative;
+}
+
+.case-card-img img {
+  max-width: 90%;
+  max-height: 80px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  transition: transform .22s ease;
+}
+.case-card:hover .case-card-img img {
+  transform: scale(1.07);
+}
+
+.case-card-body {
+  padding: 10px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.case-card-name {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #1a1208;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  line-height: 1.3;
+}
+
+.case-card-price {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  color: #1a1208;
+  letter-spacing: -.01em;
+}
+
+.case-card-tag {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  padding: 2px 5px;
+  border-radius: 2px;
+  line-height: 14px;
+}
+
+.tag-new {
+  background: #1a1208;
+  color: #f5f0e8;
+}
+.tag-hot {
+  background: #c84b1a;
+  color: #fff;
+}
+
+/* ─── Skeleton ─── */
+.skel {
+  background: linear-gradient(90deg, #ede8de 25%, #e4dfd4 50%, #ede8de 75%);
+  background-size: 200% 100%;
+  animation: skelAnim 1.4s ease-in-out infinite;
+  border-radius: 2px;
+}
+@keyframes skelAnim {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ─── Pagination ─── */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 28px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(26,18,8,.12);
+}
+
+.pag-info {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: rgba(26,18,8,.4);
+  letter-spacing: .03em;
+}
+
+.pag-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.pag-btn {
+  width: 32px;
+  height: 32px;
+  border: 1.5px solid rgba(26,18,8,.18);
+  border-radius: 3px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: rgba(26,18,8,.6);
+  transition: all .13s;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+}
+.pag-btn:hover:not(:disabled) {
+  background: #1a1208;
+  border-color: #1a1208;
+  color: #f5f0e8;
+}
+.pag-btn:disabled {
+  opacity: .3;
+  cursor: not-allowed;
+}
+.pag-btn.active {
+  background: #1a1208;
+  border-color: #1a1208;
+  color: #f5f0e8;
+}
+
+/* ─── Empty ─── */
+.empty-state {
+  grid-column: 1 / -1;
+  padding: 60px 0;
+  text-align: center;
+}
+.empty-state h3 {
+  font-family: 'Syne', sans-serif;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: rgba(26,18,8,.4);
+}
+.empty-state p {
+  font-size: 13px;
+  color: rgba(26,18,8,.25);
+  margin: 0;
+}
 `;
 
-const SORT_OPTIONS = [
-  { value: 'price_desc', label: 'High → Low',  icon: '↓' },
-  { value: 'price_asc',  label: 'Low → High',  icon: '↑' },
-  { value: 'popular',    label: 'Most Opened', icon: '🔥' },
+const CATEGORIES = [
+  { id: 'all',       label: 'All' },
+  { id: 'real_life', label: 'Real Life' },
+  { id: 'roblox',    label: 'Roblox' },
+  { id: 'csgo',      label: 'CS:GO' },
 ];
 
-const CATEGORIES = [
-  { id: 'all',       label: 'All Cases',  emoji: '🗂️',  color: 'rgba(251,191,36,1)',   bg: 'rgba(251,191,36,.12)',  border: 'rgba(251,191,36,.35)' },
-  { id: 'real_life', label: 'Real Life',  emoji: '💎',  color: 'rgba(56,189,248,1)',   bg: 'rgba(56,189,248,.12)',  border: 'rgba(56,189,248,.35)' },
-  { id: 'roblox',    label: 'Roblox',     emoji: '🟥',  color: 'rgba(239,68,68,1)',    bg: 'rgba(239,68,68,.12)',   border: 'rgba(239,68,68,.35)'  },
-  { id: 'csgo',      label: 'CS:GO',      emoji: '🔫',  color: 'rgba(251,146,60,1)',   bg: 'rgba(251,146,60,.12)',  border: 'rgba(251,146,60,.35)' },
+const SORT_OPTIONS = [
+  { value: 'price_desc', label: 'Price: High → Low' },
+  { value: 'price_asc',  label: 'Price: Low → High' },
+  { value: 'popular',    label: 'Most Opened' },
 ];
+
+function PagButton({ children, active, disabled, onClick }) {
+  return (
+    <button
+      className={`pag-btn${active ? ' active' : ''}`}
+      disabled={disabled}
+      onClick={onClick}
+    >{children}</button>
+  );
+}
+
+function buildPageNums(current, total) {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages = [1];
+  if (current > 3) pages.push('…');
+  for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) pages.push(p);
+  if (current < total - 2) pages.push('…');
+  pages.push(total);
+  return pages;
+}
 
 export default function Cases() {
   useRequireAuth();
@@ -110,7 +369,7 @@ export default function Cases() {
   const [search,   setSearch]   = useState('');
   const [sortBy,   setSortBy]   = useState('price_desc');
   const [category, setCategory] = useState('all');
-  const [hovId,    setHovId]    = useState(null);
+  const [page,     setPage]     = useState(1);
 
   useEffect(() => {
     base44.entities.CaseTemplate.filter({ is_active: true }).then(data => {
@@ -119,9 +378,10 @@ export default function Cases() {
     });
   }, []);
 
-  const activeCat = CATEGORIES.find(c => c.id === category);
+  // Reset page whenever filters change
+  useEffect(() => { setPage(1); }, [search, sortBy, category]);
 
-  const filtered = cases
+  const filtered = useMemo(() => cases
     .filter(c => {
       const matchSearch = c.name?.toLowerCase().includes(search.toLowerCase());
       const matchCat    = category === 'all' || (c.category || 'real_life') === category;
@@ -132,7 +392,12 @@ export default function Cases() {
       if (sortBy === 'price_desc') return (b.price || 0) - (a.price || 0);
       if (sortBy === 'popular')    return (b.total_opened || 0) - (a.total_opened || 0);
       return 0;
-    });
+    }), [cases, search, sortBy, category]);
+
+  const totalPages  = Math.max(1, Math.ceil(filtered.length / CASES_PER_PAGE));
+  const safePage    = Math.min(page, totalPages);
+  const pageItems   = filtered.slice((safePage - 1) * CASES_PER_PAGE, safePage * CASES_PER_PAGE);
+  const pageNums    = buildPageNums(safePage, totalPages);
 
   const catCounts = {
     all:       cases.length,
@@ -141,371 +406,168 @@ export default function Cases() {
     csgo:      cases.filter(c => c.category === 'csgo').length,
   };
 
+  const startIdx = (safePage - 1) * CASES_PER_PAGE + 1;
+  const endIdx   = Math.min(safePage * CASES_PER_PAGE, filtered.length);
+
   return (
-    <div className="cv" style={{
-      minHeight: '100vh',
-      background: '#060010',
-      marginLeft: -24, marginRight: -24,
-      padding: '20px 16px 80px',
-      position: 'relative',
-    }}>
+    <div className="cases-root">
       <style>{CSS}</style>
+      <div className="cases-wrap">
 
-      {/* Background effects */}
-      <div className="bg-grid" />
-      <div className="orb1" style={{
-        position:'fixed', top:'10%', right:'5%', width:280, height:280,
-        borderRadius:'50%', pointerEvents:'none', zIndex:0,
-        background:'radial-gradient(circle,rgba(168,85,247,.07) 0%,transparent 70%)',
-      }} />
-      <div className="orb2" style={{
-        position:'fixed', bottom:'20%', left:'3%', width:200, height:200,
-        borderRadius:'50%', pointerEvents:'none', zIndex:0,
-        background:'radial-gradient(circle,rgba(251,191,36,.05) 0%,transparent 70%)',
-      }} />
+        {/* Header */}
+        <div className="cases-header">
+          <h1 className="cases-title">Cases</h1>
+          <span className="cases-meta">
+            {loading ? 'LOADING' : `${filtered.length} ITEMS`}
+          </span>
+        </div>
 
-      <div style={{ position:'relative', zIndex:1 }}>
+        {/* Filters */}
+        <div className="filter-bar">
+          {/* Categories */}
+          {CATEGORIES.map(cat => (
+            <button
+              key={cat.id}
+              className={`cat-btn${category === cat.id ? ' active' : ''}`}
+              onClick={() => setCategory(cat.id)}
+            >
+              {cat.label}
+              <span className="count">{catCounts[cat.id]}</span>
+            </button>
+          ))}
 
-        {/* ── Header ── */}
-        <motion.div initial={{ opacity:0, y:-14 }} animate={{ opacity:1, y:0 }} style={{ marginBottom:20 }}>
-          <div style={{ display:'flex', alignItems:'flex-end', justifyContent:'space-between' }}>
-            <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-              <div style={{
-                width:36, height:36, borderRadius:10,
-                background:'linear-gradient(135deg,rgba(251,191,36,.25),rgba(168,85,247,.25))',
-                border:'1px solid rgba(251,191,36,.3)',
-                display:'flex', alignItems:'center', justifyContent:'center',
-                boxShadow:'0 0 16px rgba(251,191,36,.12)',
-              }}>
-                <Box style={{ width:16, height:16, color:'#fbbf24' }} />
-              </div>
-              <div>
-                <h1 style={{
-                  margin:0, fontSize:22, fontWeight:900, lineHeight:1,
-                  fontFamily:"'Rajdhani', sans-serif", letterSpacing:'.04em',
-                  background:'linear-gradient(90deg,#fbbf24 0%,#f59e0b 35%,#c084fc 70%,#a855f7 100%)',
-                  WebkitBackgroundClip:'text', WebkitTextFillColor:'transparent',
-                }}>CASES</h1>
-                <p style={{ margin:0, fontSize:10, color:'rgba(251,191,36,.4)', fontWeight:700, letterSpacing:'.08em' }}>
-                  {loading ? 'LOADING…' : `${filtered.length} AVAILABLE`}
-                </p>
-              </div>
-            </div>
-            <div style={{ display:'flex', alignItems:'center', gap:5 }}>
-              <Sparkles style={{ width:10, height:10, color:'rgba(251,191,36,.3)' }} />
-              <span style={{ fontSize:9, color:'rgba(251,191,36,.25)', fontWeight:700, letterSpacing:'.12em' }}>LIVE</span>
-              <div style={{ width:5, height:5, borderRadius:'50%', background:'#22c55e', boxShadow:'0 0 6px #22c55e' }} />
-            </div>
-          </div>
-          <div style={{
-            height:2, borderRadius:2, marginTop:10,
-            background:'linear-gradient(90deg,#fbbf24,#a855f7,transparent)', width:160,
-          }} />
-        </motion.div>
+          {/* Spacer */}
+          <div style={{ flex: 1 }} />
 
-        {/* ── Category Filters ── */}
-        <motion.div
-          initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:.05 }}
-          style={{ display:'flex', gap:7, marginBottom:12, overflowX:'auto', paddingBottom:2 }}>
-          {CATEGORIES.map(cat => {
-            const isActive = category === cat.id;
-            return (
-              <button
-                key={cat.id}
-                className="cat-pill"
-                onClick={() => setCategory(cat.id)}
-                style={{
-                  display:'flex', alignItems:'center', gap:5,
-                  padding:'6px 12px', borderRadius:8, border:'none',
-                  background: isActive ? cat.bg : 'rgba(255,255,255,.03)',
-                  border: `1px solid ${isActive ? cat.border : 'rgba(255,255,255,.07)'}`,
-                  color: isActive ? cat.color : 'rgba(255,255,255,.35)',
-                  fontSize:11, fontWeight:800, fontFamily:"'Nunito', sans-serif",
-                  cursor:'pointer',
-                  boxShadow: isActive ? `0 0 14px ${cat.bg}, inset 0 0 8px ${cat.bg}` : 'none',
-                  letterSpacing:'.03em',
-                }}>
-                <span style={{ fontSize:13 }}>{cat.emoji}</span>
-                <span>{cat.label}</span>
-                <span style={{
-                  padding:'1px 5px', borderRadius:4, fontSize:9, fontWeight:900,
-                  background: isActive ? `rgba(0,0,0,.3)` : 'rgba(255,255,255,.05)',
-                  color: isActive ? cat.color : 'rgba(255,255,255,.2)',
-                }}>{catCounts[cat.id]}</span>
-              </button>
-            );
-          })}
-        </motion.div>
-
-        {/* ── Search + Sort ── */}
-        <motion.div
-          initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }} transition={{ delay:.1 }}
-          style={{ display:'flex', gap:8, marginBottom:16 }}>
-
-          <div style={{ position:'relative', flex:1 }}>
-            <Search style={{
-              position:'absolute', left:10, top:'50%', transform:'translateY(-50%)',
-              width:13, height:13, color:'rgba(251,191,36,.35)', pointerEvents:'none',
-            }} />
+          {/* Search */}
+          <div className="filter-search">
+            <Search />
             <input
-              className="search-input"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder={`Search ${activeCat?.label ?? 'cases'}…`}
-              style={{
-                width:'100%', height:36, paddingLeft:30, paddingRight:12,
-                background:'rgba(255,255,255,.04)', border:'1px solid rgba(251,191,36,.12)',
-                borderRadius:9, fontSize:11, fontWeight:700,
-                fontFamily:"'Nunito', sans-serif", color:'rgba(251,191,36,.9)',
-                boxSizing:'border-box', transition:'all .2s',
-              }}
+              placeholder="Search cases…"
             />
           </div>
 
-          <div style={{ position:'relative' }}>
-            <ArrowUpDown style={{
-              position:'absolute', left:10, top:'50%', transform:'translateY(-50%)',
-              width:11, height:11, color:'rgba(192,132,252,.5)', pointerEvents:'none', zIndex:1,
-            }} />
-            <select
-              className="sort-select"
-              value={sortBy} onChange={e => setSortBy(e.target.value)}
-              style={{
-                height:36, padding:'0 12px 0 26px',
-                background:'rgba(168,85,247,.08)', border:'1px solid rgba(168,85,247,.2)',
-                borderRadius:9, outline:'none', cursor:'pointer',
-                fontSize:11, fontWeight:700, fontFamily:"'Nunito', sans-serif",
-                color:'rgba(192,132,252,.85)', appearance:'none',
-              }}>
-              {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-            </select>
-          </div>
-        </motion.div>
-
-        {/* ── Active category indicator ── */}
-        {category !== 'all' && (
-          <motion.div
-            initial={{ opacity:0, x:-8 }} animate={{ opacity:1, x:0 }}
-            style={{
-              display:'flex', alignItems:'center', gap:6, marginBottom:12,
-              padding:'5px 10px', borderRadius:7, width:'fit-content',
-              background: activeCat.bg, border:`1px solid ${activeCat.border}`,
-            }}>
-            <span style={{ fontSize:12 }}>{activeCat.emoji}</span>
-            <span style={{ fontSize:10, fontWeight:800, color: activeCat.color, letterSpacing:'.06em' }}>
-              {activeCat.label.toUpperCase()} CASES
-            </span>
-            <span style={{ fontSize:9, color:'rgba(255,255,255,.3)', fontWeight:700 }}>
-              {filtered.length} results
-            </span>
-            <button
-              onClick={() => setCategory('all')}
-              style={{
-                marginLeft:2, background:'none', border:'none', cursor:'pointer',
-                color:'rgba(255,255,255,.3)', fontSize:12, padding:'0 2px', lineHeight:1,
-              }}>×</button>
-          </motion.div>
-        )}
-
-        {/* ── Grid ── */}
-        {loading ? (
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:10 }}>
-            {Array(12).fill(0).map((_, i) => (
-              <div key={i} style={{
-                borderRadius:12, height:175,
-                background:`rgba(255,255,255,${0.015 + (i % 3) * 0.005})`,
-                border:'1px solid rgba(251,191,36,.04)',
-                animation:'gold-pulse 2s ease-in-out infinite',
-                animationDelay:`${i * 0.1}s`,
-              }} />
+          {/* Sort */}
+          <select
+            className="sort-select"
+            value={sortBy}
+            onChange={e => setSortBy(e.target.value)}
+          >
+            {SORT_OPTIONS.map(o => (
+              <option key={o.value} value={o.value}>{o.label}</option>
             ))}
-          </div>
-        ) : (
-          <AnimatePresence mode="popLayout">
-            <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:10 }}>
-              {filtered.map((c, i) => {
-                const isHov        = hovId === c.id;
-                const isExpensive  = c.price > 5000;
-                const isNew        = i < 3;
-                const cat          = c.category || 'real_life';
+          </select>
+        </div>
 
-                // Per-category accent color
-                const accentColor =
-                  cat === 'csgo'      ? '#fb923c' :
-                  cat === 'roblox'    ? '#ef4444' :
-                  isExpensive         ? '#fbbf24' : 'rgba(168,85,247,1)';
-                const accentFaint =
-                  cat === 'csgo'      ? 'rgba(251,146,60,' :
-                  cat === 'roblox'    ? 'rgba(239,68,68,' :
-                  isExpensive         ? 'rgba(251,191,36,' : 'rgba(168,85,247,';
+        {/* Grid */}
+        <AnimatePresence mode="wait">
+          {loading ? (
+            <motion.div
+              key="skeleton"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="cases-grid"
+            >
+              {Array(12).fill(0).map((_, i) => (
+                <div key={i} style={{ background: '#fff', border: '1px solid rgba(26,18,8,.1)', overflow: 'hidden' }}>
+                  <div className="skel" style={{ height: 110 }} />
+                  <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div className="skel" style={{ height: 12, width: '75%' }} />
+                    <div className="skel" style={{ height: 11, width: '45%' }} />
+                  </div>
+                </div>
+              ))}
+            </motion.div>
+          ) : (
+            <motion.div
+              key={`page-${safePage}-${category}-${sortBy}`}
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -4 }}
+              transition={{ duration: .22 }}
+              className="cases-grid"
+            >
+              {pageItems.length === 0 ? (
+                <div className="empty-state">
+                  <h3>No cases found</h3>
+                  <p>{category !== 'all' ? `No cases in this category yet` : 'Try adjusting your search'}</p>
+                </div>
+              ) : pageItems.map((c, i) => {
+                const isHot = (c.total_opened || 0) > 500;
+                const isNew = !isHot && i < 3 && safePage === 1;
 
                 return (
                   <motion.div
                     key={c.id}
-                    layout
-                    initial={{ opacity:0, scale:.88, y:12 }}
-                    animate={{ opacity:1, scale:1, y:0 }}
-                    exit={{ opacity:0, scale:.88, y:12 }}
-                    transition={{ delay: i * .018, duration:.35, ease:[.22,1,.36,1] }}>
-                    <Link to={createPageUrl('CaseOpen') + `?id=${c.id}`}>
-                      <div
-                        className="shim case-card gold-glow"
-                        onMouseEnter={() => setHovId(c.id)}
-                        onMouseLeave={() => setHovId(null)}
-                        style={{
-                          position:'relative', overflow:'hidden', borderRadius:12, cursor:'pointer',
-                          background: isExpensive
-                            ? 'linear-gradient(160deg,#0f0800,#1c0e00)'
-                            : 'linear-gradient(160deg,#080012,#0e001e)',
-                          border:`1px solid ${isHov ? accentFaint+'0.3)' : accentFaint+'0.07)'}`,
-                          padding:'12px 10px 13px',
-                          display:'flex', flexDirection:'column', alignItems:'center',
-                        }}>
-
-                        <div className="scan" />
-
-                        {/* Corner glow */}
-                        <div style={{
-                          position:'absolute', top:0, right:0, width:60, height:60, pointerEvents:'none',
-                          background:`radial-gradient(circle,${accentFaint}0.14) 0%,transparent 70%)`,
-                        }} />
-
-                        {/* Category dot */}
-                        <div style={{
-                          position:'absolute', top:7, right:7, width:6, height:6,
-                          borderRadius:'50%', background: accentColor,
-                          boxShadow:`0 0 6px ${accentColor}`,
-                          opacity: 0.8,
-                        }} />
-
-                        {/* Badge */}
-                        {(isNew || isExpensive) && (
-                          <div style={{
-                            position:'absolute', top:7, left:7, zIndex:3,
-                            fontSize:8, fontWeight:900, letterSpacing:'.08em',
-                            textTransform:'uppercase', padding:'2px 6px',
-                            borderRadius:4, lineHeight:'14px',
-                            color: isExpensive ? '#000' : '#fff',
-                            background: isExpensive
-                              ? 'linear-gradient(135deg,#fbbf24,#f59e0b)'
-                              : 'linear-gradient(135deg,#7c3aed,#6d28d9)',
-                            boxShadow: isExpensive ? '0 0 8px rgba(251,191,36,.5)' : '0 0 8px rgba(124,58,237,.5)',
-                          }}>
-                            {isExpensive ? '⭐' : 'NEW'}
-                          </div>
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * .012, duration: .22 }}
+                  >
+                    <Link
+                      to={createPageUrl('CaseOpen') + `?id=${c.id}`}
+                      className="case-card"
+                    >
+                      <div className="case-card-img">
+                        {(isNew || isHot) && (
+                          <span className={`case-card-tag ${isHot ? 'tag-hot' : 'tag-new'}`}>
+                            {isHot ? 'HOT' : 'NEW'}
+                          </span>
                         )}
-
-                        {/* Case image */}
-                        <motion.div
-                          animate={{ scale: isHov ? 1.1 : 1, y: isHov ? -4 : 0 }}
-                          transition={{ type:'spring', stiffness:240, damping:18 }}
-                          style={{
-                            width:'100%', display:'flex',
-                            alignItems:'center', justifyContent:'center',
-                            marginBottom:8, height:90,
-                          }}>
-                          {c.image_url ? (
-                            <img
-                              src={c.image_url}
-                              alt={c.name}
-                              style={{
-                                maxWidth:'92%', maxHeight:88,
-                                width:'auto', height:'auto',
-                                objectFit:'contain',
-                                filter: isHov
-                                  ? `drop-shadow(0 0 12px ${accentColor})`
-                                  : `drop-shadow(0 0 5px ${accentFaint}0.35))`,
-                                transition:'filter .25s',
-                              }}
-                            />
-                          ) : (
-                            <Box style={{ width:38, height:38, color: accentColor, opacity:.3 }} />
-                          )}
-                        </motion.div>
-
-                        {/* Name */}
-                        <p style={{
-                          margin:'0 0 5px', fontSize:11, fontWeight:800, textAlign:'center',
-                          color: isHov ? '#fff' : 'rgba(255,255,255,.7)',
-                          transition:'color .25s',
-                          overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
-                          width:'100%', lineHeight:1.2, letterSpacing:'.01em',
-                        }}>{c.name}</p>
-
-                        {/* Price */}
-                        <div style={{ display:'flex', alignItems:'center', gap:4, marginBottom:7 }}>
-                          <div style={{
-                            width:14, height:14, borderRadius:'50%', flexShrink:0,
-                            background:'linear-gradient(135deg,#fbbf24,#f59e0b)',
-                            display:'flex', alignItems:'center', justifyContent:'center',
-                            boxShadow:'0 0 6px rgba(251,191,36,.45)',
-                          }}>
-                            <span style={{ fontSize:8, fontWeight:900, color:'#000' }}>$</span>
-                          </div>
-                          <span style={{
-                            fontSize:13, fontWeight:900,
-                            color: isExpensive ? '#fbbf24' : 'rgba(251,191,36,.75)',
-                            textShadow: isExpensive ? '0 0 10px rgba(251,191,36,.4)' : undefined,
-                          }}>{c.price?.toLocaleString()}</span>
+                        {c.image_url ? (
+                          <img src={c.image_url} alt={c.name} />
+                        ) : (
+                          <Box style={{ width: 32, height: 32, color: 'rgba(26,18,8,.15)' }} />
+                        )}
+                      </div>
+                      <div className="case-card-body">
+                        <div className="case-card-name">{c.name}</div>
+                        <div className="case-card-price">
+                          ${c.price?.toLocaleString()}
                         </div>
-
-                        {/* Rarity bar */}
-                        <div style={{ width:'100%', height:2, background:'rgba(255,255,255,.04)', borderRadius:99, overflow:'hidden' }}>
-                          <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width:`${Math.min(100,((c.price||0)/20000)*100)}%` }}
-                            transition={{ delay: i * .018 + .3, duration:.6, ease:'easeOut' }}
-                            style={{
-                              height:'100%', borderRadius:99,
-                              background:`linear-gradient(90deg,${accentFaint}0.6),${accentColor})`,
-                              boxShadow:`0 0 4px ${accentFaint}0.3)`,
-                            }} />
-                        </div>
-
-                        {/* Hover top bar */}
-                        <motion.div
-                          animate={{ opacity: isHov ? 1 : 0, scaleX: isHov ? 1 : 0 }}
-                          style={{
-                            position:'absolute', top:0, left:0, right:0, height:2,
-                            background:`linear-gradient(90deg,transparent,${accentColor},transparent)`,
-                            pointerEvents:'none', originX:.5,
-                          }} />
                       </div>
                     </Link>
                   </motion.div>
                 );
               })}
-            </div>
-          </AnimatePresence>
-        )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* ── Empty state ── */}
-        {!loading && filtered.length === 0 && (
-          <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} style={{ textAlign:'center', paddingTop:50 }}>
-            <div style={{
-              width:52, height:52, borderRadius:14, margin:'0 auto 14px',
-              background:'rgba(251,191,36,.05)', border:'1px solid rgba(251,191,36,.1)',
-              display:'flex', alignItems:'center', justifyContent:'center',
-            }}>
-              <Box style={{ width:22, height:22, color:'rgba(251,191,36,.25)' }} />
+        {/* Pagination */}
+        {!loading && filtered.length > CASES_PER_PAGE && (
+          <div className="pagination">
+            <span className="pag-info">
+              {startIdx}–{endIdx} of {filtered.length}
+            </span>
+            <div className="pag-controls">
+              <PagButton
+                disabled={safePage === 1}
+                onClick={() => { setPage(p => p - 1); window.scrollTo(0, 0); }}
+              >
+                <ChevronLeft size={14} />
+              </PagButton>
+
+              {pageNums.map((p, i) =>
+                p === '…'
+                  ? <span key={`ellipsis-${i}`} className="pag-btn" style={{ cursor: 'default', opacity: .35, border: 'none' }}>…</span>
+                  : <PagButton
+                      key={p}
+                      active={p === safePage}
+                      onClick={() => { setPage(p); window.scrollTo(0, 0); }}
+                    >{p}</PagButton>
+              )}
+
+              <PagButton
+                disabled={safePage === totalPages}
+                onClick={() => { setPage(p => p + 1); window.scrollTo(0, 0); }}
+              >
+                <ChevronRight size={14} />
+              </PagButton>
             </div>
-            <p style={{ color:'rgba(251,191,36,.35)', fontWeight:800, fontSize:13, margin:'0 0 4px', letterSpacing:'.04em' }}>
-              NO CASES FOUND
-            </p>
-            <p style={{ color:'rgba(255,255,255,.12)', fontSize:11, margin:0 }}>
-              {category !== 'all' ? `No ${activeCat?.label} cases yet` : 'Try a different search'}
-            </p>
-            {category !== 'all' && (
-              <button
-                onClick={() => setCategory('all')}
-                style={{
-                  marginTop:14, padding:'7px 16px', borderRadius:8, border:'none',
-                  background:'rgba(251,191,36,.1)', border:'1px solid rgba(251,191,36,.2)',
-                  color:'rgba(251,191,36,.7)', fontSize:11, fontWeight:800,
-                  cursor:'pointer', fontFamily:"'Nunito', sans-serif",
-                }}>View All Cases</button>
-            )}
-          </motion.div>
+          </div>
         )}
 
       </div>
