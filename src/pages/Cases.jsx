@@ -4,353 +4,436 @@ import { base44 } from '@/api/base44Client';
 import { Link } from 'react-router-dom';
 import { createPageUrl } from '@/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Box, Search, ChevronLeft, ChevronRight, SlidersHorizontal, X } from 'lucide-react';
+import { Box, Search, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const CASES_PER_PAGE = 24;
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+
+:root {
+  --bg:          #09000f;
+  --surface:     #110018;
+  --surface2:    #1a0028;
+  --border:      rgba(139,92,246,.14);
+  --border-h:    rgba(251,191,36,.38);
+  --gold:        #fbbf24;
+  --gold-dim:    rgba(251,191,36,.55);
+  --purple:      #a855f7;
+  --purple-dim:  rgba(168,85,247,.6);
+  --text:        #f0e6ff;
+  --text-dim:    rgba(240,230,255,.45);
+  --text-faint:  rgba(240,230,255,.2);
+}
 
 *, *::before, *::after { box-sizing: border-box; }
 
-.cases-root {
+.cv {
   font-family: 'DM Sans', sans-serif;
   min-height: 100vh;
-  background: #f5f0e8;
-  color: #1a1208;
+  background: var(--bg);
+  color: var(--text);
+  margin-left: -24px;
+  margin-right: -24px;
+  padding: 0 16px 80px;
 }
 
-/* ─── Layout ─── */
-.cases-wrap {
-  max-width: 1100px;
+.cv-wrap {
+  max-width: 1120px;
   margin: 0 auto;
-  padding: 32px 20px 80px;
+  padding-top: 28px;
 }
 
-/* ─── Header strip ─── */
-.cases-header {
+/* ── Header ── */
+.cv-header {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  border-top: 3px solid #1a1208;
-  border-bottom: 1px solid rgba(26,18,8,.15);
-  padding: 14px 0 12px;
   margin-bottom: 24px;
-  gap: 12px;
-  flex-wrap: wrap;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
 }
 
-.cases-title {
+.cv-title {
   font-family: 'Syne', sans-serif;
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 800;
-  letter-spacing: -.02em;
+  letter-spacing: -.01em;
   margin: 0;
-  line-height: 1;
+  color: var(--text);
 }
 
-.cases-meta {
+.cv-title-dot {
+  color: var(--gold);
+  margin-left: 4px;
+}
+
+.cv-count {
   font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  color: rgba(26,18,8,.4);
-  letter-spacing: .04em;
+  font-size: 10px;
+  letter-spacing: .08em;
+  color: var(--text-faint);
+  text-transform: uppercase;
 }
 
-/* ─── Filter bar ─── */
-.filter-bar {
+/* ── Filter bar ── */
+.cv-filters {
   display: flex;
-  gap: 8px;
   align-items: center;
+  gap: 8px;
   margin-bottom: 20px;
   flex-wrap: wrap;
 }
 
-.filter-search {
-  flex: 1;
-  min-width: 180px;
-  position: relative;
-}
-
-.filter-search input {
-  width: 100%;
-  height: 38px;
-  border: 1.5px solid rgba(26,18,8,.2);
-  border-radius: 4px;
-  background: #fff;
-  padding: 0 12px 0 34px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 13px;
-  font-weight: 500;
-  color: #1a1208;
-  outline: none;
-  transition: border-color .15s;
-}
-.filter-search input::placeholder { color: rgba(26,18,8,.3); }
-.filter-search input:focus { border-color: #1a1208; }
-.filter-search svg {
-  position: absolute;
-  left: 10px; top: 50%;
-  transform: translateY(-50%);
-  width: 14px; height: 14px;
-  color: rgba(26,18,8,.35);
-  pointer-events: none;
+.cv-cats {
+  display: flex;
+  gap: 6px;
+  flex-wrap: nowrap;
 }
 
 .cat-btn {
-  height: 38px;
-  padding: 0 14px;
-  border-radius: 4px;
-  border: 1.5px solid rgba(26,18,8,.18);
+  height: 34px;
+  padding: 0 13px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
   background: transparent;
   font-family: 'DM Mono', monospace;
   font-size: 11px;
   font-weight: 500;
   letter-spacing: .04em;
-  color: rgba(26,18,8,.55);
+  color: var(--text-dim);
   cursor: pointer;
   white-space: nowrap;
-  transition: all .14s;
+  transition: all .15s ease;
   display: flex;
   align-items: center;
   gap: 6px;
 }
 .cat-btn:hover {
-  border-color: #1a1208;
-  color: #1a1208;
-  background: rgba(26,18,8,.03);
+  border-color: rgba(168,85,247,.4);
+  color: var(--purple-dim);
+  background: rgba(168,85,247,.05);
 }
 .cat-btn.active {
-  background: #1a1208;
-  border-color: #1a1208;
-  color: #f5f0e8;
+  background: rgba(168,85,247,.15);
+  border-color: rgba(168,85,247,.55);
+  color: var(--purple);
 }
-.cat-btn .count {
-  font-size: 10px;
-  opacity: .6;
+.cat-btn .cnt {
+  font-size: 9px;
+  color: var(--text-faint);
+}
+.cat-btn.active .cnt { color: rgba(168,85,247,.5); }
+
+.cv-spacer { flex: 1; min-width: 8px; }
+
+.cv-search {
+  position: relative;
+  width: 210px;
+}
+.cv-search input {
+  width: 100%;
+  height: 34px;
+  padding: 0 12px 0 30px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: var(--text);
+  outline: none;
+  transition: border-color .15s;
+}
+.cv-search input::placeholder { color: var(--text-faint); }
+.cv-search input:focus { border-color: rgba(168,85,247,.5); }
+.cv-search svg {
+  position: absolute;
+  left: 9px; top: 50%;
+  transform: translateY(-50%);
+  width: 13px; height: 13px;
+  color: var(--text-faint);
+  pointer-events: none;
 }
 
-.sort-select {
-  height: 38px;
+.cv-sort {
+  height: 34px;
   padding: 0 10px;
-  border: 1.5px solid rgba(26,18,8,.18);
-  border-radius: 4px;
-  background: #fff;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
   font-family: 'DM Mono', monospace;
   font-size: 11px;
-  color: rgba(26,18,8,.7);
+  color: var(--text-dim);
   outline: none;
   cursor: pointer;
   letter-spacing: .03em;
 }
+.cv-sort option { background: #110018; }
 
-/* ─── Grid ─── */
-.cases-grid {
+/* ── Grid — 4 columns, bigger cards ── */
+.cv-grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 2px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
 }
 
-/* ─── Card ─── */
-.case-card {
-  background: #fff;
-  border: 1px solid rgba(26,18,8,.1);
+/* ── Card ── */
+.cv-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
   overflow: hidden;
   cursor: pointer;
-  transition: transform .18s ease, box-shadow .18s ease;
-  display: flex;
-  flex-direction: column;
   text-decoration: none;
   color: inherit;
+  display: flex;
+  flex-direction: column;
   position: relative;
+  transition: border-color .2s ease, transform .2s ease, box-shadow .2s ease;
+}
+.cv-card:hover {
+  border-color: var(--border-h);
+  transform: translateY(-4px);
+  box-shadow: 0 12px 36px rgba(0,0,0,.55), 0 0 0 1px rgba(251,191,36,.07);
 }
 
-.case-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(26,18,8,.12);
-  z-index: 2;
+/* gold top line on hover */
+.cv-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 15%; right: 15%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: 0;
+  transition: opacity .2s;
+  z-index: 3;
 }
+.cv-card:hover::before { opacity: 1; }
 
-.case-card-img {
-  height: 110px;
+/* image area */
+.cv-card-img {
+  height: 180px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 16px;
-  background: #faf8f4;
-  border-bottom: 1px solid rgba(26,18,8,.06);
-  overflow: hidden;
+  padding: 22px;
+  background: linear-gradient(155deg, #160024 0%, #0e0019 100%);
+  border-bottom: 1px solid var(--border);
   position: relative;
+  overflow: hidden;
 }
 
-.case-card-img img {
-  max-width: 90%;
-  max-height: 80px;
+.cv-card-img::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 65% 25%, rgba(168,85,247,.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.cv-card-img img {
+  max-width: 88%;
+  max-height: 140px;
   width: auto;
   height: auto;
   object-fit: contain;
-  transition: transform .22s ease;
+  position: relative;
+  z-index: 1;
+  transition: transform .25s ease;
+  filter: drop-shadow(0 6px 20px rgba(0,0,0,.7));
 }
-.case-card:hover .case-card-img img {
-  transform: scale(1.07);
+.cv-card:hover .cv-card-img img {
+  transform: scale(1.09) translateY(-4px);
 }
 
-.case-card-body {
-  padding: 10px;
-  flex: 1;
+/* body */
+.cv-card-body {
+  padding: 14px 14px 16px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 7px;
+  flex: 1;
 }
 
-.case-card-name {
-  font-family: 'DM Sans', sans-serif;
-  font-size: 11.5px;
+.cv-card-name {
+  font-size: 13px;
   font-weight: 600;
-  color: #1a1208;
+  color: var(--text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
   line-height: 1.3;
 }
 
-.case-card-price {
-  font-family: 'DM Mono', monospace;
-  font-size: 12px;
-  font-weight: 500;
-  color: #1a1208;
-  letter-spacing: -.01em;
-}
-
-.case-card-tag {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  font-family: 'DM Mono', monospace;
-  font-size: 8px;
-  font-weight: 500;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  padding: 2px 5px;
-  border-radius: 2px;
-  line-height: 14px;
-}
-
-.tag-new {
-  background: #1a1208;
-  color: #f5f0e8;
-}
-.tag-hot {
-  background: #c84b1a;
-  color: #fff;
-}
-
-/* ─── Skeleton ─── */
-.skel {
-  background: linear-gradient(90deg, #ede8de 25%, #e4dfd4 50%, #ede8de 75%);
-  background-size: 200% 100%;
-  animation: skelAnim 1.4s ease-in-out infinite;
-  border-radius: 2px;
-}
-@keyframes skelAnim {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* ─── Pagination ─── */
-.pagination {
+.cv-card-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: 28px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(26,18,8,.12);
 }
 
-.pag-info {
+.cv-card-price {
   font-family: 'DM Mono', monospace;
-  font-size: 11px;
-  color: rgba(26,18,8,.4);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--gold);
+  letter-spacing: -.01em;
+}
+
+.cv-card-opens {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  color: var(--text-faint);
   letter-spacing: .03em;
 }
 
-.pag-controls {
+/* tags */
+.cv-tag {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-family: 'DM Mono', monospace;
+  font-size: 8px;
+  font-weight: 500;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+  padding: 3px 7px;
+  border-radius: 4px;
+  line-height: 1.4;
+  z-index: 4;
+}
+.tag-new {
+  background: rgba(168,85,247,.2);
+  border: 1px solid rgba(168,85,247,.4);
+  color: var(--purple);
+}
+.tag-hot {
+  background: rgba(251,191,36,.15);
+  border: 1px solid rgba(251,191,36,.4);
+  color: var(--gold);
+}
+
+/* ── Skeleton ── */
+@keyframes skelMove {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.skel {
+  background: linear-gradient(90deg,
+    var(--surface) 25%,
+    rgba(139,92,246,.1) 50%,
+    var(--surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: skelMove 1.6s ease-in-out infinite;
+  border-radius: 4px;
+}
+
+/* ── Pagination ── */
+.cv-pag {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 32px;
+  padding-top: 18px;
+  border-top: 1px solid var(--border);
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.cv-pag-info {
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  color: var(--text-faint);
+  letter-spacing: .04em;
+}
+.cv-pag-btns {
   display: flex;
   align-items: center;
   gap: 4px;
 }
-
 .pag-btn {
-  width: 32px;
-  height: 32px;
-  border: 1.5px solid rgba(26,18,8,.18);
-  border-radius: 3px;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 6px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
   background: transparent;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  color: rgba(26,18,8,.6);
-  transition: all .13s;
-  font-family: 'DM Mono', monospace;
-  font-size: 12px;
+  transition: all .14s ease;
 }
 .pag-btn:hover:not(:disabled) {
-  background: #1a1208;
-  border-color: #1a1208;
-  color: #f5f0e8;
+  border-color: rgba(251,191,36,.4);
+  color: var(--gold);
+  background: rgba(251,191,36,.06);
 }
-.pag-btn:disabled {
-  opacity: .3;
-  cursor: not-allowed;
-}
+.pag-btn:disabled { opacity: .25; cursor: not-allowed; }
 .pag-btn.active {
-  background: #1a1208;
-  border-color: #1a1208;
-  color: #f5f0e8;
+  background: rgba(251,191,36,.12);
+  border-color: rgba(251,191,36,.5);
+  color: var(--gold);
+}
+.pag-ellipsis {
+  width: 28px;
+  text-align: center;
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--text-faint);
+  line-height: 34px;
 }
 
-/* ─── Empty ─── */
-.empty-state {
+/* ── Empty ── */
+.cv-empty {
   grid-column: 1 / -1;
-  padding: 60px 0;
+  padding: 70px 0;
   text-align: center;
 }
-.empty-state h3 {
+.cv-empty h3 {
   font-family: 'Syne', sans-serif;
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 700;
+  color: var(--text-dim);
   margin: 0 0 6px;
-  color: rgba(26,18,8,.4);
 }
-.empty-state p {
-  font-size: 13px;
-  color: rgba(26,18,8,.25);
-  margin: 0;
+.cv-empty p {
+  font-size: 12px;
+  color: var(--text-faint);
+  margin: 0 0 16px;
+}
+.cv-empty button {
+  padding: 8px 18px;
+  border-radius: 6px;
+  border: 1px solid rgba(168,85,247,.3);
+  background: rgba(168,85,247,.08);
+  color: var(--purple-dim);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  cursor: pointer;
+  letter-spacing: .04em;
+  transition: all .15s;
+}
+.cv-empty button:hover {
+  border-color: rgba(168,85,247,.55);
+  background: rgba(168,85,247,.15);
 }
 `;
 
 const CATEGORIES = [
-  { id: 'all',       label: 'All' },
-  { id: 'real_life', label: 'Real Life' },
-  { id: 'roblox',    label: 'Roblox' },
-  { id: 'csgo',      label: 'CS:GO' },
+  { id: 'all',       label: 'All Cases'  },
+  { id: 'real_life', label: 'Real Life'  },
+  { id: 'roblox',    label: 'Roblox'     },
+  { id: 'csgo',      label: 'CS:GO'      },
 ];
 
 const SORT_OPTIONS = [
   { value: 'price_desc', label: 'Price: High → Low' },
   { value: 'price_asc',  label: 'Price: Low → High' },
-  { value: 'popular',    label: 'Most Opened' },
+  { value: 'popular',    label: 'Most Opened'        },
 ];
-
-function PagButton({ children, active, disabled, onClick }) {
-  return (
-    <button
-      className={`pag-btn${active ? ' active' : ''}`}
-      disabled={disabled}
-      onClick={onClick}
-    >{children}</button>
-  );
-}
 
 function buildPageNums(current, total) {
   if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
@@ -364,12 +447,12 @@ function buildPageNums(current, total) {
 
 export default function Cases() {
   useRequireAuth();
-  const [cases,    setCases]    = useState([]);
-  const [loading,  setLoading]  = useState(true);
-  const [search,   setSearch]   = useState('');
-  const [sortBy,   setSortBy]   = useState('price_desc');
-  const [category, setCategory] = useState('all');
-  const [page,     setPage]     = useState(1);
+  const [cases,   setCases]   = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search,  setSearch]  = useState('');
+  const [sortBy,  setSortBy]  = useState('price_desc');
+  const [cat,     setCat]     = useState('all');
+  const [page,    setPage]    = useState(1);
 
   useEffect(() => {
     base44.entities.CaseTemplate.filter({ is_active: true }).then(data => {
@@ -378,26 +461,27 @@ export default function Cases() {
     });
   }, []);
 
-  // Reset page whenever filters change
-  useEffect(() => { setPage(1); }, [search, sortBy, category]);
+  useEffect(() => { setPage(1); }, [search, sortBy, cat]);
 
   const filtered = useMemo(() => cases
     .filter(c => {
-      const matchSearch = c.name?.toLowerCase().includes(search.toLowerCase());
-      const matchCat    = category === 'all' || (c.category || 'real_life') === category;
-      return matchSearch && matchCat;
+      const ms = c.name?.toLowerCase().includes(search.toLowerCase());
+      const mc = cat === 'all' || (c.category || 'real_life') === cat;
+      return ms && mc;
     })
     .sort((a, b) => {
       if (sortBy === 'price_asc')  return (a.price || 0) - (b.price || 0);
       if (sortBy === 'price_desc') return (b.price || 0) - (a.price || 0);
       if (sortBy === 'popular')    return (b.total_opened || 0) - (a.total_opened || 0);
       return 0;
-    }), [cases, search, sortBy, category]);
+    }), [cases, search, sortBy, cat]);
 
-  const totalPages  = Math.max(1, Math.ceil(filtered.length / CASES_PER_PAGE));
-  const safePage    = Math.min(page, totalPages);
-  const pageItems   = filtered.slice((safePage - 1) * CASES_PER_PAGE, safePage * CASES_PER_PAGE);
-  const pageNums    = buildPageNums(safePage, totalPages);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / CASES_PER_PAGE));
+  const safePage   = Math.min(page, totalPages);
+  const pageItems  = filtered.slice((safePage - 1) * CASES_PER_PAGE, safePage * CASES_PER_PAGE);
+  const pageNums   = buildPageNums(safePage, totalPages);
+  const start      = (safePage - 1) * CASES_PER_PAGE + 1;
+  const end        = Math.min(safePage * CASES_PER_PAGE, filtered.length);
 
   const catCounts = {
     all:       cases.length,
@@ -406,41 +490,44 @@ export default function Cases() {
     csgo:      cases.filter(c => c.category === 'csgo').length,
   };
 
-  const startIdx = (safePage - 1) * CASES_PER_PAGE + 1;
-  const endIdx   = Math.min(safePage * CASES_PER_PAGE, filtered.length);
+  const goPage = (p) => {
+    setPage(p);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
 
   return (
-    <div className="cases-root">
+    <div className="cv">
       <style>{CSS}</style>
-      <div className="cases-wrap">
+      <div className="cv-wrap">
 
         {/* Header */}
-        <div className="cases-header">
-          <h1 className="cases-title">Cases</h1>
-          <span className="cases-meta">
-            {loading ? 'LOADING' : `${filtered.length} ITEMS`}
+        <div className="cv-header">
+          <h1 className="cv-title">
+            Cases<span className="cv-title-dot">·</span>
+          </h1>
+          <span className="cv-count">
+            {loading ? 'Loading…' : `${filtered.length} available`}
           </span>
         </div>
 
         {/* Filters */}
-        <div className="filter-bar">
-          {/* Categories */}
-          {CATEGORIES.map(cat => (
-            <button
-              key={cat.id}
-              className={`cat-btn${category === cat.id ? ' active' : ''}`}
-              onClick={() => setCategory(cat.id)}
-            >
-              {cat.label}
-              <span className="count">{catCounts[cat.id]}</span>
-            </button>
-          ))}
+        <div className="cv-filters">
+          <div className="cv-cats">
+            {CATEGORIES.map(c => (
+              <button
+                key={c.id}
+                className={`cat-btn${cat === c.id ? ' active' : ''}`}
+                onClick={() => setCat(c.id)}
+              >
+                {c.label}
+                <span className="cnt">{catCounts[c.id]}</span>
+              </button>
+            ))}
+          </div>
 
-          {/* Spacer */}
-          <div style={{ flex: 1 }} />
+          <div className="cv-spacer" />
 
-          {/* Search */}
-          <div className="filter-search">
+          <div className="cv-search">
             <Search />
             <input
               value={search}
@@ -449,9 +536,8 @@ export default function Cases() {
             />
           </div>
 
-          {/* Sort */}
           <select
-            className="sort-select"
+            className="cv-sort"
             value={sortBy}
             onChange={e => setSortBy(e.target.value)}
           >
@@ -465,67 +551,84 @@ export default function Cases() {
         <AnimatePresence mode="wait">
           {loading ? (
             <motion.div
-              key="skeleton"
+              key="skel"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="cases-grid"
+              className="cv-grid"
             >
-              {Array(12).fill(0).map((_, i) => (
-                <div key={i} style={{ background: '#fff', border: '1px solid rgba(26,18,8,.1)', overflow: 'hidden' }}>
-                  <div className="skel" style={{ height: 110 }} />
-                  <div style={{ padding: 10, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div className="skel" style={{ height: 12, width: '75%' }} />
-                    <div className="skel" style={{ height: 11, width: '45%' }} />
+              {Array(8).fill(0).map((_, i) => (
+                <div key={i} style={{
+                  background: 'var(--surface)',
+                  border: '1px solid var(--border)',
+                  borderRadius: 12,
+                  overflow: 'hidden',
+                }}>
+                  <div className="skel" style={{ height: 180 }} />
+                  <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div className="skel" style={{ height: 13, width: '68%' }} />
+                    <div className="skel" style={{ height: 12, width: '38%' }} />
                   </div>
                 </div>
               ))}
             </motion.div>
           ) : (
             <motion.div
-              key={`page-${safePage}-${category}-${sortBy}`}
-              initial={{ opacity: 0, y: 6 }}
+              key={`pg-${safePage}-${cat}-${sortBy}`}
+              initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -4 }}
+              exit={{ opacity: 0 }}
               transition={{ duration: .22 }}
-              className="cases-grid"
+              className="cv-grid"
             >
               {pageItems.length === 0 ? (
-                <div className="empty-state">
-                  <h3>No cases found</h3>
-                  <p>{category !== 'all' ? `No cases in this category yet` : 'Try adjusting your search'}</p>
+                <div className="cv-empty">
+                  <h3>Nothing here</h3>
+                  <p>
+                    {cat !== 'all'
+                      ? 'No cases in this category yet'
+                      : 'Try a different search term'}
+                  </p>
+                  {cat !== 'all' && (
+                    <button onClick={() => setCat('all')}>View all cases</button>
+                  )}
                 </div>
               ) : pageItems.map((c, i) => {
                 const isHot = (c.total_opened || 0) > 500;
                 const isNew = !isHot && i < 3 && safePage === 1;
-
                 return (
                   <motion.div
                     key={c.id}
-                    initial={{ opacity: 0, y: 8 }}
+                    initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * .012, duration: .22 }}
+                    transition={{ delay: i * .015, duration: .24, ease: [.22, 1, .36, 1] }}
                   >
                     <Link
                       to={createPageUrl('CaseOpen') + `?id=${c.id}`}
-                      className="case-card"
+                      className="cv-card"
                     >
-                      <div className="case-card-img">
+                      <div className="cv-card-img">
                         {(isNew || isHot) && (
-                          <span className={`case-card-tag ${isHot ? 'tag-hot' : 'tag-new'}`}>
-                            {isHot ? 'HOT' : 'NEW'}
+                          <span className={`cv-tag ${isHot ? 'tag-hot' : 'tag-new'}`}>
+                            {isHot ? 'Hot' : 'New'}
                           </span>
                         )}
-                        {c.image_url ? (
-                          <img src={c.image_url} alt={c.name} />
-                        ) : (
-                          <Box style={{ width: 32, height: 32, color: 'rgba(26,18,8,.15)' }} />
-                        )}
+                        {c.image_url
+                          ? <img src={c.image_url} alt={c.name} />
+                          : <Box style={{ width: 44, height: 44, color: 'rgba(168,85,247,.18)' }} />
+                        }
                       </div>
-                      <div className="case-card-body">
-                        <div className="case-card-name">{c.name}</div>
-                        <div className="case-card-price">
-                          ${c.price?.toLocaleString()}
+                      <div className="cv-card-body">
+                        <div className="cv-card-name">{c.name}</div>
+                        <div className="cv-card-row">
+                          <span className="cv-card-price">
+                            ${c.price?.toLocaleString()}
+                          </span>
+                          {c.total_opened > 0 && (
+                            <span className="cv-card-opens">
+                              {c.total_opened?.toLocaleString()} opens
+                            </span>
+                          )}
                         </div>
                       </div>
                     </Link>
@@ -538,34 +641,36 @@ export default function Cases() {
 
         {/* Pagination */}
         {!loading && filtered.length > CASES_PER_PAGE && (
-          <div className="pagination">
-            <span className="pag-info">
-              {startIdx}–{endIdx} of {filtered.length}
+          <div className="cv-pag">
+            <span className="cv-pag-info">
+              Showing {start}–{end} of {filtered.length}
             </span>
-            <div className="pag-controls">
-              <PagButton
+            <div className="cv-pag-btns">
+              <button
+                className="pag-btn"
                 disabled={safePage === 1}
-                onClick={() => { setPage(p => p - 1); window.scrollTo(0, 0); }}
+                onClick={() => goPage(safePage - 1)}
               >
                 <ChevronLeft size={14} />
-              </PagButton>
+              </button>
 
               {pageNums.map((p, i) =>
                 p === '…'
-                  ? <span key={`ellipsis-${i}`} className="pag-btn" style={{ cursor: 'default', opacity: .35, border: 'none' }}>…</span>
-                  : <PagButton
+                  ? <span key={`e${i}`} className="pag-ellipsis">…</span>
+                  : <button
                       key={p}
-                      active={p === safePage}
-                      onClick={() => { setPage(p); window.scrollTo(0, 0); }}
-                    >{p}</PagButton>
+                      className={`pag-btn${p === safePage ? ' active' : ''}`}
+                      onClick={() => goPage(p)}
+                    >{p}</button>
               )}
 
-              <PagButton
+              <button
+                className="pag-btn"
                 disabled={safePage === totalPages}
-                onClick={() => { setPage(p => p + 1); window.scrollTo(0, 0); }}
+                onClick={() => goPage(safePage + 1)}
               >
                 <ChevronRight size={14} />
-              </PagButton>
+              </button>
             </div>
           </div>
         )}
