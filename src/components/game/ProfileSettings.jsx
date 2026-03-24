@@ -6,6 +6,15 @@ export default function ProfileSettings({ user, onSaved }) {
   const [username, setUsername] = useState(user?.username || user?.full_name || '');
   const [isAnonymous, setIsAnonymous] = useState(user?.is_anonymous || false);
   const [avatarUrl, setAvatarUrl] = useState(user?.avatar_url || '');
+
+  // Re-sync state if parent user prop updates (e.g. after save propagates back)
+  useEffect(() => {
+    setUsername(user?.username || user?.full_name || '');
+    setIsAnonymous(user?.is_anonymous || false);
+    setAvatarUrl(user?.avatar_url || '');
+  // Only re-init on user id change, not every render
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
   const [avatarPreview, setAvatarPreview] = useState(null); // local blob preview before upload finishes
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
