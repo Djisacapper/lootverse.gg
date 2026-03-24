@@ -300,10 +300,10 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
     }
   };
 
-  const displayName   = profileData?.full_name || userName || userEmail?.split('@')[0] || '?';
+  const displayName   = profileData?.username || profileData?.full_name || userName || userEmail?.split('@')[0] || '?';
   const displayLevel  = profileData?.level  || 1;
   const displayAvatar = profileData?.avatar_url;
-  const shortId       = profileData?.id ? '#' + profileData.id.slice(-6).toUpperCase() : null;
+  const shortId       = profileData?.id ? '#' + profileData.id.slice(-8).toUpperCase() : null;
 
   // Self-check: compare by resolved email only
   const resolvedRecipientEmail = profileData?.email;
