@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 import { Camera, Loader2, CheckCircle2, EyeOff, Eye, AlertCircle, X } from 'lucide-react';
 
