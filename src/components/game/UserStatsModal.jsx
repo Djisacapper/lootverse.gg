@@ -432,9 +432,14 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
                               : <><Send style={{ width: 13, height: 13 }} /> Send</>}
                           </button>
                         </div>
-                        <p style={{ fontSize: 11, color: 'rgba(240,234,255,.28)', fontWeight: 500, textAlign: 'right' }}>
-                          Your balance: <span style={{ color: '#f5c842', fontWeight: 700 }}>{(liveMe?.balance || 0).toLocaleString()}</span> coins
-                        </p>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <p style={{ fontSize: 11, color: 'rgba(240,234,255,.28)', fontWeight: 500 }}>
+                            Daily: <span style={{ color: dailyTipped >= DAILY_TIP_LIMIT ? '#f87171' : '#4ade80', fontWeight: 700 }}>{(DAILY_TIP_LIMIT - dailyTipped).toLocaleString()}</span> remaining
+                          </p>
+                          <p style={{ fontSize: 11, color: 'rgba(240,234,255,.28)', fontWeight: 500 }}>
+                            Balance: <span style={{ color: '#f5c842', fontWeight: 700 }}>{(liveMe?.balance || 0).toLocaleString()}</span>
+                          </p>
+                        </div>
                       </div>
                     )}
                   </div>
