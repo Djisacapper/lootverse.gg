@@ -363,10 +363,13 @@ export default function Layout({ children, currentPageName }) {
   useEffect(() => { setMobileOpen(false); }, [currentPageName]);
 
   const handleProfileSaved = (updatedUser) => {
-    if (!updatedUser) { reloadUser(); return; }
-    const merged = { ...userRef.current, ...updatedUser };
-    userRef.current = merged;
-    setUser(merged);
+    // Always do a live reload so sidebar, chat, etc. show new username/avatar instantly
+    reloadUser();
+    if (updatedUser) {
+      const merged = { ...userRef.current, ...updatedUser };
+      userRef.current = merged;
+      setUser(merged);
+    }
   };
 
   const xpProgress  = user ? ((user.xp || 0) % 500) / 5 : 0;
