@@ -252,7 +252,7 @@ const GemDeco = ({ size, color, style }) => (
   </svg>
 );
 
-export default function ProfileModal({ user, onClose, onNavigate }) {
+export default function ProfileModal({ user, onClose, onNavigate, onSaved }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState({ deposits: 0, wagered: 0, withdrawals: 0 });
   const [loading, setLoading] = useState(true);
