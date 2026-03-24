@@ -406,7 +406,7 @@ export default function ProfileModal({ user, onClose, onNavigate }) {
 
           {activeTab === 'history' && <GameHistoryView userEmail={user?.email} />}
           {activeTab === 'transactions' && <TransactionsView userEmail={user?.email} />}
-          {activeTab === 'settings' && <ProfileSettings user={user} onSaved={() => {}} />}
+          {activeTab === 'settings' && <ProfileSettings user={user} onSaved={(updated) => { if (onSaved) onSaved(updated); }} />}
         </div>
 
         {/* Footer */}
