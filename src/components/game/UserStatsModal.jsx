@@ -202,9 +202,23 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
     return () => { cancelled = true; };
   }, [userEmail, userName]);
 
-  /* ── Always fetch fresh "me" so balance is live ── */
+  /* ── Always fetch fresh "me" so balance + daily tips are live ── */
   useEffect(() => {
     base44.auth.me().then(me => { if (me) setLiveMe(me); }).catch(() => {});
+
+    // Load how much the current user has tipped today
+    const loadDailyTips = async () => {
+      try {
+        const me = currentUser || await base44.auth.me();
+        if (!me?.email) return;
+        const today = new Date();
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
+        const txs = await base44.entities.Transaction.filter({ user_email: me.email, type: 'tip_sent' }, '-created_date', 100);
+        const total = txs.filter(t => t.created_date >= startOfDay).reduce((s, t) => s + Math.abs(t.amount || 0), 0);
+        setDailyTipped(total);
+      } catch {}
+    };
+    loadDailyTips();
   }, []);
 
   const handleCopyId = () => {
