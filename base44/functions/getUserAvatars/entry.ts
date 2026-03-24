@@ -1,6 +1,7 @@
-import { createClientFromRequest } from 'npm:@base44/sdk@0.8.6';
+import { createClientFromRequest } from 'npm:@base44/sdk@0.8.23';
 
-// Returns a map of { email -> { avatar_url, username } } for a list of emails
+// Returns a map of { email -> { avatar_url, username } } for a list of emails.
+// PERF FIX: only fetch users whose emails are in the requested list (filter by email).
 Deno.serve(async (req) => {
   try {
     const base44 = createClientFromRequest(req);
@@ -10,17 +11,25 @@ Deno.serve(async (req) => {
       return Response.json({ users: {} });
     }
 
-    // Fetch all users (service role so we can read all users)
-    const allUsers = await base44.asServiceRole.entities.User.list();
+    // Cap at 20 emails to prevent abuse and reduce query size
+    const safeEmails = emails.slice(0, 20);
+
+    // Fetch only the users we need by filtering on email
     const result = {};
-    for (const user of allUsers) {
-      if (emails.includes(user.email)) {
-        result[user.email] = {
-          avatar_url: user.avatar_url || null,
-          username: user.username || user.full_name || null,
-        };
-      }
-    }
+    await Promise.allSettled(
+      safeEmails.map(async (email) => {
+        try {
+          const matches = await base44.asServiceRole.entities.User.filter({ email }, '', 1);
+          const u = matches?.[0];
+          if (u) {
+            result[u.email] = {
+              avatar_url: u.avatar_url || null,
+              username: u.username || u.full_name || null,
+            };
+          }
+        } catch {}
+      })
+    );
 
     return Response.json({ users: result });
   } catch (error) {
