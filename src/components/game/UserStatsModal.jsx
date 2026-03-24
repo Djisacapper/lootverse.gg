@@ -267,31 +267,26 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
       showToast(`Insufficient balance — you have ${(freshMe.balance || 0).toLocaleString()} coins`, 'error');
       return;
     }
+    const remaining = DAILY_TIP_LIMIT - dailyTipped;
+    if (amount > remaining) {
+      showToast(`Daily tip limit: ${remaining.toLocaleString()} coins remaining today`, 'error');
+      return;
+    }
 
     setTipping(true);
     try {
-      // 1. Deduct sender
-      await base44.auth.updateMe({ balance: freshMe.balance - amount });
+      // Server handles balance deduction + daily limit + transactions
+      const result = await base44.functions.invoke('processTip', {
+        recipientEmail,
+        amount,
+        senderName: freshMe.username || freshMe.full_name || freshMe.email?.split('@')[0] || 'Someone',
+        senderEmail: freshMe.email,
+      });
 
-      // 2. Credit recipient via base44 function invoke (NOT raw fetch)
-      try {
-        const payload = {
-          recipientEmail,
-          amount,
-          senderName: freshMe.full_name || freshMe.email?.split('@')[0] || 'Someone',
-          senderEmail: freshMe.email,
-        };
+      if (result?.data?.error) throw new Error(result.data.error);
 
-        const result = await base44.functions.invoke('processTip', payload);
-
-        if (result?.error) throw new Error(result.error);
-      } catch (serverErr) {
-        // Refund sender if server step failed
-        await base44.auth.updateMe({ balance: freshMe.balance });
-        throw serverErr;
-      }
-
-      // Refresh local balance
+      // Refresh local balance from server response
+      setDailyTipped(result?.data?.dailyTipped ?? dailyTipped + amount);
       base44.auth.me().then(me => { if (me) setLiveMe(me); }).catch(() => {});
 
       showToast(`Sent ${amount.toLocaleString()} coins to ${displayName}!`);
