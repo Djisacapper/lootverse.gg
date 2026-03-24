@@ -135,6 +135,8 @@ const Toast = ({ msg, type }) => (
 );
 
 /* ─── Main Modal ──────────────────────────────────────────────────── */
+const DAILY_TIP_LIMIT = 15000;
+
 export default function UserStatsModal({ userName, userEmail, onClose, currentUser }) {
   const [profileData, setProfileData] = useState(null);
   const [liveMe,      setLiveMe]      = useState(currentUser || null);
@@ -143,6 +145,7 @@ export default function UserStatsModal({ userName, userEmail, onClose, currentUs
   const [tipping,     setTipping]     = useState(false);
   const [copied,      setCopied]      = useState(false);
   const [toast,       setToast]       = useState(null);
+  const [dailyTipped, setDailyTipped] = useState(0);
 
   const showToast = (msg, type = 'success') => {
     setToast({ msg, type });
