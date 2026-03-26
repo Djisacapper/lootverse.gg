@@ -175,17 +175,22 @@ export async function resolveAndCommitRolls(battle, selectedCases, players, batt
     }
 
     // ── Validate existing rolls: must match BOTH round count AND player count ──
-    // Skip stored rolls if gem_spin is active — they may predate the flag.
-    if (battle.committed_rolls && !battleModes?.gem_spin) {
+    // Also verify isMagic fields exist when gem_spin mode is active.
+    if (battle.committed_rolls) {
       try {
         const parsed = JSON.parse(battle.committed_rolls);
         if (rollsAreValid(parsed, selectedCases.length, players.length)) {
-          console.log(`[provablyFair] using stored rolls: ${parsed.length} rounds × ${players.length} players`);
-          return parsed;
+          // If gem_spin is active, verify the stored rolls actually have isMagic evaluated
+          // (old rolls won't have it — force re-derive)
+          const hasMagicField = parsed[0]?.[0] && 'isMagic' in parsed[0][0];
+          if (!battleModes?.gem_spin || hasMagicField) {
+            console.log(`[provablyFair] using stored rolls: ${parsed.length} rounds × ${players.length} players`);
+            return parsed;
+          }
+          console.log('[provablyFair] gem_spin active but stored rolls have no isMagic — re-deriving');
+        } else {
+          console.warn(`[provablyFair] stored rolls invalid — re-deriving`);
         }
-        console.warn(
-          `[provablyFair] stored rolls invalid (rounds=${parsed.length}, need ${selectedCases.length}; players=${parsed[0]?.length}, need ${players.length}) — re-deriving`
-        );
       } catch {}
     }
 
@@ -247,20 +252,22 @@ export function useProvablyFairArena(battle, selectedCases, players, battleModes
     resolving.current = false;
 
     // ── Validate stored rolls against BOTH round count AND player count ──
-    // Skip stored rolls if gem_spin is active — always re-derive so isMagic is set.
-    if (battle.committed_rolls && !battleModes?.gem_spin) {
+    if (battle.committed_rolls) {
       try {
         const parsed = JSON.parse(battle.committed_rolls);
         if (rollsAreValid(parsed, casesLen, playersLen)) {
-          setRolls(parsed);
-          setBlockHash(battle.eos_block_hash);
-          setBlockNum(battle.eos_block_num);
-          setStatus('ready');
-          return;
+          const hasMagicField = parsed[0]?.[0] && 'isMagic' in parsed[0][0];
+          if (!battleModes?.gem_spin || hasMagicField) {
+            setRolls(parsed);
+            setBlockHash(battle.eos_block_hash);
+            setBlockNum(battle.eos_block_num);
+            setStatus('ready');
+            return;
+          }
+          console.log('[provablyFair] hook: gem_spin active but rolls have no isMagic — re-deriving');
+        } else {
+          console.warn(`[provablyFair] hook: stored rolls invalid — re-deriving`);
         }
-        console.warn(
-          `[provablyFair] hook: stored rolls invalid — rounds=${parsed.length}/${casesLen}, players=${parsed[0]?.length}/${playersLen} — re-deriving`
-        );
       } catch {}
     }
 
