@@ -348,7 +348,7 @@ export default function BattleArena({
     const r=crRef.current;
     if(!allRolled.current?.[r]?.[pi]){playersDone.current.add(pi);checkRoundComplete(r);return;}
     markDone(pi,r);
-  },[]);
+  },[checkRoundComplete,markDone]);
   const getTotal=(pi)=>{
     if(!allRolled.current)return 0;
     if(isTerminal)return allRolled.current[totalRounds-1]?.[pi]?.item?.value||0;
