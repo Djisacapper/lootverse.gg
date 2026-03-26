@@ -532,7 +532,6 @@ export default function BattleArena({
   return(
     <div className="ba" style={{background:'var(--bg-deep)',minHeight:'100vh',padding:'20px 0 80px',position:'relative'}}>
       <style>{CSS}</style>
-      <DebugPanel/>
       <ConfettiEffect active={confetti}/>
       {showVerifier&&(<ProvablyFairVerifier battle={{...battle,eos_block_hash:blockHash,eos_block_num:blockNum}} selectedCases={selectedCases} players={players} battleModes={battleModes} onClose={()=>setShowVerifier(false)}/>)}
       <div style={{maxWidth:900,margin:'0 auto',display:'flex',flexDirection:'column',gap:14,padding:'0 16px'}}>
