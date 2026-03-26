@@ -450,9 +450,13 @@ export default function BattleArena({
           <div style={{position:'absolute',bottom:0,left:0,right:0,height:1.5,background:'linear-gradient(90deg,transparent,rgba(245,200,66,.3),rgba(157,111,255,.3),transparent)'}}/>
         </div>
 
-        {isTerminal&&!done&&<ModeNotice icon="⚡" color="#f5c842">Terminal — only the <strong>last round</strong> determines the winner</ModeNotice>}
-        {isCrazy&&!done&&<ModeNotice icon="🎭" color="#f472b6">Crazy mode — player with the <strong>lowest</strong> total wins!</ModeNotice>}
-        {isGroup&&!done&&<ModeNotice icon="🔄" color="#00e5a0">Group mode — profit is split equally among all players</ModeNotice>}
+        {activeModes.length>0&&!done&&(
+          <div style={{display:'flex',gap:6,flexWrap:'wrap',alignItems:'center'}}>
+            {activeModes.map(m=>(
+              <span key={m.label} title={m.label} style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:28,height:28,borderRadius:8,background:`${m.color}14`,border:`1px solid ${m.color}30`,fontSize:14,cursor:'default'}}>{m.icon}</span>
+            ))}
+          </div>
+        )}
         {fairStatus==='resolving'&&!isWaiting&&(
           <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 16px',borderRadius:12,background:'rgba(0,229,160,.06)',border:'1px solid rgba(0,229,160,.2)'}}>
             <Loader2 style={{width:13,height:13,color:'#00e5a0'}} className="animate-spin"/>
@@ -545,7 +549,19 @@ export default function BattleArena({
                           spinnerKey={`${r}-${pi}`} spinnerItem={rolled?.item}
                           magicItem={rolled?.isMagic?rolled.item:null}
                           onSpinDone={()=>handleSpinDone(pi)} onMagicSpinDone={()=>handleMagicDone(pi)}
-                          fast={isFast} pct={grandTotal>0?(pTotals[pi]||0)/grandTotal:0} showPct={isJackpot}/>
+                          fast={isFast}
+                          pct={(() => {
+                            if (!isJackpot || grandTotal === 0) return 0;
+                            if (isCrazy) {
+                              // Invert: lower score = higher win chance
+                              const maxVal = Math.max(...allPIs.map(p => pTotals[p] || 0));
+                              const inv = maxVal - (pTotals[pi] || 0);
+                              const invSum = allPIs.reduce((s, p) => s + (maxVal - (pTotals[p] || 0)), 0);
+                              return invSum > 0 ? inv / invSum : 1 / allPIs.length;
+                            }
+                            return grandTotal > 0 ? (pTotals[pi] || 0) / grandTotal : 0;
+                          })()}
+                          showPct={isJackpot}/>
                       );
                     })}
                   </div>

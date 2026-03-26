@@ -95,14 +95,20 @@ export default function JackpotWheel({ teamList, players, playerTotals, onWinner
   const grandTotal = allPIs.reduce((s, pi) => s + (playerTotals[pi] || 0), 0) || 1;
 
   // Build segments — one per player (not per team, for visual clarity)
-  const segments = allPIs.map((pi, idx) => ({
-    pi,
-    ti: teamList.findIndex(mi => mi.includes(pi)),
-    pct: Math.max((playerTotals[pi] || 0) / grandTotal, 0.04),
-    color: PLAYER_COLORS[idx % PLAYER_COLORS.length],
-    name: players[pi]?.name || `P${pi + 1}`,
-    value: playerTotals[pi] || 0,
-  }));
+  // In crazy mode, win chance is INVERTED: lower score = bigger slice
+  const maxVal = isCrazy ? Math.max(...allPIs.map(pi => playerTotals[pi] || 0)) : 0;
+  const segments = allPIs.map((pi, idx) => {
+    const val = playerTotals[pi] || 0;
+    const rawPct = isCrazy ? Math.max(maxVal - val, 1) : Math.max(val, 1);
+    return {
+      pi,
+      ti: teamList.findIndex(mi => mi.includes(pi)),
+      pct: rawPct,
+      color: PLAYER_COLORS[idx % PLAYER_COLORS.length],
+      name: players[pi]?.name || `P${pi + 1}`,
+      value: val,
+    };
+  });
   // Normalize pcts
   const pctSum = segments.reduce((s, g) => s + g.pct, 0);
   segments.forEach(g => { g.pct = g.pct / pctSum; });
@@ -199,7 +205,7 @@ export default function JackpotWheel({ teamList, players, playerTotals, onWinner
 
   const realPcts = segments.map(seg => ({
     ...seg,
-    realPct: Math.round(((playerTotals[seg.pi] || 0) / grandTotal) * 100),
+    realPct: Math.round(seg.pct * 100),
   }));
 
   return (
@@ -324,7 +330,7 @@ export default function JackpotWheel({ teamList, players, playerTotals, onWinner
                       fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,.25)',
                       textTransform: 'uppercase', letterSpacing: '.1em', marginTop: 2,
                     }}>
-                      {Math.round(((playerTotals[seg.pi] || 0) / grandTotal) * 100)}% chance
+                      {Math.round(seg.pct * 100)}% chance
                     </p>
                   </div>
 
