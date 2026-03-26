@@ -32,8 +32,12 @@ const CSS = `
 @keyframes ba-item-in{0%{transform:translateX(-14px) scale(.94);opacity:0}100%{transform:translateX(0) scale(1);opacity:1}}
 .ba-item-in{animation:ba-item-in .3s cubic-bezier(.22,1,.36,1) forwards;}
 .ba-spin-slot{flex-shrink:0;height:252px;position:relative;border-radius:12px;overflow:hidden;background:#04010e;border:1px solid rgba(157,111,255,.18);}
-@keyframes ba-magic{0%,100%{opacity:.6;letter-spacing:.22em;color:var(--cyan)}50%{opacity:1;letter-spacing:.3em;color:#fff}}
-.ba-magic-lbl{animation:ba-magic 1.2s ease-in-out infinite;font-size:9px;font-weight:800;text-transform:uppercase;display:block;text-align:center;}
+@keyframes ba-gem-float{0%,100%{transform:translateY(0) scale(1) rotate(-4deg);filter:drop-shadow(0 0 12px rgba(167,139,250,.9))}50%{transform:translateY(-5px) scale(1.08) rotate(4deg);filter:drop-shadow(0 0 28px rgba(167,139,250,1)) drop-shadow(0 0 8px rgba(245,200,66,.6))}}
+@keyframes ba-gem-reveal{0%{transform:scale(0.2) rotate(-30deg);opacity:0}60%{transform:scale(1.18) rotate(6deg);opacity:1}100%{transform:scale(1) rotate(0deg);opacity:1}}
+@keyframes ba-gem-ring{0%{transform:scale(1);opacity:.7;border-color:rgba(167,139,250,.8)}100%{transform:scale(2.2);opacity:0;border-color:rgba(245,200,66,.3)}}
+.ba-gem-float{animation:ba-gem-float 1.6s ease-in-out infinite;}
+.ba-gem-reveal{animation:ba-gem-reveal .55s cubic-bezier(.34,1.56,.64,1) forwards;}
+.ba-gem-ring-anim{animation:ba-gem-ring 1.4s ease-out infinite;}
 @keyframes ba-pip{0%,100%{box-shadow:0 0 0 0 rgba(245,200,66,.6)}50%{box-shadow:0 0 0 5px rgba(245,200,66,.15)}}
 .ba-pip-live{animation:ba-pip 1.1s ease-in-out infinite;}
 @keyframes ba-cdpop{0%{transform:scale(0.04) rotate(-10deg);opacity:0}65%{transform:scale(1.1) rotate(2deg);opacity:1}100%{transform:scale(1) rotate(0deg);opacity:1}}
@@ -96,14 +100,42 @@ const ConfettiEffect=({active})=>{const ref=useRef(null);useEffect(()=>{if(!acti
 const PlayerAvatar=React.memo(({player,color,size=38,iconSize=15})=>{const url=safeAvatarUrl(player?.avatar_url);const[loaded,setLoaded]=useState(false);const[err,setErr]=useState(false);const urlRef=useRef(url);useEffect(()=>{if(urlRef.current!==url){urlRef.current=url;setLoaded(false);setErr(false);}},[url]);const showImg=url&&!err;return(<div style={{width:size,height:size,borderRadius:'50%',overflow:'hidden',background:`${color}1e`,border:`2px solid ${color}50`,display:'flex',alignItems:'center',justifyContent:'center',position:'relative',flexShrink:0,boxShadow:`0 0 10px ${color}2a`}}>{showImg&&<img src={url} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',opacity:loaded?1:0,transition:'opacity .22s'}} onLoad={()=>setLoaded(true)} onError={()=>setErr(true)}/>}<div style={{opacity:showImg&&loaded?0:1,transition:'opacity .22s',display:'flex',alignItems:'center',justifyContent:'center',width:'100%',height:'100%'}}>{player?.isBot?<Bot style={{width:iconSize,height:iconSize,color}}/>:<User style={{width:iconSize,height:iconSize,color}}/>}</div></div>);});
 
 const VerticalSpinner=({items,winnerItem,onDone,fast})=>{const H=84,WIN=28,TOTAL=36,VH=252,dur=fast?1.35:2.9,spinMs=fast?1450:3050;useEffect(()=>{const t=setTimeout(onDone,spinMs);return()=>clearTimeout(t);},[]);const strip=useRef(Array.from({length:TOTAL},(_,i)=>i===WIN?winnerItem:items[Math.floor(Math.random()*items.length)])).current;const targetY=-(WIN*H-VH/2+H/2);const rc=rr(winnerItem?.rarity);return(<><div style={{position:'absolute',inset:'0 0',top:'50%',transform:'translateY(-50%)',height:H,zIndex:10,pointerEvents:'none',background:`linear-gradient(180deg,transparent 0%,${rc.bg} 30%,${rc.bg} 70%,transparent 100%)`,borderTop:`1.5px solid ${rc.border}`,borderBottom:`1.5px solid ${rc.color}44`}}/><div style={{position:'absolute',top:0,left:0,right:0,height:78,zIndex:20,pointerEvents:'none',background:'linear-gradient(to bottom,#04010e 0%,transparent 100%)'}}/><div style={{position:'absolute',bottom:0,left:0,right:0,height:78,zIndex:20,pointerEvents:'none',background:'linear-gradient(to top,#04010e 0%,transparent 100%)'}}/><motion.div style={{position:'absolute',left:0,right:0,top:0,display:'flex',flexDirection:'column'}} initial={{y:0}} animate={{y:targetY}} transition={{duration:dur,ease:[0.03,0.78,0.14,1]}}>{strip.map((item,i)=>{const rc2=rr(item?.rarity);return(<div key={i} style={{height:H,display:'flex',alignItems:'center',gap:10,padding:'0 12px',flexShrink:0}}><div style={{width:52,height:52,borderRadius:12,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:rc2.bg,border:`1px solid ${rc2.border}`}}>{item?.image||item?.image_url?<img src={item.image||item.image_url} alt={item?.name} style={{width:40,height:40,objectFit:'contain',filter:rc2.glow}}/>:<span style={{fontSize:22}}>📦</span>}</div><div style={{flex:1,minWidth:0}}><p style={{fontSize:11,color:'rgba(240,234,255,.65)',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:3}}>{item?.name||'---'}</p><span style={{fontSize:13,color:rc2.color,fontWeight:800}}>{item?.value?.toLocaleString()||0}</span></div></div>);})}</motion.div></>);};
+/* ── GemSpinLabel — animated gem shown above the spin slot during gem_spin ── */
+const GemSpinLabel=()=>{
+  return(
+    <div style={{position:'relative',display:'flex',alignItems:'center',justifyContent:'center',marginBottom:5,height:36}}>
+      {/* pulsing rings behind gem */}
+      {[0,1].map(i=>(
+        <div key={i} className="ba-gem-ring-anim" style={{
+          position:'absolute',width:30,height:30,borderRadius:'50%',
+          border:'1.5px solid rgba(167,139,250,.6)',
+          animationDelay:`${i*0.7}s`,
+        }}/>
+      ))}
+      <img
+        src="https://i.imgur.com/LKd8piQ.gif"
+        alt="Gem Spin"
+        className="ba-gem-reveal ba-gem-float"
+        style={{width:28,height:28,objectFit:'contain',position:'relative',zIndex:2,
+          filter:'drop-shadow(0 0 10px rgba(167,139,250,.9))',
+        }}
+      />
+      <span style={{
+        fontSize:9,fontWeight:800,color:'#a78bfa',letterSpacing:'.18em',
+        textTransform:'uppercase',marginLeft:7,textShadow:'0 0 10px rgba(167,139,250,.7)',
+      }}>GEM SPIN</span>
+    </div>
+  );
+};
+
 const ItemChip=React.memo(({item,index=0})=>{const rc=rr(item?.rarity);return(<div className="ba-item-in" style={{display:'flex',alignItems:'center',gap:8,padding:'6px 10px',borderRadius:10,background:rc.bg,border:`1px solid ${rc.border}`,animationDelay:`${index*0.033}s`,borderLeft:`3px solid ${rc.color}`}}><div style={{width:30,height:30,borderRadius:8,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,.25)'}}>{item?.image||item?.image_url?<img src={item.image||item.image_url} alt={item?.name} style={{width:24,height:24,objectFit:'contain',filter:rc.glow}}/>:<span style={{fontSize:13}}>📦</span>}</div><div style={{flex:1,minWidth:0}}><p style={{fontSize:10,color:'rgba(240,234,255,.55)',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:1}}>{item?.name}</p><p style={{fontSize:11,color:rc.color,fontWeight:800}}>{item?.value?.toLocaleString()}</p></div></div>);});
 
-const PlayerColumn=({player,playerColor:pc,isWinner,wonItems,spinPhase,caseItems,spinnerKey,spinnerItem,magicItem,onSpinDone,onMagicSpinDone,fast,showPct,pct})=>{
+const PlayerColumn=({player,playerColor:pc,isWinner,wonItems,spinPhase,caseItems,spinnerKey,spinnerItem,magicItem,onSpinDone,onGemSpinDone,fast,showPct,pct})=>{
   if(!player||!isRealPlayer(player))return null;
   const total=wonItems.reduce((s,it)=>s+(it?.value||0),0);
   const topItems=caseItems.filter(it=>['epic','legendary'].includes(it.rarity));
   const magicPool=topItems.length>0?topItems:caseItems;
-  const isSpinning=spinPhase==='spinning'||spinPhase==='magic_spin';
+  const isSpinning=spinPhase==='spinning'||spinPhase==='gem_spin';
   const lastItem=wonItems[wonItems.length-1];
   return(
     <div className={`ba-col${isWinner?' ba-winner':''}`} style={{border:`1.5px solid ${isWinner?'rgba(245,200,66,.35)':pc+'28'}`,boxShadow:isWinner?undefined:`0 0 0 1px rgba(0,0,0,.3),inset 0 0 28px rgba(0,0,0,.25)`}}>
@@ -128,10 +160,10 @@ const PlayerColumn=({player,playerColor:pc,isWinner,wonItems,spinPhase,caseItems
       </div>
       {showPct&&(<div style={{padding:'0 12px 7px',flexShrink:0}}><div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}><span style={{fontSize:9,fontWeight:700,color:pc,textTransform:'uppercase',letterSpacing:'.1em'}}>Win chance</span><span style={{fontSize:9,fontWeight:800,color:pc}}>{Math.round(pct*100)}%</span></div><div style={{height:3,borderRadius:3,background:'rgba(255,255,255,.06)',overflow:'hidden'}}><motion.div style={{height:'100%',borderRadius:3,background:`linear-gradient(90deg,${pc},${pc}88)`}} initial={{width:'0%'}} animate={{width:`${pct*100}%`}} transition={{duration:.7,ease:'easeOut'}}/></div></div>)}
       <div style={{padding:'0 10px 10px',flexShrink:0,position:'relative',zIndex:2}}>
-        {spinPhase==='magic_spin'&&<span className="ba-magic-lbl" style={{marginBottom:5}}>✦ Magic Spin ✦</span>}
+        {spinPhase==='gem_spin'&&<GemSpinLabel />}
         <div className="ba-spin-slot">
           {isSpinning&&caseItems.length>0
-            ?<VerticalSpinner key={`${spinnerKey}-${spinPhase}`} items={spinPhase==='magic_spin'?magicPool:caseItems} winnerItem={spinPhase==='magic_spin'?magicItem:spinnerItem} onDone={spinPhase==='magic_spin'?onMagicSpinDone:onSpinDone} fast={fast}/>
+            ?<VerticalSpinner key={`${spinnerKey}-${spinPhase}`} items={spinPhase==='gem_spin'?magicPool:caseItems} winnerItem={spinPhase==='gem_spin'?magicItem:spinnerItem} onDone={spinPhase==='gem_spin'?onGemSpinDone:onSpinDone} fast={fast}/>
             :<div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10}}>
               {lastItem?<>{lastItem?.image||lastItem?.image_url?<img src={lastItem.image||lastItem.image_url} alt="" style={{width:56,height:56,objectFit:'contain',filter:rr(lastItem?.rarity).glow,opacity:.5}}/>:<span style={{fontSize:34,opacity:.25}}>📦</span>}<div style={{textAlign:'center'}}><p style={{fontSize:10,color:'var(--text-dim)',fontWeight:500}}>{lastItem?.name}</p><p style={{fontSize:12,color:rr(lastItem?.rarity).color,fontWeight:800,opacity:.55}}>{lastItem?.value?.toLocaleString()}</p></div></>:<div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,opacity:.18}}><Swords style={{width:26,height:26,color:'#9d6fff'}}/><span style={{fontSize:10,color:'var(--text-dim)',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>Ready</span></div>}
             </div>}
@@ -272,7 +304,7 @@ export default function BattleArena({
   },[isWaiting,battle?.id]);
 
   const m=battleModes&&typeof battleModes==='object'?battleModes:{};
-  const isCrazy=m.crazy,isTerminal=m.terminal,isGroup=m.group,isMagicSpin=m.magic_spin,isFast=m.fast_mode,isJackpot=m.jackpot;
+  const isCrazy=m.crazy,isTerminal=m.terminal,isGroup=m.group,isGemSpin=m.gem_spin,isFast=m.fast_mode,isJackpot=m.jackpot;
 
   const [phase,setPhase]    = useState('countdown');
   const [countdown,setCd]   = useState(3);
@@ -310,10 +342,10 @@ export default function BattleArena({
     const r=crRef.current;
     if(!allRolled.current?.[r]?.[pi]){roundDone.current+=1;checkRoundComplete(r);return;}
     const rolled=allRolled.current[r];
-    if(rolled[pi]?.isMagic){setPP(prev=>{const n=[...prev];n[pi]='magic_spin';return n;});}
+    if(rolled[pi]?.isMagic){setPP(prev=>{const n=[...prev];n[pi]='gem_spin';return n;});}
     else{markDone(pi,r);}
   };
-  const handleMagicDone=(pi)=>{
+  const handleGemSpinDone=(pi)=>{
     stopSpin();
     if(!allRolled.current?.[crRef.current]){roundDone.current+=1;checkRoundComplete(crRef.current);return;}
     markDone(pi,crRef.current);
@@ -392,7 +424,7 @@ export default function BattleArena({
     isCrazy&&{icon:'🎭',color:'#f472b6',label:'Crazy'},
     isTerminal&&{icon:'⚡',color:'#f5c842',label:'Terminal'},
     isGroup&&{icon:'🔄',color:'#00e5a0',label:'Group'},
-    isMagicSpin&&{icon:'✨',color:'#c084fc',label:'Magic Spin'},
+    isGemSpin&&{icon:'💎',color:'#a78bfa',label:'Gem Spin'},
     isFast&&{icon:'💨',color:'#00e5ff',label:'Fast Mode'},
     isJackpot&&{icon:'👑',color:'#f5c842',label:'Jackpot'},
   ].filter(Boolean);
@@ -548,7 +580,7 @@ export default function BattleArena({
                           spinPhase={pPhases[pi]||'idle'} caseItems={caseItems}
                           spinnerKey={`${r}-${pi}`} spinnerItem={rolled?.item}
                           magicItem={rolled?.isMagic?rolled.item:null}
-                          onSpinDone={()=>handleSpinDone(pi)} onMagicSpinDone={()=>handleMagicDone(pi)}
+                          onSpinDone={()=>handleSpinDone(pi)} onGemSpinDone={()=>handleGemSpinDone(pi)}
                           fast={isFast}
                           pct={(() => {
                             if (!isJackpot || grandTotal === 0) return 0;

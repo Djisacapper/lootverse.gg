@@ -15,7 +15,7 @@ const BATTLE_MODES = [
   { key:'terminal',   emoji:'⚡', label:'Terminal',   desc:'Last case determines the winner.',           color:'#facc15' },
   { key:'jackpot',    emoji:'👑', label:'Jackpot',    desc:'Winner by jackpot spin on unboxed values!',  color:'#f472b6' },
   { key:'group',      emoji:'🔄', label:'Group',      desc:'Profit splits among all players.',           color:'#34d399' },
-  { key:'magic_spin', emoji:'✨', label:'Magic Spin', desc:'High-tier items hidden behind magic spin.',  color:'#a78bfa' },
+  { key:'gem_spin',   emoji:'💎', label:'Gem Spin',   desc:'A gem icon triggers a special bonus spin with only top-tier items.', color:'#a78bfa' },
   { key:'fast_mode',  emoji:'💨', label:'Fast Mode',  desc:'Faster gameplay, reduced animations.',       color:'#60a5fa' },
 ];
 
