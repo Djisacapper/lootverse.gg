@@ -344,11 +344,11 @@ export default function BattleArena({
     checkRoundComplete(r);
   };
 
-  const handleSpinDone=(pi)=>{
+  const handleSpinDone=useCallback((pi)=>{
     const r=crRef.current;
     if(!allRolled.current?.[r]?.[pi]){playersDone.current.add(pi);checkRoundComplete(r);return;}
     markDone(pi,r);
-  };
+  },[]);
   const getTotal=(pi)=>{
     if(!allRolled.current)return 0;
     if(isTerminal)return allRolled.current[totalRounds-1]?.[pi]?.item?.value||0;
