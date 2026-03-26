@@ -177,9 +177,8 @@ export async function resolveAndCommitRolls(battle, selectedCases, players, batt
     }
 
     // ── Validate existing rolls: must match BOTH round count AND player count ──
-    // Previously only round count was checked, so stale 1-player rolls passed
-    // validation and were returned for 4-player battles — causing 0 scores.
-    if (battle.committed_rolls) {
+    // Skip stored rolls if gem_spin is active — they may predate the flag.
+    if (battle.committed_rolls && !battleModes?.gem_spin) {
       try {
         const parsed = JSON.parse(battle.committed_rolls);
         if (rollsAreValid(parsed, selectedCases.length, players.length)) {
@@ -250,7 +249,8 @@ export function useProvablyFairArena(battle, selectedCases, players, battleModes
     resolving.current = false;
 
     // ── Validate stored rolls against BOTH round count AND player count ──
-    if (battle.committed_rolls) {
+    // Skip stored rolls if gem_spin is active — always re-derive so isMagic is set.
+    if (battle.committed_rolls && !battleModes?.gem_spin) {
       try {
         const parsed = JSON.parse(battle.committed_rolls);
         if (rollsAreValid(parsed, casesLen, playersLen)) {
@@ -308,7 +308,7 @@ export function useProvablyFairArena(battle, selectedCases, players, battleModes
 
     return () => clearInterval(poll);
 
-  }, [battle?.id, casesLen, playersLen]);
+  }, [battle?.id, casesLen, playersLen, battleModes?.gem_spin]);
 
   return { rolls, blockHash, blockNum, status };
 }
