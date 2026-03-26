@@ -103,7 +103,7 @@ const VerticalSpinner=({items,winnerItem,onDone,fast})=>{const H=84,WIN=28,TOTAL
 
 const ItemChip=React.memo(({item,index=0})=>{const rc=rr(item?.rarity);return(<div className="ba-item-in" style={{display:'flex',alignItems:'center',gap:8,padding:'6px 10px',borderRadius:10,background:rc.bg,border:`1px solid ${rc.border}`,animationDelay:`${index*0.033}s`,borderLeft:`3px solid ${rc.color}`}}><div style={{width:30,height:30,borderRadius:8,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:'rgba(0,0,0,.25)'}}>{item?.image||item?.image_url?<img src={item.image||item.image_url} alt={item?.name} style={{width:24,height:24,objectFit:'contain',filter:rc.glow}}/>:<span style={{fontSize:13}}>📦</span>}</div><div style={{flex:1,minWidth:0}}><p style={{fontSize:10,color:'rgba(240,234,255,.55)',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:1}}>{item?.name}</p><p style={{fontSize:11,color:rc.color,fontWeight:800}}>{item?.value?.toLocaleString()}</p></div></div>);});
 
-const PlayerColumn=React.memo(({player,playerColor:pc,isWinner,wonItems,spinPhase,caseItems,spinnerKey,spinnerItem,onSpinDone,fast,showPct,pct})=>{
+const PlayerColumn=({player,playerColor:pc,isWinner,wonItems,spinPhase,caseItems,spinnerKey,spinnerItem,onSpinDone,fast,showPct,pct})=>{
   if(!player||!isRealPlayer(player))return null;
   const total=wonItems.reduce((s,it)=>s+(it?.value||0),0);
   const isSpinning=spinPhase==='spinning';
@@ -225,10 +225,10 @@ const WaitingLobby=({battle,players,teams,userEmail,onJoin,onAddBot,onFillBots,b
         })}
       </div>
     </div>
-    );
-    };
+  );
+};
 
-    const RoundLabel=({round,total,caseName})=>(<motion.div key={round} initial={{opacity:0,y:-12}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:.35}}><div style={{textAlign:'center',padding:'8px 16px',borderRadius:10,background:'rgba(157,111,255,.07)',border:'1px solid rgba(157,111,255,.18)'}}><span className="ba-title" style={{fontSize:12,fontWeight:600,color:'#c4a3ff',letterSpacing:'.16em',textTransform:'uppercase'}}>Round {round+1} of {total}{caseName?` · ${caseName}`:''}</span></div></motion.div>);
+const RoundLabel=({round,total,caseName})=>(<motion.div key={round} initial={{opacity:0,y:-12}} animate={{opacity:1,y:0}} exit={{opacity:0}} transition={{duration:.35}}><div style={{textAlign:'center',padding:'8px 16px',borderRadius:10,background:'rgba(157,111,255,.07)',border:'1px solid rgba(157,111,255,.18)'}}><span className="ba-title" style={{fontSize:12,fontWeight:600,color:'#c4a3ff',letterSpacing:'.16em',textTransform:'uppercase'}}>Round {round+1} of {total}{caseName?` · ${caseName}`:''}</span></div></motion.div>);
 
 /* ─── Main ───────────────────────────────────────────────────────── */
 export default function BattleArena({
