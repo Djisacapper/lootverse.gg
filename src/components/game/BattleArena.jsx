@@ -99,33 +99,64 @@ const Particles=React.memo(({accent='#f5c842',count=10})=>{const pts=useRef(Arra
 const ConfettiEffect=({active})=>{const ref=useRef(null);useEffect(()=>{if(!active)return;const cv=ref.current;if(!cv)return;const ctx=cv.getContext('2d');cv.width=window.innerWidth;cv.height=window.innerHeight;const ps=Array.from({length:180},()=>({x:Math.random()*cv.width,y:-20,r:3+Math.random()*7,color:['#f5c842','#c084fc','#60a5fa','#34d399','#f472b6','#00e5ff'][Math.floor(Math.random()*6)],vx:(Math.random()-.5)*5,vy:2+Math.random()*4,a:Math.random()*360,va:(Math.random()-.5)*8}));let fr;const draw=()=>{ctx.clearRect(0,0,cv.width,cv.height);ps.forEach(p=>{p.x+=p.vx;p.y+=p.vy;p.a+=p.va;if(p.y>cv.height){p.y=-20;p.x=Math.random()*cv.width;}ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.a*Math.PI/180);ctx.fillStyle=p.color;ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r);ctx.restore();});fr=requestAnimationFrame(draw);};draw();const t=setTimeout(()=>cancelAnimationFrame(fr),5500);return()=>{cancelAnimationFrame(fr);clearTimeout(t);};},[active]);if(!active)return null;return <canvas ref={ref} style={{position:'fixed',inset:0,pointerEvents:'none',zIndex:9999}}/>;};
 const PlayerAvatar=React.memo(({player,color,size=38,iconSize=15})=>{const url=safeAvatarUrl(player?.avatar_url);const[loaded,setLoaded]=useState(false);const[err,setErr]=useState(false);const urlRef=useRef(url);useEffect(()=>{if(urlRef.current!==url){urlRef.current=url;setLoaded(false);setErr(false);}},[url]);const showImg=url&&!err;return(<div style={{width:size,height:size,borderRadius:'50%',overflow:'hidden',background:`${color}1e`,border:`2px solid ${color}50`,display:'flex',alignItems:'center',justifyContent:'center',position:'relative',flexShrink:0,boxShadow:`0 0 10px ${color}2a`}}>{showImg&&<img src={url} alt="" style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'cover',opacity:loaded?1:0,transition:'opacity .22s'}} onLoad={()=>setLoaded(true)} onError={()=>setErr(true)}/>}<div style={{opacity:showImg&&loaded?0:1,transition:'opacity .22s',display:'flex',alignItems:'center',justifyContent:'center',width:'100%',height:'100%'}}>{player?.isBot?<Bot style={{width:iconSize,height:iconSize,color}}/>:<User style={{width:iconSize,height:iconSize,color}}/>}</div></div>);});
 
-const VerticalSpinner=({items,winnerItem,onDone,fast})=>{const H=84,WIN=28,TOTAL=36,VH=252,dur=fast?1.35:2.9,spinMs=fast?1450:3050;useEffect(()=>{console.log('[GemSpin] VerticalSpinner mounted, will call onDone in '+spinMs+'ms');const t=setTimeout(()=>{console.log('[GemSpin] VerticalSpinner onDone firing');onDone();},spinMs);return()=>{console.log('[GemSpin] VerticalSpinner unmounted');clearTimeout(t);};},[]);const strip=useRef(Array.from({length:TOTAL},(_,i)=>i===WIN?winnerItem:items[Math.floor(Math.random()*items.length)])).current;const targetY=-(WIN*H-VH/2+H/2);const rc=rr(winnerItem?.rarity);return(<><div style={{position:'absolute',inset:'0 0',top:'50%',transform:'translateY(-50%)',height:H,zIndex:10,pointerEvents:'none',background:`linear-gradient(180deg,transparent 0%,${rc.bg} 30%,${rc.bg} 70%,transparent 100%)`,borderTop:`1.5px solid ${rc.border}`,borderBottom:`1.5px solid ${rc.color}44`}}/><div style={{position:'absolute',top:0,left:0,right:0,height:78,zIndex:20,pointerEvents:'none',background:'linear-gradient(to bottom,#04010e 0%,transparent 100%)'}}/><div style={{position:'absolute',bottom:0,left:0,right:0,height:78,zIndex:20,pointerEvents:'none',background:'linear-gradient(to top,#04010e 0%,transparent 100%)'}}/><motion.div style={{position:'absolute',left:0,right:0,top:0,display:'flex',flexDirection:'column'}} initial={{y:0}} animate={{y:targetY}} transition={{duration:dur,ease:[0.03,0.78,0.14,1]}}>{strip.map((item,i)=>{const rc2=rr(item?.rarity);return(<div key={i} style={{height:H,display:'flex',alignItems:'center',gap:10,padding:'0 12px',flexShrink:0}}><div style={{width:52,height:52,borderRadius:12,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:rc2.bg,border:`1px solid ${rc2.border}`}}>{item?.image||item?.image_url?<img src={item.image||item.image_url} alt={item?.name} style={{width:40,height:40,objectFit:'contain',filter:rc2.glow}}/>:<span style={{fontSize:22}}>📦</span>}</div><div style={{flex:1,minWidth:0}}><p style={{fontSize:11,color:'rgba(240,234,255,.65)',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:3}}>{item?.name||'---'}</p><span style={{fontSize:13,color:rc2.color,fontWeight:800}}>{item?.value?.toLocaleString()||0}</span></div></div>);})}</motion.div></>);};
-/* ── GemSpinOverlay — banner shown ABOVE the spinner slot during gem_spin ── */
-const GemSpinOverlay=()=>{
+const VerticalSpinner=({items,winnerItem,onDone,fast})=>{const H=84,WIN=28,TOTAL=36,VH=252,dur=fast?1.35:2.9,spinMs=fast?1450:3050;useEffect(()=>{const t=setTimeout(onDone,spinMs);return()=>clearTimeout(t);},[]);const strip=useRef(Array.from({length:TOTAL},(_,i)=>i===WIN?winnerItem:items[Math.floor(Math.random()*items.length)])).current;const targetY=-(WIN*H-VH/2+H/2);const rc=rr(winnerItem?.rarity);return(<><div style={{position:'absolute',inset:'0 0',top:'50%',transform:'translateY(-50%)',height:H,zIndex:10,pointerEvents:'none',background:`linear-gradient(180deg,transparent 0%,${rc.bg} 30%,${rc.bg} 70%,transparent 100%)`,borderTop:`1.5px solid ${rc.border}`,borderBottom:`1.5px solid ${rc.color}44`}}/><div style={{position:'absolute',top:0,left:0,right:0,height:78,zIndex:20,pointerEvents:'none',background:'linear-gradient(to bottom,#04010e 0%,transparent 100%)'}}/><div style={{position:'absolute',bottom:0,left:0,right:0,height:78,zIndex:20,pointerEvents:'none',background:'linear-gradient(to top,#04010e 0%,transparent 100%)'}}/><motion.div style={{position:'absolute',left:0,right:0,top:0,display:'flex',flexDirection:'column'}} initial={{y:0}} animate={{y:targetY}} transition={{duration:dur,ease:[0.03,0.78,0.14,1]}}>{strip.map((item,i)=>{const rc2=rr(item?.rarity);return(<div key={i} style={{height:H,display:'flex',alignItems:'center',gap:10,padding:'0 12px',flexShrink:0}}><div style={{width:52,height:52,borderRadius:12,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'center',background:rc2.bg,border:`1px solid ${rc2.border}`}}>{item?.image||item?.image_url?<img src={item.image||item.image_url} alt={item?.name} style={{width:40,height:40,objectFit:'contain',filter:rc2.glow}}/>:<span style={{fontSize:22}}>📦</span>}</div><div style={{flex:1,minWidth:0}}><p style={{fontSize:11,color:'rgba(240,234,255,.65)',fontWeight:600,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',marginBottom:3}}>{item?.name||'---'}</p><span style={{fontSize:13,color:rc2.color,fontWeight:800}}>{item?.value?.toLocaleString()||0}</span></div></div>);})}</motion.div></>);};
+
+/* ── GemSpinAnimation — replaces the normal spinner during gem_spin phase ──
+   Phase 1 (0 → spinMs-800ms): gem 💎 bounces/spins rapidly
+   Phase 2 (spinMs-800ms → spinMs): gem slams down, reveals the prize item
+── */
+const GemSpinAnimation=({winnerItem,onDone,fast})=>{
+  const spinMs=fast?1600:3200;
+  const [revealed,setRevealed]=useState(false);
+  const rc=rr(winnerItem?.rarity);
+  useEffect(()=>{
+    const t1=setTimeout(()=>setRevealed(true),spinMs-900);
+    const t2=setTimeout(onDone,spinMs);
+    return()=>{clearTimeout(t1);clearTimeout(t2);};
+  },[]);
   return(
-    <div style={{
-      position:'absolute',top:0,left:0,right:0,zIndex:30,
-      background:'linear-gradient(135deg,rgba(10,4,30,.88) 0%,rgba(30,10,60,.92) 100%)',
-      display:'flex',alignItems:'center',justifyContent:'center',gap:10,
-      padding:'8px 12px',
-      borderBottom:'1px solid rgba(167,139,250,.4)',
-      borderRadius:'12px 12px 0 0',
-    }}>
-      {[0,1].map(i=>(
+    <div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:0,background:'radial-gradient(ellipse 80% 70% at 50% 50%,rgba(167,139,250,.18) 0%,rgba(4,1,14,.98) 100%)'}}>
+      {/* pulsing rings */}
+      {[0,1,2].map(i=>(
         <div key={i} className="ba-gem-ring-anim" style={{
-          position:'absolute',width:50+i*20,height:50+i*20,borderRadius:'50%',
-          border:'1px solid rgba(167,139,250,.35)',
-          animationDelay:`${i*0.5}s`,
+          position:'absolute',
+          width:60+i*36,height:60+i*36,
+          borderRadius:'50%',
+          border:`1.5px solid rgba(167,139,250,${0.5-i*0.14})`,
+          animationDelay:`${i*0.38}s`,
           pointerEvents:'none',
         }}/>
       ))}
-      <span style={{fontSize:16,position:'relative',zIndex:2}}>💎</span>
-      <span style={{
-        fontSize:10,fontWeight:900,color:'#c4b5fd',letterSpacing:'.22em',
-        textTransform:'uppercase',position:'relative',zIndex:2,
-        textShadow:'0 0 16px rgba(167,139,250,.9)',
-      }}>GEM SPIN</span>
-      <span style={{fontSize:16,position:'relative',zIndex:2}}>💎</span>
+      {!revealed?(
+        /* spinning gem phase */
+        <motion.div
+          animate={{rotate:360,scale:[1,1.18,0.92,1.12,1]}}
+          transition={{rotate:{duration:0.45,repeat:Infinity,ease:'linear'},scale:{duration:0.7,repeat:Infinity,ease:'easeInOut'}}}
+          style={{fontSize:62,lineHeight:1,filter:'drop-shadow(0 0 22px rgba(167,139,250,1)) drop-shadow(0 0 8px rgba(245,200,66,.7))',position:'relative',zIndex:2}}
+        >
+          💎
+        </motion.div>
+      ):(
+        /* reveal phase */
+        <motion.div
+          initial={{scale:0.1,rotate:-25,opacity:0}}
+          animate={{scale:1,rotate:0,opacity:1}}
+          transition={{type:'spring',stiffness:340,damping:18}}
+          style={{display:'flex',flexDirection:'column',alignItems:'center',gap:10,position:'relative',zIndex:2}}
+        >
+          <div style={{width:72,height:72,borderRadius:16,display:'flex',alignItems:'center',justifyContent:'center',background:rc.bg,border:`2px solid ${rc.color}`,boxShadow:`0 0 32px ${rc.color}88`}}>
+            {winnerItem?.image||winnerItem?.image_url
+              ?<img src={winnerItem.image||winnerItem.image_url} alt={winnerItem?.name} style={{width:56,height:56,objectFit:'contain',filter:rc.glow}}/>
+              :<span style={{fontSize:36}}>💎</span>
+            }
+          </div>
+          <div style={{textAlign:'center'}}>
+            <p style={{fontSize:11,color:'rgba(240,234,255,.75)',fontWeight:600,marginBottom:3}}>{winnerItem?.name}</p>
+            <p style={{fontSize:15,color:rc.color,fontWeight:900,textShadow:`0 0 12px ${rc.color}`}}>{winnerItem?.value?.toLocaleString()}</p>
+          </div>
+          <span style={{fontSize:9,fontWeight:800,color:'#c4b5fd',letterSpacing:'.22em',textTransform:'uppercase',opacity:.7}}>💎 GEM BONUS</span>
+        </motion.div>
+      )}
     </div>
   );
 };
@@ -139,8 +170,7 @@ const PlayerColumn=({player,playerColor:pc,isWinner,wonItems,spinPhase,caseItems
   const magicPool=topItems.length>0?topItems:caseItems;
   // For gem_spin: use provided magicItem, or fallback to a random top-tier item
   const resolvedMagicItem = magicItem || (magicPool.length>0 ? magicPool[Math.floor(Math.random()*magicPool.length)] : spinnerItem);
-  const activeItem=spinPhase==='gem_spin'?resolvedMagicItem:spinnerItem;
-  const isSpinning=spinPhase==='spinning'||spinPhase==='gem_spin';
+  const isSpinning=spinPhase==='spinning';
   const lastItem=wonItems[wonItems.length-1];
   return(
     <div className={`ba-col${isWinner?' ba-winner':''}`} style={{border:`1.5px solid ${isWinner?'rgba(245,200,66,.35)':pc+'28'}`,boxShadow:isWinner?undefined:`0 0 0 1px rgba(0,0,0,.3),inset 0 0 28px rgba(0,0,0,.25)`}}>
@@ -165,11 +195,12 @@ const PlayerColumn=({player,playerColor:pc,isWinner,wonItems,spinPhase,caseItems
       </div>
       {showPct&&(<div style={{padding:'0 12px 7px',flexShrink:0}}><div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}><span style={{fontSize:9,fontWeight:700,color:pc,textTransform:'uppercase',letterSpacing:'.1em'}}>Win chance</span><span style={{fontSize:9,fontWeight:800,color:pc}}>{Math.round(pct*100)}%</span></div><div style={{height:3,borderRadius:3,background:'rgba(255,255,255,.06)',overflow:'hidden'}}><motion.div style={{height:'100%',borderRadius:3,background:`linear-gradient(90deg,${pc},${pc}88)`}} initial={{width:'0%'}} animate={{width:`${pct*100}%`}} transition={{duration:.7,ease:'easeOut'}}/></div></div>)}
       <div style={{padding:'0 10px 10px',flexShrink:0,position:'relative',zIndex:2}}>
-        {spinPhase==='gem_spin'&&<GemSpinOverlay/>}
-        <div className="ba-spin-slot" style={{borderColor:spinPhase==='gem_spin'?'rgba(167,139,250,.6)':'rgba(157,111,255,.18)',boxShadow:spinPhase==='gem_spin'?'0 0 24px rgba(167,139,250,.35)':undefined}}>
-          {isSpinning&&caseItems.length>0
-            ?<VerticalSpinner key={`${spinnerKey}-${spinPhase}`} items={spinPhase==='gem_spin'?magicPool:caseItems} winnerItem={activeItem} onDone={spinPhase==='gem_spin'?onGemSpinDone:onSpinDone} fast={fast}/>
-            :<div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10}}>
+        <div className="ba-spin-slot" style={{borderColor:spinPhase==='gem_spin'?'rgba(167,139,250,.6)':'rgba(157,111,255,.18)',boxShadow:spinPhase==='gem_spin'?'0 0 32px rgba(167,139,250,.5)':undefined}}>
+          {spinPhase==='gem_spin'
+            ?<GemSpinAnimation key={spinnerKey+'-gem'} winnerItem={resolvedMagicItem} onDone={onGemSpinDone} fast={fast}/>
+            :isSpinning&&caseItems.length>0
+              ?<VerticalSpinner key={`${spinnerKey}-spin`} items={caseItems} winnerItem={spinnerItem} onDone={onSpinDone} fast={fast}/>
+              :<div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10}}>
               {lastItem?<>{lastItem?.image||lastItem?.image_url?<img src={lastItem.image||lastItem.image_url} alt="" style={{width:56,height:56,objectFit:'contain',filter:rr(lastItem?.rarity).glow,opacity:.5}}/>:<span style={{fontSize:34,opacity:.25}}>📦</span>}<div style={{textAlign:'center'}}><p style={{fontSize:10,color:'var(--text-dim)',fontWeight:500}}>{lastItem?.name}</p><p style={{fontSize:12,color:rr(lastItem?.rarity).color,fontWeight:800,opacity:.55}}>{lastItem?.value?.toLocaleString()}</p></div></>:<div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,opacity:.18}}><Swords style={{width:26,height:26,color:'#9d6fff'}}/><span style={{fontSize:10,color:'var(--text-dim)',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>Ready</span></div>}
             </div>}
         </div>
