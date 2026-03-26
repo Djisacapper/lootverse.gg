@@ -256,21 +256,20 @@ export default function ProfileModal({ user, onClose, onNavigate, onSaved }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [stats, setStats] = useState({ deposits: 0, wagered: 0, withdrawals: 0 });
   const [loading, setLoading] = useState(true);
-  const level = user?.level || 1;
-  const xpProgress = getXpProgressForLevel(level, user?.xp || 0);
+  const [localUser, setLocalUser] = useState(user);
+  const level = localUser?.level || 1;
+  const xpProgress = getXpProgressForLevel(level, localUser?.xp || 0);
 
   useEffect(() => {
-    const fetchStats = async () => {
-      const transactions = await base44.entities.Transaction.filter({ user_email: user?.email });
+    if (!user?.email) return;
+    // Fetch once — stats don't need real-time polling
+    base44.entities.Transaction.filter({ user_email: user.email }, '-created_date', 500).then(transactions => {
       const deposits = transactions.filter(t => t.type === 'deposit').reduce((s, t) => s + (t.amount || 0), 0);
       const wagered = transactions.filter(t => ['case_purchase','battle_entry','coinflip_bet','crash_bet'].includes(t.type)).reduce((s, t) => s + Math.abs(t.amount || 0), 0);
       const withdrawals = transactions.filter(t => t.type === 'item_sell').reduce((s, t) => s + (t.amount || 0), 0);
       setStats({ deposits, wagered, withdrawals });
       setLoading(false);
-    };
-    fetchStats();
-    const interval = setInterval(fetchStats, 3000);
-    return () => clearInterval(interval);
+    });
   }, [user?.email]);
 
   const tabs = [
@@ -309,19 +308,19 @@ export default function ProfileModal({ user, onClose, onNavigate, onSaved }) {
           {/* Avatar + info */}
           <div className="pm-avatar-wrap">
             <div className="pm-avatar">
-              {user?.avatar_url
-                ? <img src={user.avatar_url} alt="avatar" />
-                : (user?.full_name?.[0]?.toUpperCase() || '?')}
+              {localUser?.avatar_url
+                ? <img src={localUser.avatar_url} alt="avatar" />
+                : ((localUser?.username || localUser?.full_name)?.[0]?.toUpperCase() || '?')}
             </div>
             <div style={{ flex: 1 }}>
               <div className="pm-user-name">
-                {user?.is_anonymous ? `Anonymous #${user?.id?.slice(-4) || '????'}` : (user?.username || user?.full_name || 'Player')}
+                {localUser?.is_anonymous ? `Anonymous #${localUser?.id?.slice(-4) || '????'}` : (localUser?.username || localUser?.full_name || 'Player')}
               </div>
-              <div className="pm-user-email">{user?.email}</div>
+              <div className="pm-user-email">{localUser?.email}</div>
               <div className="pm-badges">
                 <span className="pm-level-badge">LVL {level}</span>
-                <span className="pm-balance-badge">💰 ${(user?.balance || 0).toLocaleString()}</span>
-                <span className="pm-xp-badge">{(user?.xp || 0).toLocaleString()} XP</span>
+                <span className="pm-balance-badge">💰 ${(localUser?.balance || 0).toLocaleString()}</span>
+                <span className="pm-xp-badge">{(localUser?.xp || 0).toLocaleString()} XP</span>
               </div>
             </div>
           </div>
@@ -335,7 +334,7 @@ export default function ProfileModal({ user, onClose, onNavigate, onSaved }) {
             <div className="pm-xp-track">
               <div className="pm-xp-fill" style={{ width: `${xpProgress}%` }} />
             </div>
-            <div className="pm-xp-sub">{getXpForLevel(level).toLocaleString()} XP needed for next level</div>
+            <div className="pm-xp-sub">{getXpForLevel(level).toLocaleString()} XP needed for next level · {(localUser?.xp || 0).toLocaleString()} total</div>
           </div>
         </div>
 
@@ -387,11 +386,11 @@ export default function ProfileModal({ user, onClose, onNavigate, onSaved }) {
                 <div className="pm-info-card-title">Account Status</div>
                 <div className="pm-info-row">
                   <span className="pm-info-key">Member Since</span>
-                  <span className="pm-info-val">{user?.created_date ? new Date(user.created_date).toLocaleDateString() : 'N/A'}</span>
+                  <span className="pm-info-val">{localUser?.created_date ? new Date(localUser.created_date).toLocaleDateString() : 'N/A'}</span>
                 </div>
                 <div className="pm-info-row">
                   <span className="pm-info-key">Affiliate Code</span>
-                  <span className="pm-info-val" style={{ color: '#f5c842', fontFamily: 'monospace', letterSpacing: '.08em' }}>{user?.affiliate_code || '—'}</span>
+                  <span className="pm-info-val" style={{ color: '#f5c842', fontFamily: 'monospace', letterSpacing: '.08em' }}>{localUser?.affiliate_code || '—'}</span>
                 </div>
                 <div className="pm-info-row">
                   <span className="pm-info-key">Status</span>
@@ -406,7 +405,15 @@ export default function ProfileModal({ user, onClose, onNavigate, onSaved }) {
 
           {activeTab === 'history' && <GameHistoryView userEmail={user?.email} />}
           {activeTab === 'transactions' && <TransactionsView userEmail={user?.email} />}
-          {activeTab === 'settings' && <ProfileSettings user={user} onSaved={(updated) => { if (onSaved) onSaved(updated); }} />}
+          {activeTab === 'settings' && (
+            <ProfileSettings
+              user={localUser}
+              onSaved={(updated) => {
+                setLocalUser(prev => ({ ...prev, ...updated }));
+                if (onSaved) onSaved(updated);
+              }}
+            />
+          )}
         </div>
 
         {/* Footer */}
