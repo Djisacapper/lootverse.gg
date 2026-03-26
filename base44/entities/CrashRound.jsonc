@@ -1,0 +1,47 @@
+{
+  "name": "CrashRound",
+  "type": "object",
+  "properties": {
+    "crash_point": {
+      "type": "number",
+      "description": "Multiplier at which it crashes"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "betting",
+        "running",
+        "crashed"
+      ],
+      "default": "betting"
+    },
+    "start_time": {
+      "type": "number",
+      "description": "Unix ms timestamp when betting phase started"
+    },
+    "bets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "user_email": {
+            "type": "string"
+          },
+          "user_name": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number"
+          },
+          "cashed_out_at": {
+            "type": "number"
+          },
+          "profit": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  },
+  "required": []
+}

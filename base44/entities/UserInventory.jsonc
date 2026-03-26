@@ -1,0 +1,59 @@
+{
+  "name": "UserInventory",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string",
+      "description": "Owner email"
+    },
+    "item_name": {
+      "type": "string"
+    },
+    "item_image_url": {
+      "type": "string"
+    },
+    "rarity": {
+      "type": "string",
+      "enum": [
+        "common",
+        "uncommon",
+        "rare",
+        "epic",
+        "legendary"
+      ]
+    },
+    "value": {
+      "type": "number"
+    },
+    "source": {
+      "type": "string",
+      "enum": [
+        "case_opening",
+        "upgrade",
+        "battle_win",
+        "daily_reward",
+        "referral_bonus"
+      ],
+      "description": "How the item was obtained"
+    },
+    "source_case": {
+      "type": "string",
+      "description": "Which case it came from"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "owned",
+        "sold",
+        "upgraded",
+        "destroyed"
+      ],
+      "default": "owned"
+    }
+  },
+  "required": [
+    "user_email",
+    "item_name",
+    "value"
+  ]
+}

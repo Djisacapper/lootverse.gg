@@ -1,0 +1,92 @@
+{
+  "name": "User",
+  "type": "object",
+  "properties": {
+    "role": {
+      "type": "string",
+      "enum": [
+        "admin",
+        "user"
+      ],
+      "default": "user"
+    },
+    "balance": {
+      "type": "number",
+      "default": 1000
+    },
+    "xp": {
+      "type": "number",
+      "default": 0
+    },
+    "level": {
+      "type": "number",
+      "default": 1
+    },
+    "username": {
+      "type": "string",
+      "description": "Custom display name chosen by user"
+    },
+    "avatar_url": {
+      "type": "string",
+      "description": "Profile picture URL"
+    },
+    "is_anonymous": {
+      "type": "boolean",
+      "default": false,
+      "description": "If true, shows as Anonymous #XXXX in chat and games"
+    },
+    "affiliate_code": {
+      "type": "string",
+      "description": "Unique affiliate/referral code for this user"
+    },
+    "referred_by": {
+      "type": "string",
+      "description": "Affiliate code of the person who referred this user"
+    },
+    "total_deposited": {
+      "type": "number",
+      "default": 0
+    },
+    "affiliate_earnings": {
+      "type": "number",
+      "default": 0
+    },
+    "affiliate_earnings_claimable": {
+      "type": "number",
+      "default": 0
+    },
+    "rakeback_instant": {
+      "type": "number",
+      "default": 0
+    },
+    "rakeback_daily": {
+      "type": "number",
+      "default": 0
+    },
+    "rakeback_weekly": {
+      "type": "number",
+      "default": 0
+    },
+    "rakeback_monthly": {
+      "type": "number",
+      "default": 0
+    },
+    "total_rakeback_claimed": {
+      "type": "number",
+      "default": 0
+    },
+    "rakeback_daily_claimed_at": {
+      "type": "string",
+      "description": "ISO timestamp of last daily rakeback claim"
+    },
+    "rakeback_weekly_claimed_at": {
+      "type": "string",
+      "description": "ISO timestamp of last weekly rakeback claim"
+    },
+    "rakeback_monthly_claimed_at": {
+      "type": "string",
+      "description": "ISO timestamp of last monthly rakeback claim"
+    }
+  },
+  "required": []
+}

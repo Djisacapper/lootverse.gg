@@ -1,0 +1,31 @@
+{
+  "name": "ChatMessage",
+  "type": "object",
+  "properties": {
+    "user_name": {
+      "type": "string",
+      "description": "Display name at time of message (may be anonymous)"
+    },
+    "user_email": {
+      "type": "string",
+      "description": "Email of the user who sent the message"
+    },
+    "avatar_url": {
+      "type": "string",
+      "description": "Profile picture URL at time of message"
+    },
+    "level": {
+      "type": "number",
+      "description": "User's level at time of message"
+    },
+    "text": {
+      "type": "string",
+      "description": "Message content"
+    }
+  },
+  "required": [
+    "user_name",
+    "user_email",
+    "text"
+  ]
+}

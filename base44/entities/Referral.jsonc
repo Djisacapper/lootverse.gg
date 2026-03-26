@@ -1,0 +1,29 @@
+{
+  "name": "Referral",
+  "type": "object",
+  "properties": {
+    "referrer_email": {
+      "type": "string"
+    },
+    "referred_email": {
+      "type": "string"
+    },
+    "earnings": {
+      "type": "number",
+      "default": 0,
+      "description": "Total earnings from this referral"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "active",
+        "inactive"
+      ],
+      "default": "active"
+    }
+  },
+  "required": [
+    "referrer_email",
+    "referred_email"
+  ]
+}

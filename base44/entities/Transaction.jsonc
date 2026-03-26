@@ -1,0 +1,48 @@
+{
+  "name": "Transaction",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string"
+    },
+    "type": {
+      "type": "string",
+      "enum": [
+        "deposit",
+        "case_purchase",
+        "case_win",
+        "item_sell",
+        "upgrade_loss",
+        "upgrade_win",
+        "battle_entry",
+        "battle_win",
+        "coinflip_bet",
+        "coinflip_win",
+        "crash_bet",
+        "crash_win",
+        "daily_reward",
+        "referral_bonus"
+      ],
+      "description": "Transaction type"
+    },
+    "amount": {
+      "type": "number",
+      "description": "Positive = credit, Negative = debit"
+    },
+    "balance_after": {
+      "type": "number"
+    },
+    "description": {
+      "type": "string"
+    },
+    "related_id": {
+      "type": "string",
+      "description": "Related entity ID"
+    }
+  },
+  "required": [
+    "user_email",
+    "type",
+    "amount"
+  ]
+}

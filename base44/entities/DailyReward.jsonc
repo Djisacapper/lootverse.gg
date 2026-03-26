@@ -1,0 +1,31 @@
+{
+  "name": "DailyReward",
+  "type": "object",
+  "properties": {
+    "user_email": {
+      "type": "string"
+    },
+    "reward_type": {
+      "type": "string",
+      "enum": [
+        "coins",
+        "free_case",
+        "xp_boost"
+      ]
+    },
+    "reward_value": {
+      "type": "number"
+    },
+    "streak": {
+      "type": "number",
+      "default": 1
+    },
+    "claimed_date": {
+      "type": "string",
+      "format": "date"
+    }
+  },
+  "required": [
+    "user_email"
+  ]
+}

@@ -1,0 +1,84 @@
+{
+  "name": "CaseTemplate",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Name of the case"
+    },
+    "description": {
+      "type": "string",
+      "description": "Short description"
+    },
+    "price": {
+      "type": "number",
+      "description": "Cost in coins to open"
+    },
+    "image_url": {
+      "type": "string",
+      "description": "Case image URL"
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "budget",
+        "standard",
+        "premium",
+        "legendary",
+        "event"
+      ],
+      "description": "Case tier"
+    },
+    "items": {
+      "type": "array",
+      "description": "Items in this case with drop rates",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "image_url": {
+            "type": "string"
+          },
+          "image_urls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Array of item image URLs"
+          },
+          "rarity": {
+            "type": "string",
+            "enum": [
+              "common",
+              "uncommon",
+              "rare",
+              "epic",
+              "legendary"
+            ]
+          },
+          "value": {
+            "type": "number"
+          },
+          "drop_rate": {
+            "type": "number",
+            "description": "Probability weight 0-100"
+          }
+        }
+      }
+    },
+    "is_active": {
+      "type": "boolean",
+      "default": true
+    },
+    "total_opened": {
+      "type": "number",
+      "default": 0
+    }
+  },
+  "required": [
+    "name",
+    "price"
+  ]
+}

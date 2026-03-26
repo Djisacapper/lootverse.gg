@@ -1,0 +1,55 @@
+{
+  "name": "CoinflipGame",
+  "type": "object",
+  "properties": {
+    "creator_email": {
+      "type": "string"
+    },
+    "creator_name": {
+      "type": "string"
+    },
+    "creator_avatar_url": {
+      "type": "string",
+      "description": "Profile picture URL of creator"
+    },
+    "creator_side": {
+      "type": "string",
+      "enum": [
+        "heads",
+        "tails"
+      ]
+    },
+    "bet_amount": {
+      "type": "number"
+    },
+    "opponent_email": {
+      "type": "string"
+    },
+    "opponent_name": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "waiting",
+        "in_progress",
+        "completed"
+      ],
+      "default": "waiting"
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "heads",
+        "tails"
+      ]
+    },
+    "winner_email": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "creator_email",
+    "bet_amount"
+  ]
+}
