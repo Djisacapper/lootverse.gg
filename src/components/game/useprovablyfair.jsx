@@ -75,7 +75,8 @@ function seededRollItem(rng, items) {
 function seededMagicCheck(rng, items, isMagicSpin) {
   if (!isMagicSpin) return { isMagic: false };
   const topItems = items.filter(it => ['epic', 'legendary'].includes(it.rarity));
-  if (topItems.length > 0 && rng() < 0.20) return { isMagic: true };
+  // Always trigger gem spin when mode is enabled (if high-tier items exist)
+  if (topItems.length > 0) return { isMagic: true };
   return { isMagic: false };
 }
 

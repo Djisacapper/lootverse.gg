@@ -135,6 +135,8 @@ const PlayerColumn=({player,playerColor:pc,isWinner,wonItems,spinPhase,caseItems
   const total=wonItems.reduce((s,it)=>s+(it?.value||0),0);
   const topItems=caseItems.filter(it=>['epic','legendary'].includes(it.rarity));
   const magicPool=topItems.length>0?topItems:caseItems;
+  // Use magicItem if in gem_spin phase, otherwise use normal spinnerItem
+  const activeItem=spinPhase==='gem_spin'?magicItem:spinnerItem;
   const isSpinning=spinPhase==='spinning'||spinPhase==='gem_spin';
   const lastItem=wonItems[wonItems.length-1];
   return(
@@ -163,7 +165,7 @@ const PlayerColumn=({player,playerColor:pc,isWinner,wonItems,spinPhase,caseItems
         {spinPhase==='gem_spin'&&<GemSpinLabel />}
         <div className="ba-spin-slot">
           {isSpinning&&caseItems.length>0
-            ?<VerticalSpinner key={`${spinnerKey}-${spinPhase}`} items={spinPhase==='gem_spin'?magicPool:caseItems} winnerItem={spinPhase==='gem_spin'?magicItem:spinnerItem} onDone={spinPhase==='gem_spin'?onGemSpinDone:onSpinDone} fast={fast}/>
+            ?<VerticalSpinner key={`${spinnerKey}-${spinPhase}`} items={spinPhase==='gem_spin'?magicPool:caseItems} winnerItem={activeItem} onDone={spinPhase==='gem_spin'?onGemSpinDone:onSpinDone} fast={fast}/>
             :<div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10}}>
               {lastItem?<>{lastItem?.image||lastItem?.image_url?<img src={lastItem.image||lastItem.image_url} alt="" style={{width:56,height:56,objectFit:'contain',filter:rr(lastItem?.rarity).glow,opacity:.5}}/>:<span style={{fontSize:34,opacity:.25}}>📦</span>}<div style={{textAlign:'center'}}><p style={{fontSize:10,color:'var(--text-dim)',fontWeight:500}}>{lastItem?.name}</p><p style={{fontSize:12,color:rr(lastItem?.rarity).color,fontWeight:800,opacity:.55}}>{lastItem?.value?.toLocaleString()}</p></div></>:<div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,opacity:.18}}><Swords style={{width:26,height:26,color:'#9d6fff'}}/><span style={{fontSize:10,color:'var(--text-dim)',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>Ready</span></div>}
             </div>}
@@ -342,7 +344,10 @@ export default function BattleArena({
     const r=crRef.current;
     if(!allRolled.current?.[r]?.[pi]){roundDone.current+=1;checkRoundComplete(r);return;}
     const rolled=allRolled.current[r];
-    if(rolled[pi]?.isMagic){setPP(prev=>{const n=[...prev];n[pi]='gem_spin';return n;});}
+    if(rolled[pi]?.isMagic){
+      playSpin(isFast);
+      setPP(prev=>{const n=[...prev];n[pi]='gem_spin';return n;});
+    }
     else{markDone(pi,r);}
   };
   const handleGemSpinDone=(pi)=>{
