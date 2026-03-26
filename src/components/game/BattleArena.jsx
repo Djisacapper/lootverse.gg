@@ -166,11 +166,9 @@ const ItemChip=React.memo(({item,index=0})=>{const rc=rr(item?.rarity);return(<d
 const PlayerColumn=({player,playerColor:pc,isWinner,wonItems,spinPhase,caseItems,spinnerKey,spinnerItem,magicItem,onSpinDone,onGemSpinDone,fast,showPct,pct})=>{
   if(!player||!isRealPlayer(player))return null;
   const total=wonItems.reduce((s,it)=>s+(it?.value||0),0);
-  const topItems=caseItems.filter(it=>['epic','legendary'].includes(it.rarity));
-  const magicPool=topItems.length>0?topItems:caseItems;
-  // For gem_spin: use provided magicItem, or fallback to a random top-tier item
-  const resolvedMagicItem = magicItem || (magicPool.length>0 ? magicPool[Math.floor(Math.random()*magicPool.length)] : spinnerItem);
   const isSpinning=spinPhase==='spinning';
+  // magicItem is set from state before gem_spin phase begins — use it directly
+  const resolvedMagicItem = magicItem || spinnerItem;
   const lastItem=wonItems[wonItems.length-1];
   return(
     <div className={`ba-col${isWinner?' ba-winner':''}`} style={{border:`1.5px solid ${isWinner?'rgba(245,200,66,.35)':pc+'28'}`,boxShadow:isWinner?undefined:`0 0 0 1px rgba(0,0,0,.3),inset 0 0 28px rgba(0,0,0,.25)`}}>
@@ -349,10 +347,12 @@ export default function BattleArena({
   const [playerItems,setPI] = useState(()=>Array.from({length:rawPlayers.length},()=>[]));
   const [done,setDone]      = useState(false);
   const [jackpot,setJackpot]= useState(false);
-  const [jackpotWinnerTeam,setJWT] = useState(null); // pre-computed winner for jackpot wheel
+  const [jackpotWinnerTeam,setJWT] = useState(null);
   const [winnerTeam,setWT]  = useState(null);
   const [confetti,setConf]  = useState(false);
   const [pPhases,setPP]     = useState(()=>Array.from({length:rawPlayers.length},()=>'idle'));
+  // Store gem spin items in state so they're stable across re-renders
+  const [gemItems,setGemItems] = useState(()=>Array.from({length:rawPlayers.length},()=>null));
 
   useEffect(()=>{
     setPI(prev=>{ if(prev.length===rawPlayers.length)return prev; return Array.from({length:rawPlayers.length},(_,i)=>prev[i]||[]); });
@@ -383,7 +383,10 @@ export default function BattleArena({
     console.log('[GemSpin] handleSpinDone pi='+pi+' isMagic='+rolled[pi]?.isMagic);
     if(rolled[pi]?.isMagic){
       playSpin(isFast);
-      setPP(prev=>{const n=[...prev];n[pi]='gem_spin';console.log('[GemSpin] set gem_spin for pi='+pi,n);return n;});
+      // Store the magic item in state BEFORE switching phase so it's available immediately
+      const gemItem = rolled[pi].magicItem || rolled[pi].item;
+      setGemItems(prev=>{const n=[...prev];n[pi]=gemItem;return n;});
+      setPP(prev=>{const n=[...prev];n[pi]='gem_spin';console.log('[GemSpin] set gem_spin pi='+pi+' item=',gemItem?.name);return n;});
     }
     else{markDone(pi,r);}
   };
@@ -418,6 +421,7 @@ export default function BattleArena({
     const finalItem = (fromGemSpin && rolled[pi].magicItem) ? rolled[pi].magicItem : rolled[pi].item;
     setPI(prev=>{const n=[...prev];n[pi]=[...(n[pi]||[]),finalItem];return n;});
     setPP(prev=>{const n=[...prev];n[pi]='idle';return n;});
+    setGemItems(prev=>{const n=[...prev];n[pi]=null;return n;});
     roundDone.current+=1;checkRoundComplete(r);
   };
   const getTotal=(pi)=>{
@@ -624,7 +628,7 @@ export default function BattleArena({
                           isWinner={done&&(isGroup||ti===winnerTeam)} wonItems={playerItems[pi]||[]}
                           spinPhase={pPhases[pi]||'idle'} caseItems={caseItems}
                           spinnerKey={`${r}-${pi}-${pPhases[pi]||'idle'}`} spinnerItem={rolled?.item}
-                          magicItem={rolled?.isMagic?rolled.magicItem:null}
+                          magicItem={gemItems[pi]}
                           onSpinDone={()=>handleSpinDone(pi)} onGemSpinDone={()=>handleGemSpinDone(pi)}
                           fast={isFast}
                           pct={(() => {
