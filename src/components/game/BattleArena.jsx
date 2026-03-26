@@ -593,7 +593,7 @@ export default function BattleArena({
                         <PlayerColumn key={pi} player={players[pi]} playerColor={colMap[pi]||PLAYER_COLORS[0]}
                           isWinner={done&&(isGroup||ti===winnerTeam)} wonItems={playerItems[pi]||[]}
                           spinPhase={pPhases[pi]||'idle'} caseItems={caseItems}
-                          spinnerKey={`${r}-${pi}`} spinnerItem={rolled?.item}
+                          spinnerKey={`${r}-${pi}-${pPhases[pi]||'idle'}`} spinnerItem={rolled?.item}
                           magicItem={rolled?.isMagic?rolled.item:null}
                           onSpinDone={()=>handleSpinDone(pi)} onGemSpinDone={()=>handleGemSpinDone(pi)}
                           fast={isFast}
