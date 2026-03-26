@@ -624,10 +624,14 @@ export default function Battles() {
     setView('arena');
   };
 
-  const handleArenaReward = async (payout) => {
+  const handleArenaReward = async (payout, didWin) => {
     if (!user) return;
-    if (!arenaData?.spectate) { await updateBalance(payout,'battle_win',`Won battle — ${payout.toLocaleString()} coins`); await addXp(150); }
-    if (arenaData?.battle?.id) await base44.entities.CaseBattle.update(arenaData.battle.id,{status:'completed'});
+    if (!arenaData?.spectate) {
+      if (payout > 0) await updateBalance(payout, 'battle_win', `Won battle — ${payout.toLocaleString()} coins`);
+      // Winners get 50 XP, losers get 200 XP (losing = more to learn from)
+      await addXp(didWin ? 50 : 200);
+    }
+    if (arenaData?.battle?.id) await base44.entities.CaseBattle.update(arenaData.battle.id, { status: 'completed' });
     loadBattles();
   };
 

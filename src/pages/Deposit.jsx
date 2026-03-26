@@ -147,7 +147,6 @@ export default function Deposit() {
     setDepositing(true);
     await new Promise(r => setTimeout(r, 1500));
     await updateBalance(amount, 'deposit', `Deposited ${amount} coins`);
-    await addXp(Math.floor(amount / 50));
     setDepositing(false);
     setSuccess(true);
     setTimeout(() => setSuccess(false), 3500);

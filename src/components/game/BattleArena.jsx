@@ -345,8 +345,10 @@ export default function BattleArena({
       rewardGiven.current=true;
       const tv=allRolled.current.reduce((a,rnd)=>a+rnd.reduce((b,r)=>b+(r?.item?.value||0),0),0);
       const upi=rawPlayers.findIndex(p=>p.email===userEmail);
-      if(isGroup){setConf(true);setTimeout(()=>setConf(false),5500);onReward&&onReward(Math.floor(tv/realPlayerCount));}
-      else if(wi>=0&&teamList[wi]?.includes(upi)){setConf(true);setTimeout(()=>setConf(false),5500);onReward&&onReward(Math.floor(tv/(teamList[wi]?.length||1)));}
+      const userWon = isGroup || (wi>=0 && teamList[wi]?.includes(upi));
+      if(isGroup){setConf(true);setTimeout(()=>setConf(false),5500);onReward&&onReward(Math.floor(tv/realPlayerCount), true);}
+      else if(userWon){setConf(true);setTimeout(()=>setConf(false),5500);onReward&&onReward(Math.floor(tv/(teamList[wi]?.length||1)), true);}
+      else if(upi>=0){onReward&&onReward(0, false);} // user lost — no payout but still grant XP
       import('@/api/base44Client').then(({base44:b44})=>{
         allRolled.current.forEach((rnd,roundIdx)=>{
           rnd.forEach((rolled,pi)=>{
