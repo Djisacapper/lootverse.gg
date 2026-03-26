@@ -313,6 +313,7 @@ export default function BattleArena({
   },[isWaiting,battle?.id]);
 
   const m=battleModes&&typeof battleModes==='object'?battleModes:{};
+  console.log('[GemSpin] battleModes received:', battleModes, 'gem_spin=', m.gem_spin);
   const isCrazy=m.crazy,isTerminal=m.terminal,isGroup=m.group,isGemSpin=m.gem_spin,isFast=m.fast_mode,isJackpot=m.jackpot;
 
   const [phase,setPhase]    = useState('countdown');

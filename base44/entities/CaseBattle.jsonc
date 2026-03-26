@@ -1,0 +1,133 @@
+{
+  "name": "CaseBattle",
+  "type": "object",
+  "properties": {
+    "creator_email": {
+      "type": "string"
+    },
+    "case_template_id": {
+      "type": "string"
+    },
+    "case_name": {
+      "type": "string"
+    },
+    "rounds": {
+      "type": "number",
+      "default": 3,
+      "description": "Number of rounds"
+    },
+    "max_players": {
+      "type": "number",
+      "default": 2
+    },
+    "entry_cost": {
+      "type": "number"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "waiting",
+        "in_progress",
+        "completed"
+      ],
+      "default": "waiting"
+    },
+    "mode_label": {
+      "type": "string",
+      "description": "e.g. 1v1, 2v2"
+    },
+    "teams_config": {
+      "type": "string",
+      "description": "JSON stringified teams array"
+    },
+    "battle_modes": {
+      "type": "object",
+      "description": "Active battle mode flags",
+      "properties": {
+        "crazy": {
+          "type": "boolean"
+        },
+        "terminal": {
+          "type": "boolean"
+        },
+        "jackpot": {
+          "type": "boolean"
+        },
+        "group": {
+          "type": "boolean"
+        },
+        "gem_spin": {
+          "type": "boolean"
+        },
+        "fast_mode": {
+          "type": "boolean"
+        }
+      }
+    },
+    "players": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "email": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isBot": {
+            "type": "boolean"
+          },
+          "total_value": {
+            "type": "number"
+          },
+          "items_won": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string"
+                },
+                "value": {
+                  "type": "number"
+                },
+                "rarity": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "winner_email": {
+      "type": "string"
+    },
+    "eos_block_num": {
+      "type": "number",
+      "description": "Future EOS block number committed at battle creation"
+    },
+    "eos_chain_id": {
+      "type": "string",
+      "description": "EOS chain ID for verification"
+    },
+    "eos_block_hash": {
+      "type": "string",
+      "description": "EOS block hash used as the provably fair seed (null until block is mined)"
+    },
+    "committed_rolls": {
+      "type": "string",
+      "description": "JSON stringified array of all pre-computed rolls for every player and round"
+    },
+    "selected_cases_json": {
+      "type": "string",
+      "description": "JSON stringified array of case IDs in order \u2014 used to restore full selected cases on join/watch/view"
+    }
+  },
+  "required": [
+    "creator_email",
+    "case_template_id",
+    "entry_cost"
+  ]
+}
