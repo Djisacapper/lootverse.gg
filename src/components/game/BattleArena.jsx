@@ -404,27 +404,7 @@ export default function BattleArena({
 
   const getCaseItems=useCallback((roundIndex)=>selectedCases[roundIndex]?.items||[],[selectedCases]);
 
-  const DebugPanel = () => (
-    <div style={{position:'fixed',bottom:20,left:20,background:'rgba(0,0,0,.9)',border:'2px solid #f5c842',borderRadius:8,padding:12,fontSize:10,fontFamily:'monospace',color:'#00e5a0',maxWidth:280,zIndex:9999,maxHeight:200,overflowY:'auto'}}>
-      <div style={{color:'#f5c842',fontWeight:800,marginBottom:6}}>DEBUG STATE</div>
-      <div>phase: {phase}</div>
-      <div>round: {currentRound}/{totalRounds}</div>
-      <div>fairStatus: {fairStatus}</div>
-      <div>countdown: {countdown}</div>
-      <div style={{marginTop:8}}>
-        <div style={{color:'#f5c842'}}>pPhases:</div>
-        {pPhases.map((p,i)=><div key={i} style={{marginLeft:8}}>p[{i}]: {p}</div>)}
-      </div>
-      <div style={{marginTop:8}}>
-        <div style={{color:'#f5c842'}}>gemItems:</div>
-        {gemItems.map((g,i)=><div key={i} style={{marginLeft:8}}>g[{i}]: {g?.name||'null'}</div>)}
-      </div>
-      <div style={{marginTop:8}}>
-        <div style={{color:'#f5c842'}}>rolls:</div>
-        <div style={{marginLeft:8}}>{allRolled.current?'loaded':'pending'}</div>
-      </div>
-    </div>
-  );
+
 
   if(isWaiting)return(
     <div className="ba" style={{background:'var(--bg-deep)',minHeight:'100vh',padding:'20px 0 80px'}}>
