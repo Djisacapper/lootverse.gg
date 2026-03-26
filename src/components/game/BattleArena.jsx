@@ -280,6 +280,7 @@ export default function BattleArena({
   const [playerItems,setPI] = useState(()=>Array.from({length:rawPlayers.length},()=>[]));
   const [done,setDone]      = useState(false);
   const [jackpot,setJackpot]= useState(false);
+  const [jackpotWinnerTeam,setJWT] = useState(null); // pre-computed winner for jackpot wheel
   const [winnerTeam,setWT]  = useState(null);
   const [confetti,setConf]  = useState(false);
   const [pPhases,setPP]     = useState(()=>Array.from({length:rawPlayers.length},()=>'idle'));
@@ -319,8 +320,21 @@ export default function BattleArena({
   };
   const checkRoundComplete=(r)=>{
     if(roundDone.current>=realPlayerCount){
-      if(r+1>=totalRounds)setTimeout(()=>isJackpot?setJackpot(true):finishBattle(),isFast?1100:2400);
-      else setTimeout(()=>launchRound(r+1),isFast?1400:4000);
+      if(r+1>=totalRounds){
+        setTimeout(()=>{
+          if(isJackpot){
+            // Pre-compute winner team so wheel can land on correct player
+            const v=teamList.map(mi=>mi.reduce((s,pi)=>s+getTotal(pi),0)/mi.length);
+            const preWi=isCrazy?v.indexOf(Math.min(...v)):v.indexOf(Math.max(...v));
+            setJWT(preWi);
+            setJackpot(true);
+          } else {
+            finishBattle();
+          }
+        }, isFast?1100:2400);
+      } else {
+        setTimeout(()=>launchRound(r+1),isFast?1400:4000);
+      }
     }
   };
   const markDone=(pi,r)=>{
@@ -447,7 +461,7 @@ export default function BattleArena({
         )}
 
         <AnimatePresence mode="wait">{!done&&<RoundLabel key={currentRound} round={currentRound} total={totalRounds} caseName={selectedCases[currentRound]?.name}/>}</AnimatePresence>
-        {jackpot&&<motion.div initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}><JackpotWheel teamList={teamList} players={players} playerTotals={rawPlayers.map((_,pi)=>getTotal(pi))} onWinner={wTi=>setTimeout(()=>finishBattle(wTi),800)}/></motion.div>}
+        {jackpot&&<motion.div initial={{opacity:0,y:12}} animate={{opacity:1,y:0}}><JackpotWheel teamList={teamList} players={players} playerTotals={rawPlayers.map((_,pi)=>getTotal(pi))} winnerTeamIndex={jackpotWinnerTeam} isCrazy={isCrazy} onWinner={wTi=>setTimeout(()=>finishBattle(wTi),800)}/></motion.div>}
 
         {done&&(
           <div className="ba-win-banner" style={{position:'relative',overflow:'hidden',borderRadius:20,background:'linear-gradient(145deg,#0c0800,#160e00,#080300)',border:'1px solid rgba(245,200,66,.28)',boxShadow:'0 0 0 1px rgba(245,200,66,.07),0 0 90px rgba(245,200,66,.1)',padding:'30px 24px',textAlign:'center'}}>
