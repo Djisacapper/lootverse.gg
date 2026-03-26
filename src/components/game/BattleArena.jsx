@@ -170,12 +170,12 @@ const PlayerColumn=({player,playerColor:pc,isWinner,wonItems,spinPhase,caseItems
       {showPct&&(<div style={{padding:'0 12px 7px',flexShrink:0}}><div style={{display:'flex',justifyContent:'space-between',marginBottom:3}}><span style={{fontSize:9,fontWeight:700,color:pc,textTransform:'uppercase',letterSpacing:'.1em'}}>Win chance</span><span style={{fontSize:9,fontWeight:800,color:pc}}>{Math.round(pct*100)}%</span></div><div style={{height:3,borderRadius:3,background:'rgba(255,255,255,.06)',overflow:'hidden'}}><motion.div style={{height:'100%',borderRadius:3,background:`linear-gradient(90deg,${pc},${pc}88)`}} initial={{width:'0%'}} animate={{width:`${pct*100}%`}} transition={{duration:.7,ease:'easeOut'}}/></div></div>)}
       <div style={{padding:'0 10px 10px',flexShrink:0,position:'relative',zIndex:2}}>
         <div className="ba-spin-slot">
-          {spinPhase==='gem_spin'&&<GemSpinOverlay/>}
           {isSpinning&&caseItems.length>0
             ?<VerticalSpinner key={`${spinnerKey}-${spinPhase}`} items={spinPhase==='gem_spin'?magicPool:caseItems} winnerItem={activeItem} onDone={spinPhase==='gem_spin'?onGemSpinDone:onSpinDone} fast={fast}/>
             :<div style={{position:'absolute',inset:0,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:10}}>
               {lastItem?<>{lastItem?.image||lastItem?.image_url?<img src={lastItem.image||lastItem.image_url} alt="" style={{width:56,height:56,objectFit:'contain',filter:rr(lastItem?.rarity).glow,opacity:.5}}/>:<span style={{fontSize:34,opacity:.25}}>📦</span>}<div style={{textAlign:'center'}}><p style={{fontSize:10,color:'var(--text-dim)',fontWeight:500}}>{lastItem?.name}</p><p style={{fontSize:12,color:rr(lastItem?.rarity).color,fontWeight:800,opacity:.55}}>{lastItem?.value?.toLocaleString()}</p></div></>:<div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:8,opacity:.18}}><Swords style={{width:26,height:26,color:'#9d6fff'}}/><span style={{fontSize:10,color:'var(--text-dim)',fontWeight:600,letterSpacing:'.1em',textTransform:'uppercase'}}>Ready</span></div>}
             </div>}
+          {spinPhase==='gem_spin'&&<GemSpinOverlay/>}
         </div>
       </div>
       <div className="ba-scroll" style={{flex:1,minHeight:0,overflowY:'auto',padding:'0 10px 12px'}}>
@@ -351,9 +351,10 @@ export default function BattleArena({
     const r=crRef.current;
     if(!allRolled.current?.[r]?.[pi]){roundDone.current+=1;checkRoundComplete(r);return;}
     const rolled=allRolled.current[r];
+    console.log('[GemSpin] handleSpinDone pi='+pi+' isMagic='+rolled[pi]?.isMagic);
     if(rolled[pi]?.isMagic){
       playSpin(isFast);
-      setPP(prev=>{const n=[...prev];n[pi]='gem_spin';return n;});
+      setPP(prev=>{const n=[...prev];n[pi]='gem_spin';console.log('[GemSpin] set gem_spin for pi='+pi,n);return n;});
     }
     else{markDone(pi,r);}
   };
