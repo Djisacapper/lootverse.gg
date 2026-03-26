@@ -555,7 +555,7 @@ export default function BattleArena({
                           isWinner={done&&(isGroup||ti===winnerTeam)} wonItems={playerItems[pi]||[]}
                           spinPhase={pPhases[pi]||'idle'} caseItems={caseItems}
                           spinnerKey={`${r}-${pi}-${pPhases[pi]||'idle'}`} spinnerItem={rolled?.item}
-                          onSpinDone={useCallback(()=>handleSpinDone(pi),[pi,handleSpinDone])}
+                          onSpinDone={()=>handleSpinDone(pi)}
                           fast={isFast}
                           pct={(() => {
                             if (!isJackpot || grandTotal === 0) return 0;
