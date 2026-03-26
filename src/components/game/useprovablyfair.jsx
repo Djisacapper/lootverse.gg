@@ -73,12 +73,12 @@ function seededRollItem(rng, items) {
 }
 
 function seededMagicCheck(rng, items, isMagicSpin) {
-  console.log('[provablyFair] seededMagicCheck isMagicSpin=', isMagicSpin);
   if (!isMagicSpin) return { isMagic: false };
   const topItems = items.filter(it => ['epic', 'legendary'].includes(it.rarity));
-  console.log('[provablyFair] topItems count=', topItems.length, items.map(i=>i.rarity));
-  if (topItems.length > 0) return { isMagic: true };
-  return { isMagic: false };
+  if (topItems.length === 0) return { isMagic: false };
+  // ~30% chance of triggering the bonus gem spin
+  const roll = rng();
+  return { isMagic: roll < 0.30 };
 }
 
 // ─── Validate stored rolls ────────────────────────────────────────────────────
@@ -136,9 +136,11 @@ export function deriveRolls(blockHash, battleId, selectedCases, players, battleM
       const { isMagic } = seededMagicCheck(rng, items, battleModes.gem_spin);
 
       if (isMagic) {
+        // item = normal first spin result
+        // magicItem = bonus top-tier item shown in gem spin phase
         const topItems = items.filter(it => ['epic', 'legendary'].includes(it.rarity));
         const magicItem = seededRollItem(rng, topItems.length > 0 ? topItems : items);
-        return { item: magicItem, isMagic: true };
+        return { item, isMagic: true, magicItem };
       }
       return { item, isMagic: false };
     });

@@ -359,7 +359,7 @@ export default function BattleArena({
   const handleGemSpinDone=(pi)=>{
     stopSpin();
     if(!allRolled.current?.[crRef.current]){roundDone.current+=1;checkRoundComplete(crRef.current);return;}
-    markDone(pi,crRef.current);
+    markDone(pi,crRef.current,true);
   };
   const checkRoundComplete=(r)=>{
     if(roundDone.current>=realPlayerCount){
@@ -380,10 +380,12 @@ export default function BattleArena({
       }
     }
   };
-  const markDone=(pi,r)=>{
+  const markDone=(pi,r,fromGemSpin=false)=>{
     if(!allRolled.current?.[r]?.[pi]){roundDone.current+=1;checkRoundComplete(r);return;}
     const rolled=allRolled.current[r];
-    setPI(prev=>{const n=[...prev];n[pi]=[...(n[pi]||[]),rolled[pi].item];return n;});
+    // If gem spin fired, the player wins the magic bonus item; otherwise the normal item
+    const finalItem = (fromGemSpin && rolled[pi].magicItem) ? rolled[pi].magicItem : rolled[pi].item;
+    setPI(prev=>{const n=[...prev];n[pi]=[...(n[pi]||[]),finalItem];return n;});
     setPP(prev=>{const n=[...prev];n[pi]='idle';return n;});
     roundDone.current+=1;checkRoundComplete(r);
   };
@@ -411,7 +413,8 @@ export default function BattleArena({
           rnd.forEach((rolled,pi)=>{
             const p=rawPlayers[pi];if(!isRealPlayer(p)||p.isBot)return;
             const item=rolled?.item;if(!item)return;
-            b44.entities.UserInventory.create({user_email:p.email,item_name:item.name,item_image_url:item.image||item.image_url||null,rarity:item.rarity,value:item.value,source:'battle_win',source_case:selectedCases[roundIdx]?.name||'',status:'owned'}).catch(()=>{});
+            const finalItem = (rolled?.isMagic && rolled?.magicItem) ? rolled.magicItem : item;
+        b44.entities.UserInventory.create({user_email:p.email,item_name:finalItem.name,item_image_url:finalItem.image||finalItem.image_url||null,rarity:finalItem.rarity,value:finalItem.value,source:'battle_win',source_case:selectedCases[roundIdx]?.name||'',status:'owned'}).catch(()=>{});
           });
         });
       }).catch(()=>{});
@@ -590,7 +593,7 @@ export default function BattleArena({
                           isWinner={done&&(isGroup||ti===winnerTeam)} wonItems={playerItems[pi]||[]}
                           spinPhase={pPhases[pi]||'idle'} caseItems={caseItems}
                           spinnerKey={`${r}-${pi}-${pPhases[pi]||'idle'}`} spinnerItem={rolled?.item}
-                          magicItem={rolled?.isMagic?rolled.item:null}
+                          magicItem={rolled?.isMagic?rolled.magicItem:null}
                           onSpinDone={()=>handleSpinDone(pi)} onGemSpinDone={()=>handleGemSpinDone(pi)}
                           fast={isFast}
                           pct={(() => {
