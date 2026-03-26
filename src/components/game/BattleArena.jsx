@@ -613,7 +613,8 @@ export default function BattleArena({
           )}
         </AnimatePresence>
 
-        <div style={{display:'flex',gap:8,alignItems:'stretch',width:'100%'}}>
+        {phase==='countdown'&&<div style={{position:'absolute',inset:0,zIndex:8999,background:'rgba(0,0,0,.5)',pointerEvents:'none'}}/>}
+        <div style={{display:'flex',gap:8,alignItems:'stretch',width:'100%',opacity:phase==='countdown'?0.3:1,transition:'opacity .3s'}}>
           {teamList.map((mi,ti)=>{
             const pal=TEAM_PALETTE[ti%TEAM_PALETTE.length];
             const teamTotal=done?mi.reduce((s,pi)=>s+getTotal(pi),0):0;
