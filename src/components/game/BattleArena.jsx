@@ -359,7 +359,9 @@ export default function BattleArena({
     setPP(prev=>{ if(prev.length===rawPlayers.length)return prev; return Array.from({length:rawPlayers.length},(_,i)=>prev[i]||'idle'); });
   },[rawPlayers.length]);
 
-  const allRolled=useRef(null),roundDone=useRef(0),crRef=useRef(0),rewardGiven=useRef(false);
+  const allRolled=useRef(null),crRef=useRef(0),rewardGiven=useRef(false);
+  // Track per-player completion so multi-player rounds work correctly
+  const playersDone=useRef(new Set());
   useEffect(()=>{if(fairRolls)allRolled.current=fairRolls;},[fairRolls]);
 
   useEffect(()=>{
@@ -369,42 +371,21 @@ export default function BattleArena({
   },[phase,countdown,isWaiting,fairStatus]);
 
   const launchRound=(r)=>{
-    roundDone.current=0;crRef.current=r;setCR(r);
-    console.log('[GemSpin] launchRound r='+r+' rolls=',allRolled.current?.[r]);
+    playersDone.current=new Set();
+    crRef.current=r;setCR(r);
     setPP(prev=>prev.map((s,i)=>isRealPlayer(rawPlayers[i])?'spinning':s));
     playSpin(isFast);
   };
 
-  const handleSpinDone=(pi)=>{
-    if(roundDone.current===0)stopSpin();
-    const r=crRef.current;
-    if(!allRolled.current?.[r]?.[pi]){roundDone.current+=1;checkRoundComplete(r);return;}
-    const rolled=allRolled.current[r];
-    console.log('[GemSpin] handleSpinDone pi='+pi+' isMagic='+rolled[pi]?.isMagic);
-    if(rolled[pi]?.isMagic){
-      playSpin(isFast);
-      // Store the magic item in state BEFORE switching phase so it's available immediately
-      const gemItem = rolled[pi].magicItem || rolled[pi].item;
-      setGemItems(prev=>{const n=[...prev];n[pi]=gemItem;return n;});
-      setPP(prev=>{const n=[...prev];n[pi]='gem_spin';console.log('[GemSpin] set gem_spin pi='+pi+' item=',gemItem?.name);return n;});
-    }
-    else{markDone(pi,r);}
-  };
-  const handleGemSpinDone=(pi)=>{
-    stopSpin();
-    if(!allRolled.current?.[crRef.current]){roundDone.current+=1;checkRoundComplete(crRef.current);return;}
-    markDone(pi,crRef.current,true);
-  };
   const checkRoundComplete=(r)=>{
-    if(roundDone.current>=realPlayerCount){
+    if(playersDone.current.size>=realPlayerCount){
+      stopSpin();
       if(r+1>=totalRounds){
         setTimeout(()=>{
           if(isJackpot){
-            // Pre-compute winner team so wheel can land on correct player
             const v=teamList.map(mi=>mi.reduce((s,pi)=>s+getTotal(pi),0)/mi.length);
             const preWi=isCrazy?v.indexOf(Math.min(...v)):v.indexOf(Math.max(...v));
-            setJWT(preWi);
-            setJackpot(true);
+            setJWT(preWi);setJackpot(true);
           } else {
             finishBattle();
           }
@@ -414,15 +395,38 @@ export default function BattleArena({
       }
     }
   };
+
   const markDone=(pi,r,fromGemSpin=false)=>{
-    if(!allRolled.current?.[r]?.[pi]){roundDone.current+=1;checkRoundComplete(r);return;}
+    if(!allRolled.current?.[r]?.[pi]){
+      playersDone.current.add(pi);
+      checkRoundComplete(r);
+      return;
+    }
     const rolled=allRolled.current[r];
-    // If gem spin fired, the player wins the magic bonus item; otherwise the normal item
-    const finalItem = (fromGemSpin && rolled[pi].magicItem) ? rolled[pi].magicItem : rolled[pi].item;
+    const finalItem=(fromGemSpin&&rolled[pi].magicItem)?rolled[pi].magicItem:rolled[pi].item;
     setPI(prev=>{const n=[...prev];n[pi]=[...(n[pi]||[]),finalItem];return n;});
     setPP(prev=>{const n=[...prev];n[pi]='idle';return n;});
     setGemItems(prev=>{const n=[...prev];n[pi]=null;return n;});
-    roundDone.current+=1;checkRoundComplete(r);
+    playersDone.current.add(pi);
+    checkRoundComplete(r);
+  };
+
+  const handleSpinDone=(pi)=>{
+    const r=crRef.current;
+    if(!allRolled.current?.[r]?.[pi]){playersDone.current.add(pi);checkRoundComplete(r);return;}
+    const rolled=allRolled.current[r];
+    if(rolled[pi]?.isMagic){
+      // Store gem item in state before switching phase so it's immediately available
+      const gemItem=rolled[pi].magicItem||rolled[pi].item;
+      setGemItems(prev=>{const n=[...prev];n[pi]=gemItem;return n;});
+      setPP(prev=>{const n=[...prev];n[pi]='gem_spin';return n;});
+    } else {
+      markDone(pi,r);
+    }
+  };
+
+  const handleGemSpinDone=(pi)=>{
+    markDone(pi,crRef.current,true);
   };
   const getTotal=(pi)=>{
     if(!allRolled.current)return 0;
