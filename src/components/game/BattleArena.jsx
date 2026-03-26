@@ -415,11 +415,13 @@ export default function BattleArena({
     const r=crRef.current;
     if(!allRolled.current?.[r]?.[pi]){playersDone.current.add(pi);checkRoundComplete(r);return;}
     const rolled=allRolled.current[r];
+    console.log('[GemSpin] handleSpinDone pi='+pi+' isMagic='+rolled[pi]?.isMagic+' item='+rolled[pi]?.item?.name+' rarity='+rolled[pi]?.item?.rarity);
     if(rolled[pi]?.isMagic){
       // Store gem item in state before switching phase so it's immediately available
       const gemItem=rolled[pi].magicItem||rolled[pi].item;
+      console.log('[GemSpin] TRIGGERING gem_spin for pi='+pi+' with item='+gemItem?.name);
       setGemItems(prev=>{const n=[...prev];n[pi]=gemItem;return n;});
-      setPP(prev=>{const n=[...prev];n[pi]='gem_spin';return n;});
+      setPP(prev=>{const n=[...prev];n[pi]='gem_spin';console.log('[GemSpin] pPhases updated to gem_spin for pi='+pi);return n;});
     } else {
       markDone(pi,r);
     }
