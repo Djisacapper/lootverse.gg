@@ -403,9 +403,9 @@ export default function Leaderboard() {
 
       <div style={{ maxWidth:760, margin:'0 auto', padding:'24px 16px 100px', position:'relative', zIndex:1 }}>
 
-        {/* ── TABS ── */}
+        {/* ── HEADER: tabs + retro prize centered ── */}
         <motion.div initial={{ opacity:0, y:-10 }} animate={{ opacity:1, y:0 }}
-          style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:28 }}>
+          style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
           <div style={{ display:'inline-flex', gap:4, padding:4, borderRadius:50, background:'rgba(255,255,255,.05)', border:'1px solid rgba(255,255,255,.09)' }}>
             {Object.entries(RACES).map(([key, rc]) => {
               const active = tab === key;
@@ -432,24 +432,12 @@ export default function Leaderboard() {
             initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-10 }}
             transition={{ duration:.28, ease:[.22,1,.36,1] }}>
 
-            {/* ── HERO PRIZE POOL ── */}
-            <div style={{ textAlign:'center', marginBottom:10, position:'relative' }}>
-
-              <motion.div
-                initial={{ scale:.85, opacity:0 }} animate={{ scale:1, opacity:1 }}
-                transition={{ delay:.1, duration:.6, ease:[.22,1,.36,1] }}
-                style={{ display:'inline-flex', alignItems:'center', gap:8, padding:'4px 18px', borderRadius:50, background:`rgba(${r.glow},.1)`, border:`1px solid rgba(${r.glow},.22)`, marginBottom:18 }}>
-                <span style={{ fontSize:13, color:'rgba(255,255,255,.4)', fontWeight:600, letterSpacing:'.1em', textTransform:'uppercase' }}>
-                  {r.icon} {r.label}
-                </span>
-              </motion.div>
-
-              {/* Retro marquee-light number */}
+            {/* ── RETRO PRIZE POOL — centered ── */}
+            <div style={{ textAlign:'center', marginBottom:20 }}>
               <motion.div
                 initial={{ scale:.8, opacity:0 }} animate={{ scale:1, opacity:1 }}
-                transition={{ delay:.15, duration:.65, ease:[.22,1,.36,1] }}
-                style={{ position:'relative', display:'inline-block', marginBottom:8 }}>
-                {/* outer frame */}
+                transition={{ delay:.1, duration:.55, ease:[.22,1,.36,1] }}
+                style={{ display:'inline-block', position:'relative' }}>
                 <div style={{
                   padding:'14px 32px', borderRadius:18,
                   background:'linear-gradient(160deg,#0d0818,#160a28)',
@@ -457,36 +445,30 @@ export default function Leaderboard() {
                   boxShadow:`0 0 0 4px rgba(${r.glow},.06), 0 0 60px rgba(${r.glow},.25), inset 0 0 40px rgba(0,0,0,.6)`,
                   position:'relative', overflow:'hidden',
                 }}>
-                  {/* dot row top */}
                   <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
                     {Array.from({length:14}).map((_,i)=>(
                       <div key={i} style={{ width:5, height:5, borderRadius:'50%', background:`rgba(${r.glow},${(i%3===0)?.7:.2})`, boxShadow:`0 0 ${(i%3===0)?8:2}px rgba(${r.glow},.6)`, animation:`lb-glow-pulse ${1.2+i*0.15}s ease-in-out infinite`, animationDelay:`${i*0.08}s` }} />
                     ))}
                   </div>
-                  {/* big number */}
                   <div style={{ display:'flex', alignItems:'center', gap:10, justifyContent:'center', padding:'4px 0' }}>
                     <Coin size={34} />
                     <span style={{
                       fontFamily:"'DM Mono',monospace", fontSize:54, fontWeight:600,
-                      lineHeight:1, letterSpacing:'.06em',
-                      color:'#fff',
+                      lineHeight:1, letterSpacing:'.06em', color:'#fff',
                       textShadow:`0 0 20px rgba(${r.glow},.9), 0 0 40px rgba(${r.glow},.5), 0 0 80px rgba(${r.glow},.25)`,
                     }}>
                       {r.pool.toLocaleString()}
                     </span>
                   </div>
-                  {/* dot row bottom */}
                   <div style={{ display:'flex', justifyContent:'space-between', marginTop:6 }}>
                     {Array.from({length:14}).map((_,i)=>(
                       <div key={i} style={{ width:5, height:5, borderRadius:'50%', background:`rgba(${r.glow},${(i%3===1)?.7:.2})`, boxShadow:`0 0 ${(i%3===1)?8:2}px rgba(${r.glow},.6)`, animation:`lb-glow-pulse ${1.4+i*0.12}s ease-in-out infinite`, animationDelay:`${i*0.1}s` }} />
                     ))}
                   </div>
-                  {/* scanline overlay */}
                   <div style={{ position:'absolute', inset:0, backgroundImage:'repeating-linear-gradient(0deg,rgba(0,0,0,.12) 0px,rgba(0,0,0,.12) 1px,transparent 1px,transparent 3px)', pointerEvents:'none', borderRadius:16 }} />
                 </div>
               </motion.div>
-
-              <p style={{ fontSize:10, color:'rgba(255,255,255,.22)', letterSpacing:'.14em', textTransform:'uppercase', marginBottom:8 }}>
+              <p style={{ fontSize:10, color:'rgba(255,255,255,.22)', letterSpacing:'.14em', textTransform:'uppercase', marginTop:8 }}>
                 Total Prize Pool
               </p>
             </div>
