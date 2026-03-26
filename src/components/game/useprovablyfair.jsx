@@ -73,9 +73,10 @@ function seededRollItem(rng, items) {
 }
 
 function seededMagicCheck(rng, items, isMagicSpin) {
+  console.log('[provablyFair] seededMagicCheck isMagicSpin=', isMagicSpin);
   if (!isMagicSpin) return { isMagic: false };
   const topItems = items.filter(it => ['epic', 'legendary'].includes(it.rarity));
-  // Always trigger gem spin when mode is enabled (if high-tier items exist)
+  console.log('[provablyFair] topItems count=', topItems.length, items.map(i=>i.rarity));
   if (topItems.length > 0) return { isMagic: true };
   return { isMagic: false };
 }
@@ -109,8 +110,7 @@ export function deriveRolls(blockHash, battleId, selectedCases, players, battleM
   }
 
   console.log(
-    `[provablyFair] deriveRolls: ${selectedCases.length} case(s) × ${players.length} player(s)`,
-    selectedCases.map((c, i) => `[${i}] "${c?.name}" (${c?.items?.length ?? 0} items)`)
+    `[provablyFair] deriveRolls: ${selectedCases.length} case(s) × ${players.length} player(s), battleModes=`, battleModes
   );
 
   const combined = blockHash + '::' + battleId;
